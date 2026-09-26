@@ -1,0 +1,106 @@
+// Návrh databázového schématu pro cloudovou verzi (Supabase Postgres + Prisma).
+// MVP ukládá stejné struktury lokálně v IndexedDB (src/lib/storage.ts).
+// Pro přechod: npm i prisma @prisma/client, zkopírovat do prisma/schema.prisma
+// a napsat SupabaseAdapter implementující rozhraní StorageAdapter.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id        String       @id // = Supabase auth.users.id
+  name      String
+  email     String       @unique
+  members   Membership[]
+  createdAt DateTime     @default(now())
+}
+
+model Project {
+  id         String       @id @default(cuid())
+  name       String
+  parentName String?
+  brand      Json // BrandKit
+  teams      Json // Team[]
+  members    Membership[]
+  templates  Template[]
+  assets     Asset[]
+  datasets   Dataset[]
+  graphics   Graphic[]
+  createdAt  DateTime     @default(now())
+}
+
+model Membership {
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+  role      Role    @default(EDITOR)
+
+  @@id([userId, projectId])
+}
+
+model Template {
+  id         String   @id @default(cuid())
+  project    Project  @relation(fields: [projectId], references: [id])
+  projectId  String
+  name       String
+  category   String
+  baseFormat String
+  formats    String[]
+  background Json
+  elements   Json // TemplateElement[]
+  fields     Json // FieldDef[]
+  sampleData Json
+  paginate   Json?
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
+model Asset {
+  id          String   @id @default(cuid())
+  project     Project  @relation(fields: [projectId], references: [id])
+  projectId   String
+  name        String
+  kind        String
+  storagePath String // Supabase Storage
+  width       Int?
+  height      Int?
+  createdAt   DateTime @default(now())
+}
+
+model Dataset {
+  id        String   @id @default(cuid())
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  name      String
+  kind      String // manual | json | csv | url | api
+  source    String?
+  rows      Json
+  updatedAt DateTime @updatedAt
+}
+
+model Graphic {
+  id           String   @id @default(cuid())
+  project      Project  @relation(fields: [projectId], references: [id])
+  projectId    String
+  templateId   String
+  templateName String
+  name         String
+  format       String
+  data         Json
+  overrides    Json?
+  thumbPath    String?
+  createdBy    String?
+  createdAt    DateTime @default(now())
+}

@@ -1,0 +1,233 @@
+"use client";
+import { useRef, useSyncExternalStore } from "react";
+import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
+import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
+import { setFontSource } from "./fonts";
+import { seedDemo, SEED_VERSION, bgAsset, upgradeTemplates, BG_ASSET } from "./demo/seed";
+
+export interface AppState {
+  ready: boolean;
+  persistent: boolean;
+  settings: Settings;
+  projects: Project[];
+  templates: Template[];
+  assets: Asset[];
+  datasets: Dataset[];
+  graphics: Graphic[];
+}
+
+const DEFAULT_USERS: User[] = [
+  { id: "u-admin", name: "Petr (admin)", role: "admin" },
+  { id: "u-editor", name: "Redaktor", role: "editor" },
+  { id: "u-viewer", name: "Host", role: "viewer" },
+];
+
+let state: AppState = {
+  ready: false,
+  persistent: false,
+  settings: { users: DEFAULT_USERS, currentUserId: "u-admin", bgProvider: "browser" },
+  projects: [],
+  templates: [],
+  assets: [],
+  datasets: [],
+  graphics: [],
+};
+let adapter: StorageAdapter | null = null;
+setFontSource(() => state.assets.filter((a) => a.kind === "font"));
+const listeners = new Set<() => void>();
+
+function emit() {
+  listeners.forEach((l) => l());
+}
+function setState(patch: Partial<AppState>) {
+  state = { ...state, ...patch };
+  emit();
+}
+
+function shallowEqual(a: unknown, b: unknown) {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
+  return false;
+}
+
+const subscribe = (cb: () => void) => {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+};
+
+/** Selektor nad globálním stavem; výsledek je stabilní, dokud se nezmění (i pro filtrovaná pole). */
+export function useApp<T>(sel: (s: AppState) => T): T {
+  const ref = useRef<{ state: AppState; value: T } | null>(null);
+  const get = () => {
+    const prev = ref.current;
+    const value = sel(state);
+    if (prev && shallowEqual(prev.value, value)) {
+      ref.current = { state, value: prev.value };
+      return prev.value;
+    }
+    ref.current = { state, value };
+    return value;
+  };
+  return useSyncExternalStore(subscribe, get, get);
+}
+export const getState = () => state;
+
+let initPromise: Promise<void> | null = null;
+export function initStore() {
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    const { adapter: a, persistent } = await createAdapter();
+    adapter = a;
+    let [projects, templates, assets, datasets, graphics, settings] = await Promise.all([
+      a.list("projects"),
+      a.list("templates"),
+      a.list("assets"),
+      a.list("datasets"),
+      a.list("graphics"),
+      a.getSettings(),
+    ]);
+    if (!projects.length) {
+      const seed = await seedDemo();
+      for (const p of seed.projects) await a.put("projects", p);
+      for (const t of seed.templates) await a.put("templates", t);
+      for (const x of seed.assets) await a.put("assets", x);
+      for (const d of seed.datasets) await a.put("datasets", d);
+      projects = seed.projects;
+      templates = seed.templates;
+      assets = seed.assets;
+      datasets = seed.datasets;
+      settings = { ...state.settings, currentProjectId: seed.projects[0].id, seedVersion: SEED_VERSION };
+      await a.putSettings(settings);
+    }
+    // migrace demo obsahu (verze 2: šablony podle PSD uživatele + pozadí OBASKETU)
+    if ((settings?.seedVersion ?? 1) < SEED_VERSION && projects.some((p) => p.id === "p-nbl")) {
+      if (!assets.some((x) => x.id === BG_ASSET)) {
+        const bg = bgAsset();
+        await a.put("assets", bg);
+        assets = [...assets, bg];
+      }
+      projects = await Promise.all(
+        projects.map(async (p) => {
+          if (p.id !== "p-nbl" || p.brand.backgrounds.includes(BG_ASSET)) return p;
+          const np = { ...p, brand: { ...p.brand, backgrounds: [BG_ASSET, ...p.brand.backgrounds] } };
+          await a.put("projects", np);
+          return np;
+        }),
+      );
+      for (const pid of ["p-nbl", "p-repre"]) {
+        for (const nt of upgradeTemplates(pid)) {
+          const old = templates.find((t) => t.id === nt.id);
+          if (old && !old.builtIn) continue; // uživatel šablonu upravil – nepřepisovat
+          await a.put("templates", nt);
+          templates = [...templates.filter((t) => t.id !== nt.id), nt];
+        }
+      }
+      settings = { ...(settings ?? state.settings), seedVersion: SEED_VERSION };
+      await a.putSettings(settings);
+    }
+    const s: Settings = { ...state.settings, ...(settings ?? {}) };
+    if (!s.users?.length) s.users = DEFAULT_USERS;
+    if (!s.currentProjectId || !projects.find((p) => p.id === s.currentProjectId)) s.currentProjectId = projects[0]?.id;
+    setState({
+      ready: true,
+      persistent,
+      settings: s,
+      projects: projects.sort((x, y) => x.createdAt - y.createdAt),
+      templates,
+      assets,
+      datasets,
+      graphics: graphics.sort((x, y) => y.createdAt - x.createdAt),
+    });
+  })();
+  return initPromise;
+}
+
+// ── zápisy ──────────────────────────────────────────────────
+
+export async function upsert<K extends CollectionName>(c: K, item: CollectionMap[K]) {
+  const list = state[c] as unknown as CollectionMap[K][];
+  const idx = list.findIndex((x) => x.id === item.id);
+  const next = idx >= 0 ? list.map((x) => (x.id === item.id ? item : x)) : c === "graphics" ? [item, ...list] : [...list, item];
+  setState({ [c]: next } as Partial<AppState>);
+  await adapter?.put(c, item);
+}
+
+export async function remove(c: CollectionName, id: string) {
+  const list = state[c] as unknown as { id: string }[];
+  setState({ [c]: list.filter((x) => x.id !== id) } as Partial<AppState>);
+  await adapter?.remove(c, id);
+}
+
+export async function updateSettings(patch: Partial<Settings>) {
+  const s = { ...state.settings, ...patch };
+  setState({ settings: s });
+  await adapter?.putSettings(s);
+}
+
+export async function deleteProject(id: string) {
+  for (const c of ["templates", "assets", "datasets", "graphics"] as const) {
+    for (const x of (state[c] as { id: string; projectId: string }[]).filter((x) => x.projectId === id)) await remove(c, x.id);
+  }
+  await remove("projects", id);
+  if (state.settings.currentProjectId === id) await updateSettings({ currentProjectId: state.projects[0]?.id });
+}
+
+/** Záloha projektu (JSON) – přenos mezi zařízeními, dokud není cloud. */
+export function exportProject(projectId: string) {
+  const p = state.projects.find((x) => x.id === projectId);
+  return {
+    app: "presetka",
+    version: 1,
+    project: p,
+    templates: state.templates.filter((t) => t.projectId === projectId),
+    assets: state.assets.filter((a) => a.projectId === projectId),
+    datasets: state.datasets.filter((d) => d.projectId === projectId),
+    graphics: state.graphics.filter((g) => g.projectId === projectId),
+  };
+}
+
+export async function importProject(json: ReturnType<typeof exportProject>) {
+  if (json?.app !== "presetka" || !json.project) throw new Error("Soubor není záloha Presetky.");
+  await upsert("projects", json.project);
+  for (const t of json.templates ?? []) await upsert("templates", t);
+  for (const a of json.assets ?? []) await upsert("assets", a);
+  for (const d of json.datasets ?? []) await upsert("datasets", d);
+  for (const g of json.graphics ?? []) await upsert("graphics", g);
+  await updateSettings({ currentProjectId: json.project.id });
+}
+
+// ── selektory ────────────────────────────────────────────────
+
+export function useCurrentProject(): Project | undefined {
+  return useApp((s) => s.projects.find((p) => p.id === s.settings.currentProjectId));
+}
+
+export function useCurrentUser(): User {
+  return useApp((s) => s.settings.users.find((u) => u.id === s.settings.currentUserId) ?? s.settings.users[0]);
+}
+
+export function useAssetMap(projectId?: string): Record<string, string> {
+  const assets = useApp((s) => s.assets);
+  return assetMapFrom(assets, projectId);
+}
+
+let lastAssets: Asset[] | null = null;
+let lastPid: string | undefined;
+let lastMap: Record<string, string> = {};
+export function assetMapFrom(assets: Asset[], projectId?: string) {
+  if (assets === lastAssets && projectId === lastPid) return lastMap;
+  const m: Record<string, string> = {};
+  for (const a of assets) if (!projectId || a.projectId === projectId || a.projectId === "shared") m[a.id] = a.dataUrl;
+  lastAssets = assets;
+  lastPid = projectId;
+  lastMap = m;
+  return m;
+}
+
+export function uid(prefix = "") {
+  return prefix + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+}
+
+export type { Role, Template, Dataset, Graphic, Asset };
