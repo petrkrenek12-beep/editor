@@ -300,6 +300,8 @@ export interface Asset {
   w?: number;
   h?: number;
   createdAt: number;
+  /** adresa v cloudovém úložišti (synchronizace) */
+  remoteUrl?: string;
 }
 
 export type DataSourceKind = "manual" | "json" | "csv" | "url" | "api";
@@ -339,4 +341,7 @@ export interface Settings {
   bgProvider: "browser" | "removebg";
   aiEndpoint?: string;
   seedVersion?: number;
+  /** smazané položky "kolekce:id" → čas (pro synchronizaci) */
+  tombstones?: Record<string, number>;
+  sync?: { enabled: boolean; key?: string; lastSync?: number; lastRemote?: string };
 }

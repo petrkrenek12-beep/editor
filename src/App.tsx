@@ -6,6 +6,7 @@ import { can, ROLE_LABEL } from "@/lib/permissions";
 import { navigate, useRoute } from "@/lib/router";
 import { initStore, updateSettings, useApp, useCurrentProject, useCurrentUser } from "@/lib/store";
 import { Composer } from "@/views/Composer";
+import { startAutoSync, useSyncStatus } from "@/lib/sync";
 import { TemplateEditor } from "@/views/TemplateEditor";
 import { Dashboard, RecentPage, TemplatePicker, TemplatesPage } from "@/views/Pages";
 import { BrandKitPage } from "@/views/BrandKit";
@@ -28,7 +29,9 @@ export default function App() {
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     ensureFontStylesheet();
-    initStore().catch((e) => setErr(String(e?.message ?? e)));
+    initStore()
+      .then(() => startAutoSync())
+      .catch((e) => setErr(String(e?.message ?? e)));
   }, []);
   if (err)
     return (
@@ -105,7 +108,7 @@ function Shell() {
 
   return (
     <div className="flex min-h-screen bg-paper text-ink">
-      <Sidebar current={top} />
+      {fullBleed ? <Rail current={top} /> : <Sidebar current={top} />}
       <div className="flex min-w-0 flex-1 flex-col">
         {!fullBleed && <MobileTop />}
         <main className={cx("flex-1", !fullBleed && "pb-[calc(72px+env(safe-area-inset-bottom,0px))] lg:pb-0")}>{view}</main>
@@ -219,6 +222,9 @@ function Sidebar({ current }: { current: string }) {
         })}
       </nav>
       <div className="mt-auto space-y-3 border-t border-ink-3 pt-4">
+        <div className="px-2.5">
+          <SyncDot dark />
+        </div>
         <div className="flex gap-1">
           <button type="button" onClick={() => navigate("/projects")} className={cx("flex flex-1 items-center gap-2 rounded-md px-2.5 py-2 text-[13px] font-semibold", current === "/projects" ? "bg-ink-2 text-white" : "text-white/60 hover:text-white")}>
             <Icon name="folder" size={16} /> Projekty
@@ -242,6 +248,7 @@ function MobileTop() {
       <div className="min-w-0 flex-1">
         <ProjectSwitch />
       </div>
+      <SyncDot dark />
     </div>
   );
 }
@@ -270,5 +277,52 @@ function BottomNav({ current, onMore }: { current: string; onMore: () => void })
         Více
       </button>
     </nav>
+  );
+}
+
+function SyncDot({ dark }: { dark?: boolean }) {
+  const st = useSyncStatus();
+  const on = useApp((s) => s.settings.sync?.enabled);
+  if (!on || st.state === "off") return null;
+  const color = st.state === "error" || st.state === "unavailable" ? "bg-bad" : st.state === "syncing" ? "bg-amber-400 animate-pulse" : "bg-emerald-500";
+  const label = st.state === "syncing" ? "Synchronizuji…" : st.state === "error" ? "Chyba synchronizace" : st.state === "unavailable" ? "Synchronizace nedostupná" : "Synchronizováno";
+  return (
+    <button type="button" onClick={() => navigate("/settings")} title={st.message ?? label} className={cx("flex items-center gap-1.5 text-[12px] font-semibold", dark ? "text-white/60" : "text-mute")}>
+      <span className={cx("h-2 w-2 rounded-full", color)} />
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+}
+
+/** Úzká lišta pro editor a tvorbu – víc místa pro náhled */
+function Rail({ current }: { current: string }) {
+  return (
+    <aside className="sticky top-0 hidden h-screen w-[60px] shrink-0 flex-col items-center gap-1 bg-ink py-4 text-white lg:flex">
+      <button type="button" onClick={() => navigate("/")} className="mb-3" aria-label="Přehled">
+        <svg width="28" height="28" viewBox="0 0 26 26" aria-hidden="true">
+          <rect x="1" y="1" width="24" height="24" rx="5" fill="#2A4BFF" />
+          <path d="M8 19V7h6a4 4 0 0 1 0 8H8" stroke="#fff" strokeWidth="2.6" fill="none" strokeLinejoin="round" />
+          <circle cx="19" cy="19" r="2" fill="#fff" />
+        </svg>
+      </button>
+      {NAV.map((n) => (
+        <button
+          key={n.to}
+          type="button"
+          title={n.label}
+          aria-label={n.label}
+          onClick={() => navigate(n.to)}
+          className={cx("flex h-10 w-10 items-center justify-center rounded-md", current === n.to ? "bg-white text-ink" : "text-white/60 hover:bg-ink-2 hover:text-white")}
+        >
+          <Icon name={n.icon} size={18} />
+        </button>
+      ))}
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <SyncDot dark />
+        <button type="button" title="Nastavení" aria-label="Nastavení" onClick={() => navigate("/settings")} className="flex h-10 w-10 items-center justify-center rounded-md text-white/60 hover:bg-ink-2 hover:text-white">
+          <Icon name="settings" size={18} />
+        </button>
+      </div>
+    </aside>
   );
 }

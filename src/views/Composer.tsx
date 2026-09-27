@@ -3,7 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { GraphicCanvas } from "@/components/GraphicCanvas";
 import { DataForm } from "@/components/DataForm";
 import { AiPanel } from "@/components/AiPanel";
-import { Badge, Button, cx, Icon, IconButton, Label, Modal, Segmented, Select, toast, Textarea } from "@/components/ui";
+import { ScreenshotImport } from "@/components/ScreenshotImport";
+import { Badge, Button, cx, Icon, IconButton, Label, Modal, Segmented, Select, toast, Textarea, useWindowHeight, ZoomControl } from "@/components/ui";
 import { applyMapping, autoMap, parseJson } from "@/lib/data-import";
 import { canShareFiles, downloadBlob, fileName, renderPages, shareFiles, zipFiles, type ImageType } from "@/lib/export";
 import { FORMATS, FORMAT_ORDER } from "@/lib/formats";
@@ -34,6 +35,8 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
   const [dsOpen, setDsOpen] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [zoom, setZoom] = useState<"fit" | number>("fit");
+  const winH = useWindowHeight();
 
   useEffect(() => {
     const m = window.matchMedia("(min-width: 1024px)");
@@ -194,8 +197,13 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
             {FORMATS[f].short}
           </button>
         ))}
+        {isDesktop && (
+          <span className="ml-3">
+            <ZoomControl value={zoom} onChange={setZoom} />
+          </span>
+        )}
       </div>
-      <GraphicCanvas env={env} interaction={role === "viewer" ? undefined : interaction} maxHeight={isDesktop ? 720 : 420} className="w-full" />
+      <GraphicCanvas env={env} interaction={role === "viewer" ? undefined : interaction} maxHeight={isDesktop ? Math.max(420, winH - 57 - 120) : 420} zoom={isDesktop && zoom !== "fit" ? zoom : undefined} className="w-full" />
       <div className="flex items-center gap-3 text-[12px] text-mute">
         <span className="tabular-nums">
           {FORMATS[format].label} · {FORMATS[format].w}×{FORMATS[format].h}
@@ -218,6 +226,7 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
 
   const dataPanel = (
     <div className="flex flex-col gap-4">
+      {role !== "viewer" && <ScreenshotImport template={template} teams={project.teams} onData={(d) => setData((cur) => ({ ...cur, ...d }))} />}
       <div className="flex flex-wrap gap-2">
         <Button size="sm" icon="database" onClick={() => setDsOpen(true)} disabled={role === "viewer"}>
           Načíst data
@@ -281,14 +290,14 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
       </div>
 
       {isDesktop ? (
-        <div className="grid grid-cols-[360px_minmax(0,1fr)_320px] gap-0">
+        <div className="grid grid-cols-[320px_minmax(0,1fr)_290px] gap-0 xl:grid-cols-[360px_minmax(0,1fr)_320px]">
           <aside className="h-[calc(100vh-57px)] overflow-y-auto border-r border-line bg-white p-5">
             <div className="mb-4">
               <Segmented value={tab === "layout" ? "layout" : "data"} onChange={(v) => setTab(v as Tab)} options={[{ value: "data", label: "Data" }, { value: "layout", label: "Rozložení" }]} />
             </div>
             {tab === "layout" ? layoutPanel : dataPanel}
           </aside>
-          <main className="flex h-[calc(100vh-57px)] items-start justify-center overflow-y-auto bg-paper px-8 py-6">{preview}</main>
+          <main className="h-[calc(100vh-57px)] overflow-auto bg-paper px-6 py-4">{preview}</main>
           <aside className="h-[calc(100vh-57px)] space-y-6 overflow-y-auto border-l border-line bg-white p-5">
             {exportPanel}
             <div className="border-t border-line pt-5">{aiPanel}</div>

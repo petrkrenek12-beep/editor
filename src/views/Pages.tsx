@@ -216,7 +216,7 @@ export function TemplatesPage() {
                 Import JSON
               </FileButton>
               <Button icon="layers" onClick={() => setPsdOpen(true)}>
-                Import z PSD
+                Import z Affinity / PSD
               </Button>
               <Button variant="primary" icon="plus" onClick={create}>
                 Nová šablona
@@ -343,12 +343,17 @@ function PsdImport({ open, onClose, projectId }: { open: boolean; onClose: () =>
     setBusy(true);
     setRes(null);
     try {
-      const r = await importPsd(files[0], projectId, { textToFields: toFields });
+      const f = files[0];
+      if (/\.(af|afdesign|afphoto|afpub)$/i.test(f.name))
+        throw new Error("soubory Affinity (.af) nejdou přečíst mimo Affinity – formát je uzavřený. V Affinity dejte Soubor → Exportovat → SVG (doporučeno) nebo PSD a nahrajte ten soubor.");
+      const r = /\.svg$/i.test(f.name) || f.type === "image/svg+xml"
+        ? await (await import("@/lib/svg-import")).importSvg(f, projectId, { textToFields: toFields })
+        : await importPsd(f, projectId, { textToFields: toFields });
       for (const a of r.assets) await upsert("assets", a);
       await upsert("templates", r.template);
       setRes(r);
     } catch (e) {
-      toast("PSD se nepodařilo načíst: " + (e as Error).message, "bad");
+      toast("Import se nepodařil: " + (e as Error).message, "bad");
     } finally {
       setBusy(false);
     }
@@ -357,7 +362,7 @@ function PsdImport({ open, onClose, projectId }: { open: boolean; onClose: () =>
     <Modal
       open={open}
       onClose={onClose}
-      title="Import šablony z PSD"
+      title="Import šablony z Affinity / Photoshopu"
       footer={
         res ? (
           <>
@@ -374,19 +379,24 @@ function PsdImport({ open, onClose, projectId }: { open: boolean; onClose: () =>
       {!res ? (
         <div className="space-y-4">
           <p className="text-sm text-mute">
-            Nahrajte svou hotovou grafiku jako PSD. Každá vrstva se vloží na stejné místo, texty se stanou poli formuláře a fotka (vrstva „DSC…“, „foto…“) polem pro fotku.
+            Nahrajte hotovou grafiku jako <b>SVG</b> nebo <b>PSD</b>. Každá vrstva se vloží na stejné místo, texty se stanou poli formuláře a fotka (vrstva „DSC…“, „foto…“) polem pro fotku.
           </p>
-          <ul className="list-disc space-y-1 pl-5 text-[13px] text-mute">
-            <li>Affinity: Soubor → Exportovat → PSD, zapnout „Zachovat upravitelnost“.</li>
-            <li>Photoshop: Uložit jako → PSD.</li>
-            <li>Efekty vrstev (fx) se nepřenáší – takové vrstvy před exportem převeďte na pixely (rastrovat).</li>
-          </ul>
+          <div className="rounded-md bg-paper p-3 text-[13px]">
+            <p className="mb-1 font-semibold">Affinity (doporučeno SVG):</p>
+            <ol className="list-decimal space-y-0.5 pl-5 text-mute">
+              <li>Soubor → Exportovat → <b>SVG</b></li>
+              <li>Předvolba „SVG (pro export)“, v Další: <b>Rastrovat: Nic</b>, <b>Převést text na křivky: vypnuto</b></li>
+              <li>Exportovat a soubor .svg nahrát sem</li>
+            </ol>
+            <p className="mt-2 text-mute">SVG zachová přechody, masky i efekty. Soubor .afdesign přímo načíst nejde – formát Affinity je uzavřený.</p>
+          </div>
+          <p className="text-[13px] text-mute">Photoshop: Uložit jako → PSD. Efekty vrstev (fx) se z PSD nepřenáší – takové vrstvy rastrujte.</p>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={toFields} onChange={(e) => setToFields(e.target.checked)} className="h-4 w-4 accent-[#2A4BFF]" />
             Texty převést na pole formuláře
           </label>
-          <FileButton variant="primary" size="lg" accept=".psd,image/vnd.adobe.photoshop,application/octet-stream" onFile={run} disabled={busy}>
-            {busy ? "Načítám vrstvy…" : "Vybrat PSD soubor"}
+          <FileButton variant="primary" size="lg" accept=".svg,image/svg+xml,.psd,image/vnd.adobe.photoshop,.afdesign,.af" onFile={run} disabled={busy}>
+            {busy ? "Načítám vrstvy…" : "Vybrat soubor SVG / PSD"}
           </FileButton>
         </div>
       ) : (

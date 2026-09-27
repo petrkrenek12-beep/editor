@@ -13,7 +13,7 @@ DATA  →  TEMPLATE  →  RENDERER  →  EXPORT
 - **Projekty** (např. Obasketu.cz → NBL, NBA, ŽBL, Reprezentace) – každý má vlastní šablony, brand kit, týmy, data a grafiky
 - **Brand kit** – loga, 6 barev, 3 fonty (Google Fonts s češtinou nebo vlastní TTF/OTF/WOFF), pozadí, grafické prvky, **zámky** pro editory
 - **16 demo šablon**: výsledek, pozvánka, zápasový den, sestava, přestup, nový hráč, statistiky hráče, tabulka, konečné pořadí, jubileum, citát, breaking news, carousel výsledků, story, reels cover, program kola
-- **Import z PSD** – hotovou grafiku z Photoshopu/Affinity (Export → PSD) převede na šablonu: vrstvy na stejných místech, texty jako pole formuláře, fotka jako pole pro fotku
+- **Import z Affinity (SVG) a PSD** – hotovou grafiku převede na šablonu (Affinity: Soubor → Exportovat → SVG, text nepřevádět na křivky): vrstvy na stejných místech, texty jako pole formuláře, fotka jako pole pro fotku
 - **Vlastní obrázky ve šabloně** – čáry, pozadí řádků, textury: *Editor → Vlastní obrázek* nebo u prvku *Nahrát obrázek*; libovolnou vrstvu lze přepnout na „fotku“ nebo „logo týmu“; **přechod do průhledna** (maska) pro fotky a pozadí
 - **Editor šablon** – vrstvy, datová pole, vlastnosti, tažení a změna velikosti, přichytávání na střed, undo/redo, kotvení pro formáty, úpravy jen pro konkrétní formát
 - **Automatické rozvržení** – text se zmenší, aby se vešel (nikdy nepřeteče), týmy se poznají podle názvu/zkratky/aliasu a načtou logo i barvy, seznamy řádků se samy zmenší/rozprostřou
@@ -21,6 +21,7 @@ DATA  →  TEMPLATE  →  RENDERER  →  EXPORT
 - **Fotky** – nahrání, zoom, posun výřezu tažením v náhledu, **odstranění pozadí** (AI v prohlížeči zdarma, nebo remove.bg)
 - **Hromadné generování** z CSV (mapování sloupců, fotky podle názvu souboru) → ZIP
 - **Carousel** – libovolný počet zápasů se automaticky rozdělí na slidy
+- **Vyplnění ze screenshotu** – Ctrl+V / fotka screenshotu z Livesportu či Flashscore → AI vyplní týmy, skóre, časy, program i hráče zápasu (potřebuje `ANTHROPIC_API_KEY`)
 - **AI asistent** – z věty „Nymburk porazil Brno 92:78…“ navrhne titulky, teaser, text příspěvku a vyplní pole. Design nemění.
 - **Role** Administrátor / Editor / Pouze prohlížení
 - **Export** PNG, JPG, 1× nebo 2×, všechny formáty do ZIP, na mobilu „Sdílet → Uložit obrázek“
@@ -41,6 +42,17 @@ npm install
 npm run dev     # http://localhost:3000
 npm run build   # produkční build
 ```
+
+## Synchronizace PC ↔ mobil (doporučeno)
+
+1. Ve Vercelu otevřete projekt → záložka **Storage** → **Create** → **Blob** → připojit k projektu (přidá `BLOB_READ_WRITE_TOKEN`).
+2. **Settings → Environment Variables** → přidat `APP_PASSWORD` = vaše heslo.
+3. **Deployments → Redeploy**.
+4. V aplikaci **Nastavení → Synchronizace mezi zařízeními** zadat heslo a Zapnout – **nejdřív na počítači**, pak na mobilu.
+
+Změny se ukládají do cloudu automaticky po pár sekundách a načítají se při otevření aplikace.
+Při souběžné úpravě stejné šablony na dvou zařízeních vyhrává novější úprava.
+Pokud Blob úložiště vytvoříte jako soukromé (private), přidejte ještě `BLOB_ACCESS=private`.
 
 ## Kde jsou data
 

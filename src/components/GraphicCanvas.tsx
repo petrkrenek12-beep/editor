@@ -27,12 +27,15 @@ export function GraphicCanvas({
   env,
   interaction,
   maxHeight,
+  zoom,
   className,
   onRendered,
 }: {
   env: RenderEnv;
   interaction?: Interaction;
   maxHeight?: number;
+  /** pevné měřítko (1 = 100 %) místo přizpůsobení */
+  zoom?: number;
   className?: string;
   onRendered?: (c: HTMLCanvasElement) => void;
 }) {
@@ -54,7 +57,7 @@ export function GraphicCanvas({
     return () => ro.disconnect();
   }, []);
 
-  const scale = boxW ? Math.min(boxW / fmt.w, (maxHeight ?? Infinity) / fmt.h) : 0;
+  const scale = zoom ? zoom : boxW ? Math.min(boxW / fmt.w, (maxHeight ?? Infinity) / fmt.h) : 0;
   const dispW = Math.round(fmt.w * scale);
   const dispH = Math.round(fmt.h * scale);
 
@@ -194,10 +197,10 @@ export function GraphicCanvas({
   const selEditable = sel && interaction?.editable(sel.id) && !interaction.panMode?.(sel.id);
 
   return (
-    <div ref={wrap} className={cx("relative flex w-full justify-center", className)}>
+    <div ref={wrap} className={cx("relative flex w-full", zoom && dispW > boxW ? "justify-start" : "justify-center", className)}>
       <div
         data-stage
-        className="relative touch-none select-none overflow-hidden rounded-[3px] bg-ink/10 shadow-[0_20px_50px_-20px_rgba(14,18,24,0.45)]"
+        className="relative shrink-0 touch-none select-none overflow-hidden rounded-[3px] bg-ink/10 shadow-[0_20px_50px_-20px_rgba(14,18,24,0.45)]"
         style={{ width: dispW || "100%", height: dispH || 200 }}
         onPointerDown={onDown}
         onPointerMove={onMove}

@@ -9,6 +9,8 @@ import { navigate } from "@/lib/router";
 import { TARGET } from "@/lib/runtime";
 import { deleteProject, exportProject, importProject, uid, updateSettings, upsert, useApp, useCurrentProject, useCurrentUser } from "@/lib/store";
 import type { Project, Role, User } from "@/lib/types";
+import { disableSync, enableSync, syncNow, syncServerInfo, useSyncStatus } from "@/lib/sync";
+import { HAS_SERVER } from "@/lib/runtime";
 
 export function ProjectsPage() {
   const projects = useApp((s) => s.projects);
@@ -189,6 +191,7 @@ export function SettingsPage() {
     <div className="mx-auto max-w-[900px] px-4 py-6 lg:px-8 lg:py-8">
       <PageHeader title="Nastavení" />
       <div className="space-y-6">
+        <SyncCard />
         <Card className="p-5">
           <SectionTitle>Uživatelé a role</SectionTitle>
           <p className="mb-4 text-sm text-mute">
@@ -285,5 +288,99 @@ function RoleCard({ role, items }: { role: string; items: string[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+export function SyncCard() {
+  const cfg = useApp((s) => s.settings.sync);
+  const st = useSyncStatus();
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState<{ blob: boolean; password: boolean } | null | undefined>(undefined);
+  React.useEffect(() => {
+    syncServerInfo().then(setInfo);
+  }, []);
+  if (!HAS_SERVER)
+    return (
+      <Card className="p-5">
+        <SectionTitle>Synchronizace mezi zařízeními</SectionTitle>
+        <p className="text-sm text-mute">V živé ukázce není k dispozici. Funguje ve verzi nasazené na Vercelu. Zatím použijte Projekty → Záloha a na druhém zařízení Obnovit zálohu.</p>
+      </Card>
+    );
+  const ready = info?.blob && info?.password;
+  return (
+    <Card className="p-5">
+      <SectionTitle
+        action={
+          cfg?.enabled && (
+            <Badge tone={st.state === "error" ? "warn" : st.state === "syncing" ? "signal" : "ok"}>
+              {st.state === "syncing" ? "synchronizuji" : st.state === "error" ? "chyba" : "zapnuto"}
+            </Badge>
+          )
+        }
+      >
+        Synchronizace mezi zařízeními
+      </SectionTitle>
+      <p className="mb-3 text-sm text-mute">Šablony, brand kit, týmy, datové zdroje, fotky a grafiky budou stejné na PC i na mobilu. Změny se ukládají automaticky během pár sekund.</p>
+      {info === undefined ? null : !ready ? (
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-[13px] text-ink">
+          <p className="font-semibold">Jednorázové nastavení ve Vercelu:</p>
+          <ol className="list-decimal space-y-1 pl-5">
+            <li className={info?.blob ? "text-ok line-through" : ""}>Projekt → záložka <b>Storage</b> → <b>Create</b> → <b>Blob</b> → připojit k projektu.</li>
+            <li className={info?.password ? "text-ok line-through" : ""}>
+              Settings → Environment Variables → přidat <code className="rounded bg-white px-1">APP_PASSWORD</code> = vaše heslo.
+            </li>
+            <li>Deployments → u posledního nasazení <b>Redeploy</b>.</li>
+          </ol>
+        </div>
+      ) : cfg?.enabled ? (
+        <div className="space-y-3">
+          <p className="text-sm">
+            {st.state === "syncing"
+              ? st.progress ?? "Synchronizuji…"
+              : st.state === "error"
+                ? <span className="text-bad">{st.message}</span>
+                : cfg.lastSync
+                  ? `Naposledy synchronizováno ${new Date(cfg.lastSync).toLocaleString("cs-CZ", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+                  : "Čeká na první synchronizaci."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button icon="refresh" onClick={() => syncNow()} disabled={st.state === "syncing"}>
+              Synchronizovat teď
+            </Button>
+            <Button variant="ghost" onClick={() => disableSync()}>
+              Vypnout na tomto zařízení
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="sync-pw" hint="stejné jako APP_PASSWORD ve Vercelu">
+            Heslo
+          </Label>
+          <div className="flex gap-2">
+            <Input id="sync-pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
+            <Button
+              variant="primary"
+              disabled={!pw || busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await enableSync(pw);
+                  toast("Synchronizace zapnuta");
+                } catch (e) {
+                  toast((e as Error).message, "bad");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {busy ? "Připojuji…" : "Zapnout"}
+            </Button>
+          </div>
+          <p className="text-[12px] text-mute">Tip: zapněte nejdřív na počítači, kde máte upravené šablony – pak na mobilu. Při prvním připojení mobil převezme data z cloudu.</p>
+        </div>
+      )}
+    </Card>
   );
 }

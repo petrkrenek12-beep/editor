@@ -146,18 +146,35 @@ export function initStore() {
 
 // ── zápisy ──────────────────────────────────────────────────
 
-export async function upsert<K extends CollectionName>(c: K, item: CollectionMap[K]) {
+// ── sledování změn pro synchronizaci ──────────────────────────
+const changeListeners = new Set<() => void>();
+export function onLocalChange(fn: () => void) {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
+const notifyChange = () => changeListeners.forEach((f) => f());
+
+/** Čas poslední změny položky (pro sloučení mezi zařízeními) */
+export const modTime = (x: unknown) => ((x as { _mod?: number })?._mod ?? 0);
+
+export async function upsert<K extends CollectionName>(c: K, item: CollectionMap[K], opts?: { remote?: boolean }) {
+  const stamped = opts?.remote ? item : ({ ...item, _mod: Date.now() } as CollectionMap[K]);
   const list = state[c] as unknown as CollectionMap[K][];
-  const idx = list.findIndex((x) => x.id === item.id);
-  const next = idx >= 0 ? list.map((x) => (x.id === item.id ? item : x)) : c === "graphics" ? [item, ...list] : [...list, item];
+  const idx = list.findIndex((x) => x.id === stamped.id);
+  const next = idx >= 0 ? list.map((x) => (x.id === stamped.id ? stamped : x)) : c === "graphics" ? [stamped, ...list] : [...list, stamped];
   setState({ [c]: next } as Partial<AppState>);
-  await adapter?.put(c, item);
+  await adapter?.put(c, stamped);
+  if (!opts?.remote) notifyChange();
 }
 
-export async function remove(c: CollectionName, id: string) {
+export async function remove(c: CollectionName, id: string, opts?: { remote?: boolean }) {
   const list = state[c] as unknown as { id: string }[];
   setState({ [c]: list.filter((x) => x.id !== id) } as Partial<AppState>);
   await adapter?.remove(c, id);
+  if (!opts?.remote) {
+    await updateSettings({ tombstones: { ...(state.settings.tombstones ?? {}), [`${c}:${id}`]: Date.now() } });
+    notifyChange();
+  }
 }
 
 export async function updateSettings(patch: Partial<Settings>) {

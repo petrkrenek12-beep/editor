@@ -402,3 +402,29 @@ export function FileButton({ accept, onFile, children, icon = "upload", variant 
     </>
   );
 }
+
+/** Výška okna (pro náhled přes celou výšku obrazovky) */
+export function useWindowHeight() {
+  const [h, setH] = useState(typeof window !== "undefined" ? window.innerHeight : 900);
+  useEffect(() => {
+    const on = () => setH(window.innerHeight);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return h;
+}
+
+export function ZoomControl({ value, onChange }: { value: "fit" | number; onChange: (v: "fit" | number) => void }) {
+  return (
+    <Segmented
+      size="sm"
+      value={String(value)}
+      onChange={(v) => onChange(v === "fit" ? "fit" : Number(v))}
+      options={[
+        { value: "fit", label: "Přizpůsobit", title: "Celá grafika na obrazovku" },
+        { value: "0.75", label: "75 %" },
+        { value: "1", label: "100 %", title: "Skutečná velikost (1 px = 1 px)" },
+      ]}
+    />
+  );
+}

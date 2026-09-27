@@ -18,7 +18,7 @@ await build({
   jsx: "automatic",
   outfile: path.join(out, "app.js"),
   alias: { "@": path.join(root, "src") },
-  external: ["@imgly/background-removal"],
+  external: ["@imgly/background-removal", "@vercel/blob/client"],
   define: {
     "process.env.NODE_ENV": '"production"',
     "process.env.NEXT_PUBLIC_PRESETKA_TARGET": '"artifact"',

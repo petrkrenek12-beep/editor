@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { GraphicCanvas } from "@/components/GraphicCanvas";
 import { DataForm, AssetLibrary, saveImageAsset } from "@/components/DataForm";
 import { ColorField, FillField } from "@/components/ColorField";
+import { useWindowHeight, ZoomControl } from "@/components/ui";
 import { Badge, Button, cx, FileButton, Icon, IconButton, Input, Label, NumberInput, Segmented, Select, Textarea, Toggle, toast, useConfirm } from "@/components/ui";
 import { FONT_LIBRARY } from "@/lib/fonts";
 import { FORMATS, FORMAT_ORDER } from "@/lib/formats";
@@ -32,6 +33,8 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
   const [sel, setSel] = useState<string | null>(null);
   const [childSel, setChildSel] = useState<string | null>(null);
   const [left, setLeft] = useState<LeftTab>("layers");
+  const [zoom, setZoom] = useState<"fit" | number>("fit");
+  const winH = useWindowHeight();
   const { confirm, node: confirmNode } = useConfirm();
 
   useEffect(() => {
@@ -262,7 +265,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         </div>
       </div>
 
-      <div className="grid flex-1 grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_320px]">
+      <div className="grid flex-1 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)_300px]">
         {/* LEVÝ PANEL */}
         <aside className="order-2 border-line bg-white lg:order-1 lg:h-[calc(100vh-57px)] lg:overflow-y-auto lg:border-r">
           <div className="sticky top-0 z-10 flex border-b border-line bg-white">
@@ -349,7 +352,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         </aside>
 
         {/* NÁHLED */}
-        <main className="order-1 flex flex-col items-center gap-3 bg-paper px-4 py-5 lg:order-2 lg:h-[calc(100vh-57px)] lg:overflow-y-auto lg:px-8">
+        <main className="order-1 flex flex-col items-center gap-3 bg-paper px-4 py-4 lg:order-2 lg:h-[calc(100vh-57px)] lg:overflow-auto lg:px-6">
           <div className="flex flex-wrap items-center justify-center gap-1.5">
             {FORMAT_ORDER.filter((f) => t.formats.includes(f)).map((f) => (
               <button
@@ -368,7 +371,10 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
               ? "Základní formát – ostatní formáty se z něj přepočítají podle kotvení prvků."
               : "Úprava v tomto formátu se uloží jen pro něj (ostatní formáty zůstanou automatické)."}
           </p>
-          <GraphicCanvas env={env} interaction={interaction} maxHeight={680} className="w-full" />
+          <div className="flex w-full justify-center">
+            <ZoomControl value={zoom} onChange={setZoom} />
+          </div>
+          <GraphicCanvas env={env} interaction={interaction} maxHeight={Math.max(420, winH - 57 - 170)} zoom={zoom !== "fit" ? zoom : undefined} className="w-full" />
           {overlaps.length > 0 && (
             <div className="max-w-xl rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-warn">
               Překrývající se texty v {FORMATS[format].short}: {overlaps.slice(0, 3).join(", ")}
