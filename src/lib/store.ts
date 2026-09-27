@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, upgradeTemplates, BG_ASSET } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, upgradeTemplates, BG_ASSET } from "./demo/seed";
 
 export interface AppState {
   ready: boolean;
@@ -103,6 +103,11 @@ export function initStore() {
     }
     // migrace demo obsahu (verze 2: šablony podle PSD uživatele + pozadí OBASKETU)
     if ((settings?.seedVersion ?? 1) < SEED_VERSION && projects.some((p) => p.id === "p-nbl")) {
+      if (!assets.some((x) => x.id === "demo-star")) {
+        const st = starAsset();
+        await a.put("assets", st);
+        assets = [...assets, st];
+      }
       if (!assets.some((x) => x.id === BG_ASSET)) {
         const bg = bgAsset();
         await a.put("assets", bg);
@@ -120,6 +125,7 @@ export function initStore() {
         for (const nt of upgradeTemplates(pid)) {
           const old = templates.find((t) => t.id === nt.id);
           if (old && !old.builtIn) continue; // uživatel šablonu upravil – nepřepisovat
+          (nt as { _mod?: number })._mod = Date.now();
           await a.put("templates", nt);
           templates = [...templates.filter((t) => t.id !== nt.id), nt];
         }

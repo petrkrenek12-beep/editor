@@ -132,6 +132,8 @@ function collect(env: RenderEnv) {
       if (r.url) urls.add(r.url);
       if (r.team || el.fallback === "monogram") fonts.add(`400 60px ${fontStack(env.brand.fonts.display.family)}`);
     } else if (el.type === "text") {
+      const iu = iconUrl(el, env, ctx);
+      if (iu) urls.add(iu);
       const fam = fontFamily(el, env.brand);
       fonts.add(`${el.italic ? "italic " : ""}${el.weight ?? 400} 60px ${fontStack(fam)}`);
     } else if (el.type === "list") {
@@ -224,6 +226,7 @@ function parseRuns(text: string, highlight: boolean): Run[] {
 interface Word {
   text: string;
   hl: boolean;
+  icon?: boolean;
   w: number;
   space: boolean; // mezera před slovem
 }
@@ -278,7 +281,12 @@ function lineWidth(line: Word[], spaceW: number) {
   return line.reduce((a, w, i) => a + w.w + (i && w.space ? spaceW : 0), 0);
 }
 
-function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext) {
+function iconUrl(el: TextElement, env: RenderEnv, rc: RenderContext) {
+  if (!el.icon?.src) return undefined;
+  return resolveImage({ id: "icon", name: "icon", type: "image", frame: el.frame, src: el.icon.src } as ImageElement, env, rc).url;
+}
+
+function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, images?: Images) {
   let content = interpolate(el.text, rc);
   if (el.uppercase) content = content.toLocaleUpperCase("cs-CZ");
   if (!content.trim()) return;
@@ -297,7 +305,11 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
   const maxLines = el.maxLines ?? 3;
 
   const runs = parseRuns(content, !!el.highlight);
-  const tokens: { text: string; hl: boolean; space: boolean }[] = [];
+  const tokens: { text: string; hl: boolean; space: boolean; icon?: boolean }[] = [];
+  // ikona před textem (např. vlastní hvězda u hráče zápasu)
+  const iUrl = iconUrl(el, env, rc);
+  const iconImg = iUrl ? images?.get(iUrl) ?? null : null;
+  if (iconImg) tokens.push({ text: "\u2022", hl: false, space: false, icon: true });
   let pendingSpace = false;
   for (const r of runs) {
     const parts = r.text.split(/(\s+)/);
@@ -316,7 +328,8 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
   const layoutAt = (size: number) => {
     ctx.font = `${style}${weight} ${size}px ${fontStack(family)}`;
     const ls = lsEm * size;
-    const words: Word[] = tokens.map((t) => ({ ...t, w: t.text === "\n" ? 0 : measure(ctx, t.text, ls) }));
+    const iconW = iconImg ? size * (el.icon?.scale ?? 1) * (iconImg.naturalWidth / iconImg.naturalHeight) + size * (el.icon?.gap ?? 0.2) : 0;
+    const words: Word[] = tokens.map((t) => ({ ...t, w: t.icon ? iconW : t.text === "\n" ? 0 : measure(ctx, t.text, ls) }));
     const spaceW = ctx.measureText(" ").width + ls;
     const lines = wrap(words, availW, spaceW);
     const lh = size * lhMul;
@@ -414,6 +427,17 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
     const y = top + capH + i * lh;
     line.forEach((w, j) => {
       if (j && w.space) x += spaceW;
+      if (w.icon && iconImg) {
+        const ih = size * (el.icon?.scale ?? 1);
+        const iw = ih * (iconImg.naturalWidth / iconImg.naturalHeight);
+        ctx.save();
+        ctx.shadowColor = "transparent";
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(iconImg, x, y - capH / 2 - ih / 2, iw, ih);
+        ctx.restore();
+        x += w.w;
+        return;
+      }
       if (el.strokeText) {
         ctx.save();
         ctx.lineJoin = "round";
@@ -564,6 +588,22 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   const source = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale);
+  // záře kolem loga (jako Outer Glow v Affinity): ze šablony, nebo zaškrtnutím u týmu
+  const teamKey = /^team:\{\{([^}|]+)/.exec(el.src.trim())?.[1]?.trim();
+  const glow = el.glow ?? (teamKey && (rc.row ? rc.row[`${teamKey}__glow`] : rc.data[`${teamKey}__glow`]) ? { color: "#FFFFFF", radius: 1, intensity: 0.5 } : undefined);
+  if (glow) {
+    ctx.save();
+    ctx.shadowColor = "transparent";
+    const halo = processedImage(img, resolveColor(glow.color, env.brand, rc), false);
+    const r = Math.max(0.6, glow.radius * s);
+    ctx.globalAlpha *= Math.min(1, glow.intensity);
+    const steps = Math.max(8, Math.round(r * 6));
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      ctx.drawImage(halo, dx + Math.cos(a) * r, dy + Math.sin(a) * r, dw, dh);
+    }
+    ctx.restore();
+  }
   ctx.drawImage(source, dx, dy, dw, dh);
   ctx.restore();
 }
@@ -643,7 +683,7 @@ function drawElement(
         break;
       }
       case "text":
-        drawText(ctx, el, frame, s, env, rc);
+        drawText(ctx, el, frame, s, env, rc, images);
         break;
       case "image":
         drawImage(ctx, el, frame, s, env, rc, images);

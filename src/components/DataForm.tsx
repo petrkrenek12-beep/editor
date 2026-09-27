@@ -56,7 +56,13 @@ export function DataForm({
                 ))}
               </Select>
             ) : f.type === "team" ? (
-              <TeamInput id={id} project={project} assets={assets} value={String(v ?? "")} disabled={ro} onChange={(x) => set(f.key, x)} />
+              <>
+                <TeamInput id={id} project={project} assets={assets} value={String(v ?? "")} disabled={ro} onChange={(x) => set(f.key, x)} />
+                <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-[12px] text-mute">
+                  <input type="checkbox" className="h-3.5 w-3.5 accent-[#2A4BFF]" checked={!!data[`${f.key}__glow`]} disabled={ro} onChange={(e) => set(`${f.key}__glow`, e.target.checked ? "1" : "")} />
+                  Záře kolem loga (1 px, bílá) – pro špatně čitelná loga
+                </label>
+              </>
             ) : f.type === "image" ? (
               <ImageField id={id} value={asImageValue(v)} disabled={ro} assets={assets} project={project} onChange={(x) => set(f.key, x)} />
             ) : f.type === "list" ? (
@@ -71,18 +77,87 @@ export function DataForm({
   );
 }
 
-function TeamInput({ id, value, onChange, project, assets, disabled }: { id: string; value: string; onChange: (v: string) => void; project: Project; assets: Record<string, string>; disabled?: boolean }) {
-  const team = findTeam(project.teams, value);
+function TeamLogo({ team, assets, size = 40 }: { team?: Project["teams"][number]; assets: Record<string, string>; size?: number }) {
   return (
-    <div className="flex items-center gap-2">
-      <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line font-cond text-[11px] font-bold"
-        style={{ background: team?.logo ? "#fff" : team?.color ?? "#EEF0F3", color: team && !team.logo ? "#fff" : "#5E6977" }}
-        title={team ? `Rozpoznáno: ${team.name}` : "Tým nenalezen – použije se monogram"}
-      >
-        {team?.logo && assets[team.logo] ? <img src={assets[team.logo]} alt="" className="h-full w-full object-contain p-0.5" /> : team?.short ?? "?"}
+    <div
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line font-cond text-[11px] font-bold"
+      style={{ width: size, height: size, background: team?.logo ? "#fff" : team?.color ?? "#EEF0F3", color: team && !team.logo ? "#fff" : "#5E6977" }}
+    >
+      {team?.logo && assets[team.logo] ? <img src={assets[team.logo]} alt="" className="h-full w-full object-contain p-0.5" /> : team?.short ?? "?"}
+    </div>
+  );
+}
+
+/** Výběr týmu: rozbalovací seznam všech týmů + možnost psát (filtruje) */
+export function TeamInput({ id, value, onChange, project, assets, disabled }: { id: string; value: string; onChange: (v: string) => void; project: Project; assets: Record<string, string>; disabled?: boolean }) {
+  const team = findTeam(project.teams, value);
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const box = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  const norm = (x: string) => x.toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+  const list = project.teams.filter((t) => !q || [t.name, t.short, ...t.aliases].some((n) => norm(n).includes(norm(q))));
+  return (
+    <div ref={box} className="relative flex items-center gap-2">
+      <div title={team ? `Rozpoznáno: ${team.name}` : "Tým nenalezen – použije se monogram"}>
+        <TeamLogo team={team} assets={assets} />
       </div>
-      <Input id={id} list="team-list" disabled={disabled} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Začněte psát název týmu" />
+      <div className="relative flex-1">
+        <Input
+          id={id}
+          disabled={disabled}
+          value={value}
+          onFocus={() => setQ("")}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setQ(e.target.value);
+            setOpen(true);
+          }}
+          placeholder="Vyberte nebo napište tým"
+          className="pr-10"
+          autoComplete="off"
+        />
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            setQ("");
+            setOpen((o) => !o);
+          }}
+          className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded text-mute hover:bg-paper hover:text-ink"
+          aria-label="Zobrazit všechny týmy"
+        >
+          <Icon name="chevronDown" size={18} />
+        </button>
+        {open && (
+          <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-72 overflow-y-auto rounded-md border border-line bg-white py-1 shadow-pop">
+            {list.length ? (
+              list.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(t.name);
+                    setOpen(false);
+                  }}
+                  className={cx("flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-sm hover:bg-signal-soft", team?.id === t.id && "bg-paper font-semibold")}
+                >
+                  <TeamLogo team={t} assets={assets} size={28} />
+                  <span className="truncate">{t.name}</span>
+                  <span className="ml-auto text-[11px] text-mute">{t.short}</span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-[13px] text-mute">Žádný tým neodpovídá. Nový tým přidáte v Datové zdroje → Týmy.</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

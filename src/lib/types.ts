@@ -136,6 +136,8 @@ export interface TextElement extends BaseElement {
   /** Svislý text (otočený o -90°) */
   vertical?: boolean;
   strokeText?: { color: ColorRef; width: number };
+  /** Obrázek před textem (např. hvězda): src jako u obrázku, scale = výška vůči písmu, gap = mezera v em */
+  icon?: { src: string; scale?: number; gap?: number };
 }
 
 export interface ImageElement extends BaseElement {
@@ -157,6 +159,8 @@ export interface ImageElement extends BaseElement {
   fallback?: "monogram" | "placeholder" | "none";
   tint?: ColorRef;
   grayscale?: boolean;
+  /** Záře kolem obrysu (Outer Glow) */
+  glow?: { color: ColorRef; radius: number; intensity: number };
 }
 
 export interface ListElement extends BaseElement {

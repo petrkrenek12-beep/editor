@@ -154,7 +154,7 @@ Pravidla:
 - Datum (typ date) ve formátu RRRR-MM-DD; chybí-li rok, použij ${y} (dnes je ${today.toISOString().slice(0, 10)}).
 - Čas ve formátu HH:MM. Skóre jako čísla.
 - Kolo piš např. "4. kolo". Termín (dates) krátce, např. "30.9." nebo "30.9. - 1.10.".
-- Hráč zápasu (mvp): nejlepší hráč VÍTĚZNÉHO týmu podle bodů, formát "Příjmení J. (X PTS, Y REB)" – body = sloupec B/PTS, doskoky = DOS/REB. Jen když jsou na obrázku statistiky hráčů.
+- Hráč zápasu: když jsou na obrázku statistiky hráčů a šablona má pole "mvp", NEVYPLŇUJ "mvp" textem, ale přidej klíč "_mvp" = {"name": jméno tak, jak je na screenshotu, "pts": body (sloupec B/PTS), "reb": doskoky (DOS/REB), "ast": asistence (A/AST)} pro hráče s nejvíce body z VÍTĚZNÉHO týmu.
 - Seznamy (např. zápasy) vyplň ve stejném pořadí jako na screenshotu, všechny řádky.
 - Pole, která ze screenshotu nejdou zjistit, VYNECH (nevymýšlej).
 
@@ -210,6 +210,14 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
     } else if (f.type === "team") out[f.key] = teamName(v);
     else if (f.type === "number") out[f.key] = v === "" || v === null ? "" : Number(v);
     else out[f.key] = String(v ?? "");
+  }
+  // hráč zápasu: vždy body, doskoky a asistence jen když jich má aspoň 5
+  const m = raw._mvp as { name?: string; pts?: number; reb?: number; ast?: number } | undefined;
+  if (m?.name && t.fields.some((f) => f.key === "mvp")) {
+    const parts = [`${Number(m.pts) || 0} PTS`];
+    if (Number(m.reb) >= 5) parts.push(`${Number(m.reb)} REB`);
+    if (Number(m.ast) >= 5) parts.push(`${Number(m.ast)} AST`);
+    out.mvp = `${m.name} (${parts.join(", ")})`;
   }
   if (!Object.keys(out).length) throw new Error("Ze screenshotu se nepodařilo nic vyčíst pro tuto šablonu.");
   return out;

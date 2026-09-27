@@ -3,8 +3,9 @@ import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, 
 import { makeArena, makeBallPhoto, makePlayerCutout, makeWordmark } from "./procedural";
 import { buildTemplates } from "./templates";
 import { OBASKETU_BG } from "./obasketu-bg";
+import { STAR_PNG } from "./star";
 
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -60,6 +61,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     { id: "p-nbl-logo", projectId: nbl.id, name: "Logo (demo)", kind: "logo", dataUrl: logoNbl, createdAt: now },
     { id: "p-repre-logo", projectId: repre.id, name: "Logo (demo)", kind: "logo", dataUrl: logoRepre, createdAt: now },
     bgAsset(),
+    starAsset(),
   );
 
   const templates = [...buildTemplates(nbl.id, shared), ...buildTemplates(repre.id, shared)];
@@ -102,4 +104,8 @@ export function upgradeTemplates(projectId: string): Template[] {
   if (projectId === "p-repre")
     for (const t of list) if ("home_team" in t.sampleData) t.sampleData = { ...t.sampleData, home_team: "Česko", away_team: "Srbsko" };
   return list;
+}
+
+export function starAsset(): Asset {
+  return { id: "demo-star", projectId: SHARED, name: "Hvězda (hráč zápasu)", kind: "element", dataUrl: STAR_PNG, w: 81, h: 81, createdAt: Date.now() };
 }

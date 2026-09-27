@@ -183,7 +183,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         text("score", "Skóre", [396, 1036, 288, 124], "{{home_score}} : {{away_score}}", { size: 142, align: "center", minSize: 70 }),
         logo("away-logo", "Logo hosté", [680, 1026, 240, 136], "away_team"),
         line("divider", "Linka", [105, 1178, 870, 4], "#FFFFFF", 3),
-        text("mvp", "Hráč zápasu", [90, 1192, 900, 58], "[★] {{mvp}}", { font: "body", italic: true, weight: 600, size: 38, align: "center", highlight: "#F7B733", showIf: "mvp" }),
+        text("mvp", "Hráč zápasu", [90, 1190, 900, 62], "{{mvp}}", { font: "body", italic: true, weight: 600, size: 38, align: "center", showIf: "mvp", icon: { src: "asset:demo-star", scale: 1.8, gap: 0.12 } }),
         img("partner", "Liga / partner", [396, 1258, 170, 66], "brand:partner", { fallback: "none", align: "right", locked: true }),
         brandLogo([578, 1254, 110, 74], { align: "left" }),
       ],

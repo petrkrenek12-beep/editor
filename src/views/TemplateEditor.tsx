@@ -510,6 +510,7 @@ function ElementProps({
     onChange(inBase ? { frame: f } : { frames: { ...(el.frames ?? {}), [format]: f } });
   };
   const [lib, setLib] = useState(false);
+  const [iconLib, setIconLib] = useState(false);
   const textFields = t.fields;
 
   return (
@@ -612,6 +613,32 @@ function ElementProps({
             </Button>
           )}
           <TextProps el={el} onChange={onChange} brand={brand} fields={textFields} />
+          <Section title="Ikona před textem">
+            {el.icon?.src && el.icon.src !== "asset:" ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="checker-dark flex h-10 w-10 items-center justify-center rounded border border-line">
+                    {project && <IconPreview src={el.icon.src} projectId={project.id} />}
+                  </span>
+                  <Button size="sm" variant="ghost" icon="trash" onClick={() => onChange({ icon: undefined } as Partial<TemplateElement>)}>Odebrat</Button>
+                </div>
+                <Row>
+                  <label className="flex items-center gap-1.5 text-[12px] text-mute">Velikost<NumberInput value={el.icon.scale ?? 1} step={0.05} onChange={(v) => onChange({ icon: { ...el.icon!, scale: v } } as Partial<TemplateElement>)} /></label>
+                  <label className="flex items-center gap-1.5 text-[12px] text-mute">Mezera<NumberInput value={el.icon.gap ?? 0.2} step={0.05} onChange={(v) => onChange({ icon: { ...el.icon!, gap: v } } as Partial<TemplateElement>)} /></label>
+                </Row>
+              </>
+            ) : (
+              <p className="text-[12px] text-mute">Např. vlastní hvězda před jménem hráče. Posouvá se s textem.</p>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              <FileButton size="sm" accept="image/*" onFile={async (f) => {
+                const a = await saveImageAsset(f[0], f[0].name.replace(/\.\w+$/, ""), "element");
+                onChange({ icon: { src: "asset:" + a.id, scale: el.icon?.scale ?? 1.2, gap: el.icon?.gap ?? 0.22 } } as Partial<TemplateElement>);
+              }}>Nahrát ikonu</FileButton>
+              <Button size="sm" icon="grid" onClick={() => setIconLib(true)}>Z knihovny</Button>
+            </div>
+            <AssetLibrary open={iconLib} onClose={() => setIconLib(false)} project={project} onPick={(a) => onChange({ icon: { src: "asset:" + a, scale: el.icon?.scale ?? 1.2, gap: el.icon?.gap ?? 0.22 } } as Partial<TemplateElement>)} />
+          </Section>
         </>
       )}
       {el.type === "image" && (
@@ -704,6 +731,17 @@ function ElementProps({
             </Select>
           </div>
           <Toggle checked={!!el.grayscale} onChange={(v) => onChange({ grayscale: v } as Partial<ImageElement>)} label="Černobíle" />
+          <Toggle checked={!!el.glow} onChange={(v) => onChange({ glow: v ? { color: "#FFFFFF", radius: 1, intensity: 0.5 } : undefined } as Partial<ImageElement>)} label="Záře kolem obrysu (Outer Glow)" />
+          {el.glow && (
+            <div className="space-y-2 rounded-md border border-line p-2">
+              <ColorField value={el.glow.color} onChange={(v) => onChange({ glow: { ...el.glow!, color: v } } as Partial<ImageElement>)} brand={brand} />
+              <Row>
+                <label className="flex items-center gap-1.5 text-[12px] text-mute">Poloměr px<NumberInput value={el.glow.radius} step={0.5} onChange={(v) => onChange({ glow: { ...el.glow!, radius: Math.max(0.5, v) } } as Partial<ImageElement>)} /></label>
+                <label className="flex items-center gap-1.5 text-[12px] text-mute">Síla %<NumberInput value={Math.round(el.glow.intensity * 100)} onChange={(v) => onChange({ glow: { ...el.glow!, intensity: Math.max(0, Math.min(100, v)) / 100 } } as Partial<ImageElement>)} /></label>
+              </Row>
+            </div>
+          )}
+          <p className="text-[11px] text-mute">U log týmů jde záři zapnout i jednotlivě při tvorbě grafiky (zaškrtávátko pod týmem).</p>
           <Toggle checked={!!el.tint} onChange={(v) => onChange({ tint: v ? "#FFFFFF" : undefined } as Partial<ImageElement>)} label="Přebarvit (např. bílé logo)" />
           {el.tint && <ColorField value={el.tint} onChange={(v) => onChange({ tint: v } as Partial<ImageElement>)} brand={brand} />}
         </Section>
@@ -1036,4 +1074,10 @@ function TemplateSettings({ t, commit, brand }: { t: Template; commit: (t: Templ
       </div>
     </div>
   );
+}
+
+function IconPreview({ src, projectId }: { src: string; projectId: string }) {
+  const assets = useAssetMap(projectId);
+  const url = src.startsWith("asset:") ? assets[src.slice(6)] : undefined;
+  return url ? <img src={url} alt="" className="max-h-8 max-w-8 object-contain" /> : null;
 }
