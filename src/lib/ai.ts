@@ -132,10 +132,10 @@ function blobToBase64(b: Blob): Promise<string> {
 
 function describeFields(t: Template) {
   return t.fields
-    .filter((f) => f.type !== "image")
+    .filter((f) => f.type !== "image" && f.type !== "channel")
     .map((f) => {
       if (f.type === "list")
-        return `- "${f.key}" (${f.label}): POLE objektů, každý má klíče ${(f.columns ?? []).map((c) => `"${c.key}" (${c.label}, ${c.type})`).join(", ")}`;
+        return `- "${f.key}" (${f.label}): POLE objektů, každý má klíče ${(f.columns ?? []).filter((c) => c.type !== "channel").map((c) => `"${c.key}" (${c.label}, ${c.type})`).join(", ")}`;
       return `- "${f.key}" (${f.label}, typ ${f.type})`;
     })
     .join("\n");
@@ -194,7 +194,7 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
     return findTeam(teams, s)?.name ?? s;
   };
   for (const f of t.fields) {
-    if (!(f.key in raw) || f.type === "image") continue;
+    if (!(f.key in raw) || f.type === "image" || f.type === "channel") continue;
     const v = raw[f.key];
     if (f.type === "list") {
       if (!Array.isArray(v)) continue;
@@ -202,7 +202,7 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
         const r0 = (row ?? {}) as Record<string, unknown>;
         const r1: Record<string, unknown> = {};
         for (const c of f.columns ?? []) {
-          if (!(c.key in r0)) continue;
+          if (!(c.key in r0) || c.type === "channel") continue;
           r1[c.key] = c.type === "team" ? teamName(r0[c.key]) : c.type === "number" && r0[c.key] !== "" ? Number(r0[c.key]) : String(r0[c.key] ?? "");
         }
         return r1;

@@ -8,6 +8,7 @@ import { can } from "@/lib/permissions";
 import { HAS_SERVER } from "@/lib/runtime";
 import { remove, uid, upsert, useApp, useAssetMap, useCurrentProject, useCurrentUser } from "@/lib/store";
 import type { Dataset, DataSourceKind, Team } from "@/lib/types";
+import { normalize } from "@/lib/template-string";
 
 const KIND_LABEL: Record<DataSourceKind, string> = { manual: "Ručně", json: "JSON", csv: "CSV", url: "URL", api: "API" };
 
@@ -322,10 +323,33 @@ function Teams() {
   const setTeams = (teams: Team[]) => upsert("projects", { ...project, teams });
   const upd = (id: string, p: Partial<Team>) => setTeams(project.teams.map((t) => (t.id === id ? { ...t, ...p } : t)));
 
+  // soubory pojmenované podle týmu, např. "nymburk.png", "Nymburk_bile.png", "USK white.svg"
+  const bulkLogos = async (files: File[]) => {
+    const patch = new Map<string, Partial<Team>>();
+    const miss: string[] = [];
+    for (const f of files) {
+      const base = f.name.replace(/\.[a-z0-9]+$/i, "");
+      const n = normalize(base);
+      const white = /(^| )(white|bile|bila|bily|bele|negativ|neg|w)( |$)/.test(n);
+      const key = n.replace(/(^| )(white|bile|bila|bily|bele|negativ|neg|logo|w)(?= |$)/g, " ").replace(/\s+/g, " ").trim();
+      const team = matchTeamFile(project.teams, key);
+      if (!team) {
+        miss.push(f.name);
+        continue;
+      }
+      const a = await saveImageAsset(f, `${team.name} logo${white ? " bílé" : ""}`, "team");
+      patch.set(team.id, { ...patch.get(team.id), ...(white ? { logoWhite: a.id } : { logo: a.id }) });
+    }
+    if (patch.size) setTeams(project.teams.map((t) => (patch.has(t.id) ? { ...t, ...patch.get(t.id) } : t)));
+    toast(`Přiřazeno ${files.length - miss.length} log${miss.length ? ` · nepoznáno: ${miss.join(", ")}` : ""}`, miss.length ? "info" : "ok");
+  };
+
   return (
     <div>
       <p className="mb-4 max-w-2xl text-sm text-mute">
         Když do pole „Tým“ napíšete název, zkratku nebo alias, šablona sama načte logo a barvy týmu. Bez nahraného loga se vykreslí monogram v barvách týmu.
+        Ke každému týmu můžete nahrát i <b>bílé logo</b> – použije se v šablonách nastavených na bílá loga (např. Program) nebo po přepnutí „Loga týmů: Bílá“ u grafiky.
+        Hromadně: pojmenujte soubory podle týmu (např. <code>nymburk.png</code>, <code>nymburk_bile.png</code>).
       </p>
       {manage && (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -336,6 +360,9 @@ function Teams() {
           >
             Přidat tým
           </Button>
+          <FileButton accept="image/png,image/svg+xml,image/webp" multiple icon="image" onFile={(files) => bulkLogos(files)}>
+            Nahrát loga hromadně
+          </FileButton>
           <Button icon="upload" onClick={() => setCsv(true)}>
             Import z CSV
           </Button>
@@ -344,23 +371,32 @@ function Teams() {
       <div className="grid gap-2 md:grid-cols-2">
         {project.teams.map((t) => (
           <Card key={t.id} className="flex gap-3 p-3">
-            <div className="flex w-20 shrink-0 flex-col items-center gap-1.5">
-              <div className={cx("flex h-16 w-16 items-center justify-center overflow-hidden rounded-full", !t.logo && "border-[3px]")} style={{ background: t.logo ? "transparent" : t.color, borderColor: t.color2 }}>
-                {t.logo && assets[t.logo] ? <img src={assets[t.logo]} alt="" className="h-full w-full object-contain" /> : <span className="font-cond text-lg font-bold" style={{ color: t.color2 }}>{t.short}</span>}
-              </div>
-              {manage && (
-                <FileButton
-                  size="sm"
-                  variant="ghost"
-                  accept="image/png,image/svg+xml,image/webp"
-                  onFile={async (f) => {
-                    const a = await saveImageAsset(f[0], `${t.name} logo`, "team");
-                    upd(t.id, { logo: a.id });
-                  }}
-                >
-                  Logo
-                </FileButton>
-              )}
+            <div className="flex shrink-0 gap-1.5">
+              <LogoSlot
+                label="Logo"
+                title="Barevné logo"
+                url={t.logo ? assets[t.logo] : undefined}
+                team={t}
+                manage={manage}
+                onFile={async (f) => {
+                  const a = await saveImageAsset(f, `${t.name} logo`, "team");
+                  upd(t.id, { logo: a.id });
+                }}
+                onClear={() => upd(t.id, { logo: undefined })}
+              />
+              <LogoSlot
+                dark
+                label="Bílé"
+                title="Bílé logo – použije se, když je v šabloně / u grafiky zvolena bílá loga"
+                url={t.logoWhite ? assets[t.logoWhite] : undefined}
+                team={t}
+                manage={manage}
+                onFile={async (f) => {
+                  const a = await saveImageAsset(f, `${t.name} logo bílé`, "team");
+                  upd(t.id, { logoWhite: a.id });
+                }}
+                onClear={() => upd(t.id, { logoWhite: undefined })}
+              />
             </div>
             <div className="grid min-w-0 flex-1 grid-cols-[1fr_76px] gap-1.5">
               <Input value={t.name} disabled={!manage} onChange={(e) => upd(t.id, { name: e.target.value })} className="h-8 text-sm font-semibold" aria-label="Název" />
@@ -370,7 +406,6 @@ function Teams() {
                 <input type="color" value={t.color} disabled={!manage} onChange={(e) => upd(t.id, { color: e.target.value })} className="h-7 w-9 rounded border border-line" aria-label="Barva týmu" />
                 <input type="color" value={t.color2} disabled={!manage} onChange={(e) => upd(t.id, { color2: e.target.value })} className="h-7 w-9 rounded border border-line" aria-label="Doplňková barva" />
                 <span className="flex-1" />
-                {t.logo && manage && <Button size="sm" variant="ghost" onClick={() => upd(t.id, { logo: undefined })}>Bez loga</Button>}
                 {manage && <IconButton icon="trash" label="Smazat tým" onClick={() => setTeams(project.teams.filter((x) => x.id !== t.id))} />}
               </div>
             </div>
@@ -413,6 +448,47 @@ function Teams() {
         <p className="mb-2 text-sm text-mute">Sloupce: name, short, aliases (oddělené |), color, color2</p>
         <Textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} className="font-mono text-[12px]" placeholder={"name,short,aliases,color,color2\nBK Nymburk,NYM,Nymburk|ERA,#C8102E,#FFFFFF"} />
       </Modal>
+    </div>
+  );
+}
+
+function matchTeamFile(teams: Team[], key: string): Team | undefined {
+  if (!key) return undefined;
+  const exact = teams.find((t) => [t.name, t.short, ...t.aliases].some((x) => normalize(x) === key));
+  if (exact) return exact;
+  // nejdelší shoda části názvu (např. "slavia" → "Slavia Praha")
+  let best: Team | undefined;
+  let bestLen = 0;
+  for (const t of teams)
+    for (const x of [t.name, ...t.aliases]) {
+      const nx = normalize(x);
+      for (const w of [nx, ...nx.split(" ").filter((w) => w.length > 3)])
+        if ((key.includes(w) || w.includes(key)) && w.length > bestLen && Math.min(w.length, key.length) > 3) {
+          best = t;
+          bestLen = w.length;
+        }
+    }
+  return best;
+}
+
+function LogoSlot({ label, title, url, team, manage, dark, onFile, onClear }: { label: string; title: string; url?: string; team: Team; manage: boolean; dark?: boolean; onFile: (f: File) => void; onClear: () => void }) {
+  return (
+    <div className="flex w-[68px] flex-col items-center gap-1" title={title}>
+      <div className={cx("relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-line p-1", dark ? "bg-[#1a1024]" : "bg-[#f3f1f6]")}>
+        {url ? <img src={url} alt="" className="h-full w-full object-contain" /> : <span className={cx("font-cond text-[13px] font-bold", dark ? "text-white/40" : "text-black/30")}>{dark ? "bílé" : team.short}</span>}
+        {url && manage && (
+          <button type="button" onClick={onClear} className="absolute right-0.5 top-0.5 rounded bg-black/60 px-1 text-[10px] leading-4 text-white" aria-label={`Odebrat ${label}`}>
+            ✕
+          </button>
+        )}
+      </div>
+      {manage ? (
+        <FileButton size="sm" variant="ghost" accept="image/png,image/svg+xml,image/webp" onFile={(f) => onFile(f[0])}>
+          {label}
+        </FileButton>
+      ) : (
+        <span className="text-[11px] text-mute">{label}</span>
+      )}
     </div>
   );
 }

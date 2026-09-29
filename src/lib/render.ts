@@ -7,7 +7,7 @@ import { fontStack, loadFonts, registerCustomFont, registerFamilies } from "./fo
 import { FORMATS } from "./formats";
 import { loadImage } from "./images";
 import { constrain, autoAnchorX, layoutList, resolveElement } from "./layout";
-import { findTeam, getValue, interpolate, isEmptyValue, type RenderContext } from "./template-string";
+import { findTeam, getValue, interpolate, isEmptyValue, normalize, type RenderContext } from "./template-string";
 import type {
   BrandKit,
   DataRecord,
@@ -54,6 +54,7 @@ interface ImgRef {
   value?: ImageValue;
   team?: Team;
   teamName?: string;
+  channelName?: string;
 }
 
 function assetUrl(env: RenderEnv, idOrUrl: string | undefined): string | undefined {
@@ -67,7 +68,16 @@ function resolveImage(el: ImageElement, env: RenderEnv, ctx: RenderContext): Img
   if (src.startsWith("team:")) {
     const name = interpolate(src.slice(5), ctx);
     const team = findTeam(env.teams, name);
-    return { team, teamName: name, url: team?.logo ? assetUrl(env, team.logo) : undefined };
+    // bílá / barevná verze: přepínač u grafiky (data.__logos) má přednost před nastavením šablony
+    const variant = (ctx.data.__logos as string) || el.logoVariant || "color";
+    const id = variant === "white" && team?.logoWhite ? team.logoWhite : team?.logo;
+    return { team, teamName: name, url: id ? assetUrl(env, id) : undefined };
+  }
+  if (src.startsWith("channel:")) {
+    const name = normalize(interpolate(src.slice(8), ctx));
+    if (!name) return {};
+    const ch = (env.brand.channels ?? []).find((c) => normalize(c.name) === name);
+    return { url: ch?.logo ? assetUrl(env, ch.logo) : undefined, channelName: ch?.name ?? interpolate(src.slice(8), ctx) };
   }
   if (src.startsWith("brand:")) {
     const k = src.slice(6);
@@ -119,6 +129,7 @@ function isVisible(el: TemplateElement, env: RenderEnv, ctx: RenderContext) {
     const v = getValue(ctx, el.showIf);
     if (isEmptyValue(v)) return false;
   }
+  if (el.hideIf && !isEmptyValue(getValue(ctx, el.hideIf))) return false;
   return true;
 }
 
@@ -137,6 +148,10 @@ function collect(env: RenderEnv) {
       const fam = fontFamily(el, env.brand);
       fonts.add(`${el.italic ? "italic " : ""}${el.weight ?? 400} 60px ${fontStack(fam)}`);
     } else if (el.type === "list") {
+      if (el.rowsBg?.src) {
+        const u = resolveImage({ id: "rb", name: "rb", type: "image", frame: el.frame, src: el.rowsBg.src } as ImageElement, env, ctx).url;
+        if (u) urls.add(u);
+      }
       listRows(el, env).forEach((row, i) => {
         el.children.forEach((c) => visit(c, { ...ctx, row, rowIndex: i }));
       });
@@ -544,6 +559,21 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     if (ref.team || (el.fallback === "monogram" && ref.teamName)) {
       const t = ref.team;
       drawMonogram(ctx, frame, t?.short ?? ref.teamName ?? "?", t?.color ?? env.brand.colors.primary, t?.color2 ?? "#FFFFFF", env);
+    } else if (ref.channelName) {
+      // stanice bez nahraného loga: aspoň název
+      ctx.save();
+      let size = frame.h * 0.8;
+      ctx.font = `700 ${size}px ${fontStack(env.brand.fonts.body.family)}`;
+      const w = ctx.measureText(ref.channelName.toUpperCase()).width;
+      if (w > frame.w) {
+        size *= frame.w / w;
+        ctx.font = `700 ${size}px ${fontStack(env.brand.fonts.body.family)}`;
+      }
+      ctx.fillStyle = "#FFFFFF";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(ref.channelName.toUpperCase(), frame.x + frame.w / 2, frame.y + frame.h / 2);
+      ctx.restore();
     } else if (el.fallback === "monogram" && el.src.startsWith("team:")) {
       // bez jména týmu nic
     } else if (env.placeholders && el.fallback !== "none" && (env.editor || /^\{\{/.test(el.src.trim()))) {
@@ -690,7 +720,26 @@ function drawElement(
         break;
       case "list": {
         const rows = listRows(el, env);
-        const { rows: rf } = layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true);
+        const { rows: rf, k: rk } = layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true);
+        // společné pozadí: jeden obrázek přes celý blok, každý řádek ukáže svůj výřez
+        const rbUrl = el.rowsBg?.src ? resolveImage({ id: "rb", name: "rb", type: "image", frame: el.frame, src: el.rowsBg.src } as ImageElement, env, rc).url : undefined;
+        const rbImg = rbUrl ? images.get(rbUrl) : null;
+        if (rbImg && rf.length) {
+          const top = rf[0].y;
+          const bottom = rf[rf.length - 1].y + rf[rf.length - 1].h;
+          const U = { x: frame.x, y: top, w: frame.w, h: bottom - top };
+          const kk = Math.max(U.w / rbImg.naturalWidth, U.h / rbImg.naturalHeight);
+          const dw = rbImg.naturalWidth * kk;
+          const dh = rbImg.naturalHeight * kk;
+          for (const r of rf) {
+            ctx.save();
+            roundRectPath(ctx, r, (el.rowsBg!.radius ?? 0) * rk);
+            ctx.clip();
+            ctx.globalAlpha *= el.rowsBg!.opacity ?? 1;
+            ctx.drawImage(rbImg, U.x + (U.w - dw) / 2, U.y + (U.h - dh) / 2, dw, dh);
+            ctx.restore();
+          }
+        }
         rows.forEach((row, i) => {
           const rowCtx: RenderContext = { ...rc, row, rowIndex: i + (env.template.paginate?.field === el.field ? ((env.page ?? 1) - 1) * env.template.paginate.perPage : 0) };
           const B = { w: el.frame.w, h: el.rowHeight };

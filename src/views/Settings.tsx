@@ -7,7 +7,7 @@ import { downloadBlob, slug } from "@/lib/export";
 import { can, ROLE_LABEL } from "@/lib/permissions";
 import { navigate } from "@/lib/router";
 import { TARGET } from "@/lib/runtime";
-import { deleteProject, exportProject, importProject, uid, updateSettings, upsert, useApp, useCurrentProject, useCurrentUser } from "@/lib/store";
+import { deleteProject, exportProject, importProject, remove, uid, updateSettings, upsert, useApp, useCurrentProject, useCurrentUser } from "@/lib/store";
 import type { Project, Role, User } from "@/lib/types";
 import { disableSync, enableSync, syncNow, syncServerInfo, useSyncStatus } from "@/lib/sync";
 import { HAS_SERVER } from "@/lib/runtime";
@@ -265,14 +265,7 @@ export function SettingsPage() {
           </p>
         </Card>
 
-        <Card className="p-5">
-          <SectionTitle>Úložiště</SectionTitle>
-          <p className="text-sm text-mute">
-            {persistent
-              ? "Data se ukládají v tomto prohlížeči (IndexedDB). Pro přenos na jiné zařízení použijte zálohu projektu v sekci Projekty."
-              : "Prohlížeč nepovolil trvalé úložiště (např. anonymní okno) – data vydrží jen do zavření stránky."}
-          </p>
-        </Card>
+        <StorageCard />
       </div>
     </div>
   );
@@ -381,6 +374,91 @@ export function SyncCard() {
           <p className="text-[12px] text-mute">Tip: zapněte nejdřív na počítači, kde máte upravené šablony – pak na mobilu. Při prvním připojení mobil převezme data z cloudu.</p>
         </div>
       )}
+    </Card>
+  );
+}
+
+const mb = (b: number) => (b >= 1e9 ? `${(b / 1e9).toFixed(2)} GB` : `${(b / 1e6).toFixed(1)} MB`);
+
+export function StorageCard() {
+  const persistent = useApp((s) => s.persistent);
+  const assets = useApp((s) => s.assets);
+  const templates = useApp((s) => s.templates);
+  const graphics = useApp((s) => s.graphics);
+  const projects = useApp((s) => s.projects);
+  const syncOn = useApp((s) => s.settings.sync?.enabled);
+  const { confirm, node } = useConfirm();
+  const [est, setEst] = useState<{ usage?: number; quota?: number } | null>(null);
+  React.useEffect(() => {
+    navigator.storage?.estimate?.().then(setEst).catch(() => setEst(null));
+  }, [assets.length, graphics.length]);
+
+  const size = (d: string) => Math.round(d.length * 0.75);
+  const own = assets.filter((a) => a.projectId !== "shared");
+  const byKind = (k: string[]) => own.filter((a) => k.includes(a.kind)).reduce((x, a) => x + size(a.dataUrl), 0);
+  const refs = JSON.stringify([templates, graphics.map((g) => [g.data, g.overrides]), projects]);
+  const unused = own.filter((a) => !refs.includes(a.id));
+  const unusedBytes = unused.reduce((x, a) => x + size(a.dataUrl), 0);
+  const thumbs = graphics.reduce((x, g) => x + size(g.thumb) + JSON.stringify(g.data).length, 0);
+  const total = own.reduce((x, a) => x + size(a.dataUrl), 0) + thumbs;
+  const rows: [string, number][] = [
+    ["Fotky", byKind(["photo"])],
+    ["Loga (projekt i týmy)", byKind(["logo", "team"])],
+    ["Pozadí a grafické prvky", byKind(["background", "element"])],
+    ["Fonty", byKind(["font"])],
+    [`Uložené grafiky (${graphics.length}×, jen data a náhled)`, thumbs],
+  ];
+  const CLOUD = 1e9;
+  return (
+    <Card className="p-5">
+      {node}
+      <SectionTitle>Úložiště</SectionTitle>
+      <div className="space-y-1.5 text-sm">
+        {rows.map(([l, b]) => (
+          <div key={l} className="flex justify-between gap-3">
+            <span className="text-mute">{l}</span>
+            <span className="tabular-nums">{mb(b)}</span>
+          </div>
+        ))}
+        <div className="flex justify-between gap-3 border-t border-line pt-1.5 font-semibold">
+          <span>Data aplikace celkem</span>
+          <span className="tabular-nums">{mb(total)}</span>
+        </div>
+      </div>
+      {syncOn && (
+        <div className="mt-4">
+          <div className="mb-1 flex justify-between text-[13px]">
+            <span className="text-mute">Cloud (Vercel Blob zdarma: 1 GB)</span>
+            <span className="tabular-nums">{Math.round((total / CLOUD) * 100)} %</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded bg-paper">
+            <div className={total / CLOUD > 0.8 ? "h-full bg-warn" : "h-full bg-signal"} style={{ width: `${Math.min(100, (total / CLOUD) * 100)}%` }} />
+          </div>
+        </div>
+      )}
+      {est?.quota ? (
+        <p className="mt-3 text-[13px] text-mute tabular-nums">
+          Tento prohlížeč: využito {mb(est.usage ?? 0)} z dostupných {mb(est.quota)}.
+        </p>
+      ) : null}
+      <p className="mt-2 text-[13px] text-mute">
+        {persistent
+          ? "Stažené grafiky (PNG/JPG) se do aplikace neukládají – jen jejich data a malý náhled, aby šly znovu otevřít."
+          : "Prohlížeč nepovolil trvalé úložiště (např. anonymní okno) – data vydrží jen do zavření stránky."}
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button
+          icon="trash"
+          disabled={!unused.length}
+          onClick={async () => {
+            if (!(await confirm(`Smazat ${unused.length} nepoužívaných obrázků (${mb(unusedBytes)})? Nejsou v žádné šabloně, grafice, týmu ani brand kitu.`))) return;
+            for (const a of unused) await remove("assets", a.id);
+            toast(`Uvolněno ${mb(unusedBytes)}`);
+          }}
+        >
+          Smazat nepoužívané obrázky {unused.length ? `(${unused.length}, ${mb(unusedBytes)})` : ""}
+        </Button>
+      </div>
     </Card>
   );
 }

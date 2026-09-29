@@ -1,11 +1,12 @@
-import type { Asset, BrandKit, Dataset, Project, Team, Template } from "../types";
+import type { Asset, BrandKit, Channel, Dataset, ImageElement, ListElement, Project, Team, Template, TemplateElement, TextElement } from "../types";
 import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./data";
 import { makeArena, makeBallPhoto, makePlayerCutout, makeWordmark } from "./procedural";
 import { buildTemplates } from "./templates";
 import { OBASKETU_BG } from "./obasketu-bg";
 import { STAR_PNG } from "./star";
+import { ROWS_BG } from "./rows-bg";
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -40,7 +41,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     id: "p-nbl",
     name: "NBL",
     parentName: "Obasketu.cz",
-    brand: { ...defaultBrand(), logo: "p-nbl-logo", backgrounds: [BG_ASSET] },
+    brand: { ...defaultBrand(), logo: "p-nbl-logo", backgrounds: [BG_ASSET], channels: defaultChannels() },
     teams: teamsFrom("p-nbl", DEMO_TEAMS),
     createdAt: now,
   };
@@ -62,6 +63,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     { id: "p-repre-logo", projectId: repre.id, name: "Logo (demo)", kind: "logo", dataUrl: logoRepre, createdAt: now },
     bgAsset(),
     starAsset(),
+    rowsBgAsset(),
   );
 
   const templates = [...buildTemplates(nbl.id, shared), ...buildTemplates(repre.id, shared)];
@@ -108,4 +110,67 @@ export function upgradeTemplates(projectId: string): Template[] {
 
 export function starAsset(): Asset {
   return { id: "demo-star", projectId: SHARED, name: "Hvězda (hráč zápasu)", kind: "element", dataUrl: STAR_PNG, w: 81, h: 81, createdAt: Date.now() };
+}
+
+export const ROWS_BG_ASSET = "demo-rows-bg";
+
+export function rowsBgAsset(): Asset {
+  return { id: ROWS_BG_ASSET, projectId: SHARED, name: "Pozadí řádků programu", kind: "background", dataUrl: ROWS_BG, w: 1402, h: 1122, createdAt: Date.now() };
+}
+
+export function defaultChannels(): Channel[] {
+  return [{ id: "ch-prima-sport", name: "Prima Sport" }];
+}
+
+/**
+ * Migrace v4 pro šablony, které uživatel upravil:
+ *  - loga týmů s bílým „tintem“ → bílá varianta loga (Team.logoWhite)
+ *  - program: obrázek v každém řádku → jedno společné pozadí přes všechny řádky, + sloupec TV
+ * Vrací null, když se nic nezměnilo.
+ */
+export function migrateTemplateV4(t: Template): Template | null {
+  let changed = false;
+  const fixEl = (el: TemplateElement): TemplateElement => {
+    if (el.type === "image" && el.src.trim().startsWith("team:") && el.tint && /^#?f{3}(f{3})?$/i.test(el.tint.replace("#", "#"))) {
+      changed = true;
+      const { tint: _t, ...rest } = el;
+      return { ...(rest as ImageElement), logoVariant: "white" };
+    }
+    if (el.type === "list") {
+      let children = el.children.map(fixEl);
+      let rowsBg = el.rowsBg;
+      const slot = children.find((c) => c.type === "image" && c.id === "bgimg") as ImageElement | undefined;
+      if (slot && !rowsBg) {
+        const src = slot.src.trim();
+        rowsBg = { src: src && src !== "asset:" ? src : `asset:${ROWS_BG_ASSET}`, radius: slot.radius ?? 20 };
+        children = children.filter((c) => c !== slot && !(c.type === "rect" && c.id === "bg"));
+        changed = true;
+      }
+      if (/-program$/.test(t.id) && el.field === "games" && !children.some((c) => c.id === "tv")) {
+        changed = true;
+        children = children.map((c) => (c.type === "text" && (c.id === "day" || c.id === "time") ? { ...c, hideIf: "tv" } : c));
+        const day = children.find((c) => c.id === "day") as TextElement | undefined;
+        const time = children.find((c) => c.id === "time") as TextElement | undefined;
+        const idx = children.findIndex((c) => c.id === "time");
+        const extra: TemplateElement[] = [];
+        if (day) extra.push({ ...day, id: "day-tv", name: "Den (s TV)", hideIf: undefined, showIf: "tv", frame: { ...day.frame, y: 4, h: 52 }, size: Math.round((day.size ?? 62) * 0.9) } as TextElement);
+        if (time) extra.push({ ...time, id: "time-tv", name: "Čas (s TV)", hideIf: undefined, showIf: "tv", frame: { ...time.frame, y: 52, h: 40 }, size: Math.round((time.size ?? 40) * 0.95) } as TextElement);
+        const fx = day?.frame ?? { x: 160, y: 0, w: 229, h: 0 };
+        extra.push({ id: "tv", name: "Logo TV", type: "image", frame: { x: fx.x + 25, y: 93, w: fx.w - 50, h: 30 }, src: "channel:{{tv}}", fit: "contain", showIf: "tv", fallback: "none" } as ImageElement);
+        children.splice(idx >= 0 ? idx + 1 : children.length, 0, ...extra);
+      }
+      if (children !== el.children || rowsBg !== el.rowsBg) return { ...el, children, rowsBg } as ListElement;
+    }
+    return el;
+  };
+  const elements = t.elements.map(fixEl);
+  let fields = t.fields;
+  if (/-program$/.test(t.id)) {
+    fields = t.fields.map((f) =>
+      f.type === "list" && f.key === "games" && !(f.columns ?? []).some((c) => c.key === "tv")
+        ? ((changed = true), { ...f, columns: [...(f.columns ?? []), { key: "tv", label: "TV", type: "channel" as const }] })
+        : f,
+    );
+  }
+  return changed ? { ...t, elements, fields } : null;
 }

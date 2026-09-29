@@ -7,7 +7,7 @@ import { FONT_LIBRARY, fontStack, parseFontName, registerCustomFont } from "@/li
 import { fileToDataUrl } from "@/lib/images";
 import { can } from "@/lib/permissions";
 import { remove, uid, upsert, useApp, useAssetMap, useCurrentProject, useCurrentUser } from "@/lib/store";
-import type { Asset, BrandKit as BK, FormatId } from "@/lib/types";
+import type { Asset, BrandKit as BK, Channel, FormatId } from "@/lib/types";
 
 const COLOR_LABELS: [keyof BK["colors"], string, string][] = [
   ["primary", "Primární", "hlavní plochy"],
@@ -37,6 +37,8 @@ export function BrandKitPage() {
   const [previewFmt, setPreviewFmt] = useState<FormatId>("ig_portrait");
 
   const setBrand = (b: Partial<BK>) => upsert("projects", { ...project, brand: { ...brand, ...b } });
+  const channels = brand.channels ?? [];
+  const setChannel = (id: string, p: Partial<Channel>) => setBrand({ channels: channels.map((c) => (c.id === id ? { ...c, ...p } : c)) });
 
   const uploadLogo = async (key: "logo" | "logoAlt" | "partnerLogo", files: File[]) => {
     const a = await saveImageAsset(files[0], files[0].name, "logo");
@@ -106,6 +108,55 @@ export function BrandKitPage() {
               })}
             </div>
             <p className="mt-3 text-[12px] text-mute">Nejlépe PNG nebo SVG s průhledným pozadím. Loga týmů nahrajete v Datových zdrojích → Týmy.</p>
+          </Card>
+
+          <Card className="p-5">
+            <SectionTitle
+              action={
+                admin && (
+                  <Button size="sm" icon="plus" onClick={() => setBrand({ channels: [...channels, { id: uid("ch-"), name: "Nová stanice" }] })}>
+                    Přidat
+                  </Button>
+                )
+              }
+            >
+              TV stanice
+            </SectionTitle>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {channels.map((c) => (
+                <div key={c.id} className="flex items-center gap-3 rounded-md border border-line p-2">
+                  <div className="checker-dark flex h-14 w-28 shrink-0 items-center justify-center rounded border border-line p-1.5">
+                    {c.logo && assets[c.logo] ? <img src={assets[c.logo]} alt="" className="max-h-full max-w-full object-contain" /> : <span className="text-[11px] text-white/60">bez loga</span>}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <input
+                      value={c.name}
+                      disabled={!admin}
+                      onChange={(e) => setChannel(c.id, { name: e.target.value })}
+                      className="h-8 w-full rounded-md border border-line bg-white px-2 text-sm font-semibold"
+                      aria-label="Název stanice"
+                    />
+                    <div className="flex gap-1.5">
+                      <FileButton
+                        size="sm"
+                        accept="image/png,image/svg+xml,image/webp"
+                        disabled={!admin}
+                        onFile={async (f) => {
+                          const a = await saveImageAsset(f[0], `${c.name} logo`, "logo");
+                          setChannel(c.id, { logo: a.id });
+                        }}
+                      >
+                        Logo
+                      </FileButton>
+                      {admin && <IconButton icon="trash" label="Smazat stanici" onClick={() => setBrand({ channels: channels.filter((x) => x.id !== c.id) })} />}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[12px] text-mute">
+              V šabloně Program vyberete u zápasu ve sloupci „TV“ stanici – pod časem se ukáže její logo (bílé PNG/SVG s průhledností). Bez loga se vypíše název.
+            </p>
           </Card>
 
           <Card className="p-5">

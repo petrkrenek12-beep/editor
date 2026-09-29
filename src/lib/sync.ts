@@ -15,6 +15,8 @@ import { defaultBrand } from "./demo/seed";
 
 type AssetMeta = Omit<Asset, "dataUrl">;
 
+const STATE_PATH = "presetka/state/current.json";
+
 interface RemoteState {
   app: "presetka";
   v: 1;
@@ -81,7 +83,7 @@ async function readBlob(url: string): Promise<Response> {
   const info = await syncServerInfo();
   const r =
     info?.access === "private"
-      ? await fetch(`/api/sync?op=get&url=${encodeURIComponent(url)}`, { headers: { "x-presetka-key": key() }, cache: "no-store" })
+      ? await fetch(`/api/sync?op=get&url=${encodeURIComponent(url.split("?")[0])}`, { headers: { "x-presetka-key": key() }, cache: "no-store" })
       : await fetch(url, { cache: "no-store" });
   if (!r.ok) throw new Error(`Stažení ze cloudu selhalo (${r.status}).`);
   return r;
@@ -180,12 +182,16 @@ async function doSync() {
   const lr = await fetch("/api/sync?op=latest", { headers: { "x-presetka-key": key() }, cache: "no-store" });
   if (lr.status === 401) throw new Error("Špatné heslo pro synchronizaci.");
   if (!lr.ok) throw new Error(await lr.text());
-  const latest = (await lr.json()) as { url: string } | null;
+  const latest = (await lr.json()) as { url: string; uploadedAt?: string; legacy?: string[] } | null;
+  const latestKey = latest ? `${latest.url}@${latest.uploadedAt ?? ""}` : undefined;
   let remote: RemoteState | null = null;
   if (latest?.url) {
-    if (latest.url === cfg.lastRemote && cfg.lastSync) {
+    if (latestKey === cfg.lastRemote && cfg.lastSync) {
       remote = null; // nic nového – jen případně nahrajeme své změny
-    } else remote = (await (await readBlob(latest.url)).json()) as RemoteState;
+    } else {
+      const bust = `${latest.url}${latest.url.includes("?") ? "&" : "?"}v=${encodeURIComponent(latest.uploadedAt ?? Date.now())}`;
+      remote = (await (await readBlob(bust)).json()) as RemoteState;
+    }
   }
   const firstSync = !cfg.lastSync;
 
@@ -265,15 +271,25 @@ async function doSync() {
   const byId = <T extends { id: string }>(l: T[]) => [...l].sort((a, b) => (a.id < b.id ? -1 : 1));
   const strip = (x: RemoteState | null) =>
     x ? JSON.stringify([byId(x.projects), byId(x.templates), byId(x.datasets), byId(x.graphics), byId(x.assets as Asset[]), Object.keys(x.tombstones ?? {}).sort().map((k) => [k, x.tombstones[k]])]) : "";
-  let remoteUrl = latest?.url;
-  const unchanged = remote ? strip(remote) === strip(snapshot) : latest?.url && cfg.lastRemote === latest.url && !dirty;
+  let remoteKey = latestKey;
+  const unchanged = remote ? strip(remote) === strip(snapshot) && !latest?.legacy : latestKey === cfg.lastRemote && !dirty;
   if (!unchanged || !latest) {
     setStatus({ progress: "Ukládám do cloudu…" });
-    remoteUrl = await uploadBlob(`presetka/state/${Date.now()}-${deviceId}.json`, JSON.stringify(snapshot), "application/json");
+    const url = await uploadBlob(STATE_PATH, JSON.stringify(snapshot), "application/json");
+    remoteKey = `${url}@${new Date().toISOString()}`;
+    // přesně jak ho vidí server zjistíme při další synchronizaci; do té doby ho nestahujeme znovu
+    const h = await fetch("/api/sync?op=latest", { headers: { "x-presetka-key": key() }, cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (h?.url) remoteKey = `${h.url}@${h.uploadedAt ?? ""}`;
+  }
+  // úklid v cloudu: staré verze stavu a smazané obrázky (mazání je zdarma)
+  const toDelete = [...(latest?.legacy ?? []), ...(getState().settings.pendingBlobDeletes ?? [])];
+  if (toDelete.length) {
+    const r = await fetch("/api/sync?op=delete", { method: "POST", headers: { "x-presetka-key": key(), "content-type": "application/json" }, body: JSON.stringify({ urls: toDelete }) }).catch(() => null);
+    if (r?.ok) await updateSettings({ pendingBlobDeletes: [] });
   }
   dirty = false;
   const now = Date.now();
-  await updateSettings({ tombstones: tomb, sync: { ...getState().settings.sync!, lastSync: now, lastRemote: remoteUrl } });
+  await updateSettings({ tombstones: tomb, sync: { ...getState().settings.sync!, lastSync: now, lastRemote: remoteKey } });
   setStatus({ state: "idle", lastSync: now, progress: undefined, message: undefined });
 }
 
@@ -292,14 +308,26 @@ export function startAutoSync() {
     if (!getState().settings.sync?.enabled) return;
     dirty = true;
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => void syncNow(), 3000);
+    // změny sbíráme 20 s, ať se do cloudu neukládá po každém kliknutí (šetří limit operací)
+    timer = setTimeout(() => void syncNow(), 20_000);
   });
+  let lastPull = 0;
   const pull = () => {
-    if (document.visibilityState === "visible" && getState().settings.sync?.enabled) void syncNow();
+    if (!getState().settings.sync?.enabled) return;
+    if (document.visibilityState === "hidden") {
+      // odchod z aplikace: hned uložit rozpracované změny
+      if (dirty) {
+        if (timer) clearTimeout(timer);
+        void syncNow();
+      }
+      return;
+    }
+    if (Date.now() - lastPull < 60_000) return;
+    lastPull = Date.now();
+    void syncNow();
   };
   document.addEventListener("visibilitychange", pull);
   window.addEventListener("focus", pull);
-  setInterval(pull, 120_000);
   if (cfg?.enabled) void syncNow();
 }
 

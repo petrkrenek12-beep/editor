@@ -35,9 +35,9 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 
 /**
  * Zmenší příliš velké fotky (šetří úložiště), ale nechá dost rozlišení
- * na export ve 2× (max. 3200 px na delší straně). PNG s průhledností zůstane PNG.
+ * na export ve 2× (max. 2400 px na delší straně). PNG s průhledností zůstane PNG.
  */
-export async function importImageFile(file: File, maxSide = 3200): Promise<{ dataUrl: string; w: number; h: number }> {
+export async function importImageFile(file: File, maxSide = 2400): Promise<{ dataUrl: string; w: number; h: number }> {
   const raw = await fileToDataUrl(file);
   if (file.type === "image/svg+xml") {
     const img = await loadImage(raw);
@@ -47,7 +47,7 @@ export async function importImageFile(file: File, maxSide = 3200): Promise<{ dat
   if (!img) throw new Error("Soubor se nepodařilo načíst jako obrázek.");
   const { naturalWidth: w, naturalHeight: h } = img;
   const scale = Math.min(1, maxSide / Math.max(w, h));
-  if (scale === 1 && file.size < 6_000_000) return { dataUrl: raw, w, h };
+  if (scale === 1 && file.size < 2_500_000) return { dataUrl: raw, w, h };
   const c = document.createElement("canvas");
   c.width = Math.round(w * scale);
   c.height = Math.round(h * scale);
@@ -55,6 +55,6 @@ export async function importImageFile(file: File, maxSide = 3200): Promise<{ dat
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, 0, 0, c.width, c.height);
   const keepAlpha = file.type === "image/png" || file.type === "image/webp";
-  const dataUrl = keepAlpha ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.92);
+  const dataUrl = keepAlpha ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.9);
   return { dataUrl, w: c.width, h: c.height };
 }

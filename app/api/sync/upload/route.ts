@@ -14,6 +14,8 @@ export async function POST(req: Request) {
         const pw = process.env.APP_PASSWORD;
         if (!pw || clientPayload !== pw) throw new Error("Špatné heslo pro synchronizaci.");
         if (!pathname.startsWith("presetka/")) throw new Error("Neplatná cesta.");
+        if (pathname === "presetka/state/current.json")
+          return { addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 60, maximumSizeInBytes: 60 * 1024 * 1024 };
         return { addRandomSuffix: true, maximumSizeInBytes: 60 * 1024 * 1024 };
       },
     });

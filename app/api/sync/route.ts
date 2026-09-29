@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { del, get, list } from "@vercel/blob";
+import { BlobNotFoundError, del, get, head, list } from "@vercel/blob";
 
 // Synchronizace mezi zařízeními přes Vercel Blob.
 // Potřebné proměnné: BLOB_READ_WRITE_TOKEN (přidá Vercel po vytvoření Blob úložiště)
@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PREFIX = "presetka/state/";
+const CURRENT = "presetka/state/current.json";
 const access = () => (process.env.BLOB_ACCESS === "private" ? "private" : "public") as "public" | "private";
 
 function authorized(req: Request) {
@@ -28,19 +29,18 @@ export async function GET(req: Request) {
   if (!authorized(req)) return new NextResponse("Špatné heslo pro synchronizaci.", { status: 401 });
 
   if (op === "latest") {
-    const blobs: { url: string; pathname: string; uploadedAt: Date }[] = [];
-    let cursor: string | undefined;
-    do {
-      const r = await list({ prefix: PREFIX, cursor, limit: 1000 });
-      blobs.push(...r.blobs);
-      cursor = r.hasMore ? r.cursor : undefined;
-    } while (cursor);
-    blobs.sort((a, b) => +new Date(b.uploadedAt) - +new Date(a.uploadedAt));
-    const newest = blobs[0];
-    // úklid – necháme posledních 10 verzí
-    const old = blobs.slice(10).map((b) => b.url);
-    if (old.length) del(old).catch(() => undefined);
-    return NextResponse.json(newest ? { url: newest.url, uploadedAt: newest.uploadedAt, access: access() } : null, { headers: { "cache-control": "no-store" } });
+    // Stav je v jednom souboru (přepisuje se) – head() je levná operace.
+    try {
+      const h = await head(CURRENT);
+      return NextResponse.json({ url: h.url, uploadedAt: h.uploadedAt, access: access() }, { headers: { "cache-control": "no-store" } });
+    } catch (e) {
+      if (!(e instanceof BlobNotFoundError)) throw e;
+    }
+    // Starší verze aplikace ukládala stav do více souborů – najdeme nejnovější a staré smažeme
+    const r = await list({ prefix: PREFIX, limit: 1000 });
+    const old = r.blobs.filter((b) => b.pathname !== CURRENT).sort((a, b) => +new Date(b.uploadedAt) - +new Date(a.uploadedAt));
+    const newest = old[0];
+    return NextResponse.json(newest ? { url: newest.url, uploadedAt: newest.uploadedAt, access: access(), legacy: old.map((b) => b.url) } : null, { headers: { "cache-control": "no-store" } });
   }
 
   if (op === "get") {
@@ -54,4 +54,16 @@ export async function GET(req: Request) {
     });
   }
   return new NextResponse("Neznámá operace.", { status: 400 });
+}
+
+// Smazání souborů v cloudu (smazané fotky, staré verze stavu). Mazání je ve Vercel Blob zdarma.
+export async function POST(req: Request) {
+  const op = new URL(req.url).searchParams.get("op");
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return new NextResponse("Chybí úložiště.", { status: 501 });
+  if (!authorized(req)) return new NextResponse("Špatné heslo pro synchronizaci.", { status: 401 });
+  if (op !== "delete") return new NextResponse("Neznámá operace.", { status: 400 });
+  const { urls } = (await req.json().catch(() => ({}))) as { urls?: string[] };
+  const list0 = (urls ?? []).filter((u) => typeof u === "string" && u.includes("/presetka/")).slice(0, 500);
+  if (list0.length) await del(list0);
+  return NextResponse.json({ deleted: list0.length });
 }

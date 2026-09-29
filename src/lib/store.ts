@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, upgradeTemplates, BG_ASSET } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, upgradeTemplates, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, migrateTemplateV4 } from "./demo/seed";
 
 export interface AppState {
   ready: boolean;
@@ -108,6 +108,11 @@ export function initStore() {
         await a.put("assets", st);
         assets = [...assets, st];
       }
+      if (!assets.some((x) => x.id === ROWS_BG_ASSET)) {
+        const rb = rowsBgAsset();
+        await a.put("assets", rb);
+        assets = [...assets, rb];
+      }
       if (!assets.some((x) => x.id === BG_ASSET)) {
         const bg = bgAsset();
         await a.put("assets", bg);
@@ -115,8 +120,15 @@ export function initStore() {
       }
       projects = await Promise.all(
         projects.map(async (p) => {
-          if (p.id !== "p-nbl" || p.brand.backgrounds.includes(BG_ASSET)) return p;
-          const np = { ...p, brand: { ...p.brand, backgrounds: [BG_ASSET, ...p.brand.backgrounds] } };
+          if (p.id !== "p-nbl") return p;
+          const needBg = !p.brand.backgrounds.includes(BG_ASSET);
+          const needCh = !p.brand.channels;
+          if (!needBg && !needCh) return p;
+          const np = {
+            ...p,
+            brand: { ...p.brand, backgrounds: needBg ? [BG_ASSET, ...p.brand.backgrounds] : p.brand.backgrounds, channels: p.brand.channels ?? defaultChannels() },
+          };
+          (np as { _mod?: number })._mod = Date.now();
           await a.put("projects", np);
           return np;
         }),
@@ -130,6 +142,16 @@ export function initStore() {
           templates = [...templates.filter((t) => t.id !== nt.id), nt];
         }
       }
+      // upravené šablony: bílý tint log → bílé varianty, společné pozadí řádků, TV
+      templates = await Promise.all(
+        templates.map(async (t) => {
+          const nt = migrateTemplateV4(t);
+          if (!nt) return t;
+          (nt as { _mod?: number })._mod = Date.now();
+          await a.put("templates", nt);
+          return nt;
+        }),
+      );
       settings = { ...(settings ?? state.settings), seedVersion: SEED_VERSION };
       await a.putSettings(settings);
     }
@@ -174,9 +196,12 @@ export async function upsert<K extends CollectionName>(c: K, item: CollectionMap
 }
 
 export async function remove(c: CollectionName, id: string, opts?: { remote?: boolean }) {
-  const list = state[c] as unknown as { id: string }[];
+  const list = state[c] as unknown as { id: string; remoteUrl?: string }[];
+  const gone = list.find((x) => x.id === id);
   setState({ [c]: list.filter((x) => x.id !== id) } as Partial<AppState>);
   await adapter?.remove(c, id);
+  if (c === "assets" && gone?.remoteUrl && state.settings.sync?.enabled)
+    await updateSettings({ pendingBlobDeletes: [...(state.settings.pendingBlobDeletes ?? []), gone.remoteUrl] });
   if (!opts?.remote) {
     await updateSettings({ tombstones: { ...(state.settings.tombstones ?? {}), [`${c}:${id}`]: Date.now() } });
     notifyChange();

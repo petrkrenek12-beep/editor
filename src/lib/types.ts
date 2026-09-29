@@ -72,6 +72,8 @@ interface BaseElement {
   hidden?: boolean;
   /** Prvek se nevykreslí, pokud je pole prázdné. */
   showIf?: string;
+  /** Prvek se nevykreslí, pokud je pole vyplněné. */
+  hideIf?: string;
   /** Zamčeno administrátorem – editor/viewer nemůže měnit. */
   locked?: boolean;
   /** Skrýt jen v některých formátech */
@@ -159,6 +161,8 @@ export interface ImageElement extends BaseElement {
   fallback?: "monogram" | "placeholder" | "none";
   tint?: ColorRef;
   grayscale?: boolean;
+  /** Varianta loga týmu (bílá = Team.logoWhite, když existuje) */
+  logoVariant?: "color" | "white";
   /** Záře kolem obrysu (Outer Glow) */
   glow?: { color: ColorRef; radius: number; intensity: number };
 }
@@ -175,6 +179,8 @@ export interface ListElement extends BaseElement {
   distribute?: boolean;
   /** Když se řádky nevejdou, zmenší se (nikdy nepřetečou) */
   children: TemplateElement[];
+  /** Jeden obrázek přes všechny řádky (každý řádek ukáže svůj výřez) */
+  rowsBg?: { src: string; radius?: number; opacity?: number };
 }
 
 export type TemplateElement =
@@ -199,7 +205,7 @@ export type ElementOverride = Partial<{
   opacity: number;
 }>;
 
-export type FieldType = "text" | "longtext" | "number" | "image" | "team" | "date" | "list" | "select";
+export type FieldType = "text" | "longtext" | "number" | "image" | "team" | "date" | "list" | "select" | "channel";
 
 export interface FieldDef {
   key: string;
@@ -267,6 +273,8 @@ export interface BrandKit {
   partnerLogo?: string;
   backgrounds: string[];
   elements: string[];
+  /** TV stanice / streamy s logem (např. Prima Sport) */
+  channels?: Channel[];
   locks: {
     logo: boolean;
     colors: boolean;
@@ -283,6 +291,14 @@ export interface Team {
   aliases: string[];
   color: string;
   color2: string;
+  logo?: string; // asset id
+  /** bílá verze loga (pro tmavé pozadí) */
+  logoWhite?: string;
+}
+
+export interface Channel {
+  id: string;
+  name: string;
   logo?: string; // asset id
 }
 
@@ -347,5 +363,7 @@ export interface Settings {
   seedVersion?: number;
   /** smazané položky "kolekce:id" → čas (pro synchronizaci) */
   tombstones?: Record<string, number>;
+  /** cloudové soubory ke smazání při další synchronizaci */
+  pendingBlobDeletes?: string[];
   sync?: { enabled: boolean; key?: string; lastSync?: number; lastRemote?: string };
 }

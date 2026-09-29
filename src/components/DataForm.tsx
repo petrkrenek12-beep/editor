@@ -6,7 +6,7 @@ import { asImageValue, clamp } from "@/lib/graphic";
 import { dataUrlToBlob, fileToDataUrl, importImageFile } from "@/lib/images";
 import { getState, uid, upsert, useApp } from "@/lib/store";
 import { findTeam } from "@/lib/template-string";
-import type { Asset, DataRecord, FieldDef, ImageValue, Project, Template } from "@/lib/types";
+import type { Asset, Channel, DataRecord, FieldDef, ImageValue, Project, Template } from "@/lib/types";
 import { Button, cx, FileButton, Icon, IconButton, Input, Label, Modal, Select, Spinner, Textarea, toast } from "./ui";
 
 export function DataForm({
@@ -63,10 +63,17 @@ export function DataForm({
                   Záře kolem loga (1 px, bílá) – pro špatně čitelná loga
                 </label>
               </>
+            ) : f.type === "channel" ? (
+              <Select id={id} disabled={ro} value={String(v ?? "")} onChange={(e) => set(f.key, e.target.value)}>
+                <option value="">—</option>
+                {(project.brand.channels ?? []).map((c) => (
+                  <option key={c.id}>{c.name}</option>
+                ))}
+              </Select>
             ) : f.type === "image" ? (
               <ImageField id={id} value={asImageValue(v)} disabled={ro} assets={assets} project={project} onChange={(x) => set(f.key, x)} />
             ) : f.type === "list" ? (
-              <ListField field={f} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
+              <ListField field={f} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
             ) : (
               <Input id={id} disabled={ro} value={String(v ?? "")} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} />
             )}
@@ -301,7 +308,7 @@ export function AssetLibrary({ open, onClose, onPick, project, kinds }: { open: 
 
 // ── Seznam (řádky tabulky) ───────────────────────────────────
 
-function ListField({ field, rows, onChange, disabled }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean }) {
+function ListField({ field, rows, onChange, disabled, channels = [] }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean; channels?: Channel[] }) {
   const cols = field.columns ?? [];
   const [paste, setPaste] = useState(false);
   const [text, setText] = useState("");
@@ -350,6 +357,22 @@ function ListField({ field, rows, onChange, disabled }: { field: FieldDef; rows:
               <tr key={i} className="border-t border-line">
                 {cols.map((c) => (
                   <td key={c.key} className="p-1">
+                    {c.type === "channel" ? (
+                      <select
+                        disabled={disabled}
+                        value={String(r[c.key] ?? "")}
+                        onChange={(e) => setCell(i, c.key, e.target.value)}
+                        aria-label={`${c.label} ${i + 1}`}
+                        title={channels.length ? undefined : "Přidejte TV stanice v Brand kitu"}
+                        className={cx("h-8 w-full min-w-[64px] rounded border border-transparent bg-transparent px-1 text-[13px] hover:border-line focus:border-signal focus:bg-white focus:outline-none", r[c.key] ? "font-semibold text-signal" : "text-mute")}
+                      >
+                        <option value="">—</option>
+                        {channels.map((ch) => (
+                          <option key={ch.id}>{ch.name}</option>
+                        ))}
+                        {!!r[c.key] && !channels.some((ch) => ch.name === r[c.key]) && <option>{String(r[c.key])}</option>}
+                      </select>
+                    ) : (
                     <input
                       disabled={disabled}
                       list={c.type === "team" ? "team-list" : undefined}
@@ -358,6 +381,7 @@ function ListField({ field, rows, onChange, disabled }: { field: FieldDef; rows:
                       aria-label={`${c.label} ${i + 1}`}
                       className={cx("h-8 w-full min-w-[48px] rounded border border-transparent bg-transparent px-1.5 text-[13px] hover:border-line focus:border-signal focus:bg-white focus:outline-none", c.type === "number" && "tabular-nums")}
                     />
+                    )}
                   </td>
                 ))}
                 <td className="whitespace-nowrap pr-1 text-right">

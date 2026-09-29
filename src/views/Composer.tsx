@@ -13,7 +13,8 @@ import { can, canEditElement } from "@/lib/permissions";
 import { pageCount, type RenderEnv } from "@/lib/render";
 import { navigate } from "@/lib/router";
 import { uid, upsert, useApp, useAssetMap, useCurrentProject, useCurrentUser } from "@/lib/store";
-import type { DataRecord, ElementOverride, FormatId, Frame, Graphic, Template } from "@/lib/types";
+import type { DataRecord, ElementOverride, FormatId, Frame, Graphic, Team, Template, TemplateElement } from "@/lib/types";
+import { findTeam } from "@/lib/template-string";
 
 type Tab = "data" | "layout" | "ai" | "export";
 
@@ -238,6 +239,24 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
           Ukázková data
         </Button>
       </div>
+      {usesTeamLogos(template.elements) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-panel px-3 py-2">
+          <span className="text-[13px] font-semibold">Loga týmů</span>
+          <Segmented
+            size="sm"
+            value={((data.__logos as string) || "") as "" | "color" | "white"}
+            onChange={(v) => setData((d) => ({ ...d, __logos: v }))}
+            options={[
+              { value: "", label: "Podle šablony" },
+              { value: "color", label: "Barevná" },
+              { value: "white", label: "Bílá", title: "Použije bílá loga nahraná u týmů (Datové zdroje → Týmy a loga)" },
+            ]}
+          />
+          {data.__logos === "white" && missingWhite(template, data, project.teams).length > 0 && (
+            <p className="w-full text-[12px] text-mute">Bez bílého loga: {missingWhite(template, data, project.teams).join(", ")} – nahrajte ho v Datové zdroje → Týmy a loga.</p>
+          )}
+        </div>
+      )}
       <DataForm template={template} data={data} onChange={setData} project={project} assets={assets} readOnlyField={readOnlyField} />
     </div>
   );
@@ -635,3 +654,22 @@ function JsonModal({ open, onClose, data, onApply }: { open: boolean; onClose: (
   );
 }
 
+
+function usesTeamLogos(els: TemplateElement[]): boolean {
+  return els.some((e) => (e.type === "image" && e.src.trim().startsWith("team:")) || (e.type === "list" && usesTeamLogos(e.children)));
+}
+
+/** Týmy použité v grafice, které nemají bílé logo. */
+function missingWhite(t: Template, data: DataRecord, teams: Team[]): string[] {
+  const names = new Set<string>();
+  const add = (v: unknown) => {
+    const tm = findTeam(teams, String(v ?? ""));
+    if (tm && !tm.logoWhite) names.add(tm.short || tm.name);
+  };
+  for (const f of t.fields) {
+    if (f.type === "team") add(data[f.key]);
+    if (f.type === "list" && Array.isArray(data[f.key]))
+      for (const r of data[f.key] as Record<string, unknown>[]) for (const c of f.columns ?? []) if (c.type === "team") add(r[c.key]);
+  }
+  return [...names];
+}

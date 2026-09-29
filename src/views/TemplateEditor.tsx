@@ -512,6 +512,12 @@ function ElementProps({
   const [lib, setLib] = useState(false);
   const [iconLib, setIconLib] = useState(false);
   const textFields = t.fields;
+  const assets = useAssetMap(project.id);
+  // podmínky: pole šablony + u prvků řádku i sloupce seznamu
+  const condKeys: { key: string; label: string }[] = [
+    ...(isChild ? t.fields.filter((f) => f.type === "list").flatMap((f) => (f.columns ?? []).map((c) => ({ key: c.key, label: `${c.label} (řádek)` }))) : []),
+    ...t.fields.map((f) => ({ key: f.key, label: f.label })),
+  ];
 
   return (
     <div className="space-y-3">
@@ -651,11 +657,13 @@ function ElementProps({
                 const k = e.target.value;
                 const firstImg = t.fields.find((f) => f.type === "image")?.key ?? "photo";
                 const firstTeam = t.fields.find((f) => f.type === "team")?.key ?? "home_team";
-                onChange({ src: k === "field" ? `{{${firstImg}}}` : k === "team" ? `team:{{${firstTeam}}}` : k === "brand" ? "brand:logo" : "asset:" } as Partial<ImageElement>);
+                const firstCh = [...t.fields, ...t.fields.flatMap((f) => f.columns ?? [])].find((f) => f.type === "channel")?.key ?? "tv";
+                onChange({ src: k === "field" ? `{{${firstImg}}}` : k === "team" ? `team:{{${firstTeam}}}` : k === "channel" ? `channel:{{${firstCh}}}` : k === "brand" ? "brand:logo" : "asset:" } as Partial<ImageElement>);
               }}
             >
               <option value="field">Z datového pole (fotka)</option>
               <option value="team">Logo týmu podle pole</option>
+              <option value="channel">Logo TV stanice podle pole</option>
               <option value="brand">Z brand kitu</option>
               <option value="asset">Pevný obrázek</option>
             </Select>
@@ -668,7 +676,24 @@ function ElementProps({
             </Select>
           )}
           {srcKind(el.src) === "team" && (
-            <Input value={el.src.slice(5)} onChange={(e) => onChange({ src: "team:" + e.target.value } as Partial<ImageElement>)} className="font-mono text-[12px]" aria-label="Pole týmu" />
+            <>
+              <Input value={el.src.slice(5)} onChange={(e) => onChange({ src: "team:" + e.target.value } as Partial<ImageElement>)} className="font-mono text-[12px]" aria-label="Pole týmu" />
+              <div>
+                <Label hint="bílá loga se nahrávají v Datové zdroje → Týmy a loga">Verze loga</Label>
+                <Segmented
+                  size="sm"
+                  value={el.logoVariant ?? "color"}
+                  onChange={(v) => onChange({ logoVariant: v === "color" ? undefined : v, tint: v === "white" ? undefined : el.tint } as Partial<ImageElement>)}
+                  options={[
+                    { value: "color", label: "Barevné" },
+                    { value: "white", label: "Bílé" },
+                  ]}
+                />
+              </div>
+            </>
+          )}
+          {srcKind(el.src) === "channel" && (
+            <Input value={el.src.slice(8)} onChange={(e) => onChange({ src: "channel:" + e.target.value } as Partial<ImageElement>)} className="font-mono text-[12px]" aria-label="Pole stanice" />
           )}
           {srcKind(el.src) === "brand" && (
             <Select value={el.src.slice(6)} onChange={(e) => onChange({ src: "brand:" + e.target.value } as Partial<ImageElement>)} aria-label="Prvek brand kitu">
@@ -804,6 +829,33 @@ function ElementProps({
             <NumberInput value={el.maxRows ?? 0} onChange={(v) => onChange({ maxRows: v || undefined } as Partial<TemplateElement>)} />
           </div>
           <Toggle checked={!!el.distribute} onChange={(v) => onChange({ distribute: v } as Partial<TemplateElement>)} label="Rozprostřít řádky do výšky" />
+          <div className="space-y-2 rounded-md border border-line p-2">
+            <Label hint="jeden obrázek přes všechny řádky">Společné pozadí řádků</Label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {el.rowsBg?.src && assets[el.rowsBg.src.replace(/^asset:/, "")] && (
+                <img src={assets[el.rowsBg.src.replace(/^asset:/, "")]} alt="" className="h-10 w-14 rounded border border-line object-cover" />
+              )}
+              <FileButton size="sm" accept="image/*" onFile={async (f) => {
+                const a = await saveImageAsset(f[0], f[0].name.replace(/\.\w+$/, ""), "background");
+                onChange({ rowsBg: { radius: 20, ...el.rowsBg, src: "asset:" + a.id } } as Partial<TemplateElement>);
+              }}>Nahrát</FileButton>
+              <Button size="sm" icon="grid" onClick={() => setLib(true)}>Z knihovny</Button>
+              {el.rowsBg && <IconButton icon="trash" label="Bez pozadí" onClick={() => onChange({ rowsBg: undefined } as Partial<TemplateElement>)} />}
+            </div>
+            <AssetLibrary open={lib} onClose={() => setLib(false)} project={project} onPick={(a) => onChange({ rowsBg: { radius: 20, ...el.rowsBg, src: "asset:" + a } } as Partial<TemplateElement>)} />
+            {el.rowsBg && (
+              <Row>
+                <div>
+                  <Label>Zaoblení</Label>
+                  <NumberInput value={el.rowsBg.radius ?? 0} min={0} onChange={(v) => onChange({ rowsBg: { ...el.rowsBg!, radius: v } } as Partial<TemplateElement>)} />
+                </div>
+                <div>
+                  <Label hint={`${Math.round((el.rowsBg.opacity ?? 1) * 100)} %`}>Krytí</Label>
+                  <input type="range" min={0} max={1} step={0.01} value={el.rowsBg.opacity ?? 1} onChange={(e) => onChange({ rowsBg: { ...el.rowsBg!, opacity: Number(e.target.value) } } as Partial<TemplateElement>)} className="w-full accent-[#2A4BFF]" aria-label="Krytí pozadí řádků" />
+                </div>
+              </Row>
+            )}
+          </div>
           <p className="text-[12px] text-mute">Když se řádky nevejdou, automaticky se zmenší. Prvky řádku vyberete ve Vrstvách.</p>
           {onAddChild && (
             <div className="flex flex-wrap gap-1.5">
@@ -829,10 +881,17 @@ function ElementProps({
             <Label>Zobrazit jen když</Label>
             <Select value={el.showIf ?? ""} onChange={(e) => onChange({ showIf: e.target.value || undefined })}>
               <option value="">vždy</option>
-              {t.fields.map((f) => <option key={f.key} value={f.key}>{f.label} vyplněno</option>)}
+              {condKeys.map((f) => <option key={f.key} value={f.key}>{f.label} vyplněno</option>)}
             </Select>
           </div>
         </Row>
+        <div>
+          <Label>Skrýt když</Label>
+          <Select value={el.hideIf ?? ""} onChange={(e) => onChange({ hideIf: e.target.value || undefined })}>
+            <option value="">nikdy</option>
+            {condKeys.map((f) => <option key={f.key} value={f.key}>{f.label} vyplněno</option>)}
+          </Select>
+        </div>
         <Toggle checked={!!el.fade} onChange={(v) => onChange({ fade: v ? { angle: 90, from: 0.4, to: 0.8 } : undefined })} label="Přechod do průhledna (maska)" />
         {el.fade && (
           <div className="space-y-2 rounded-md border border-line p-2">
@@ -864,6 +923,7 @@ function ax(a: string) {
 }
 function srcKind(src: string) {
   if (src.startsWith("team:")) return "team";
+  if (src.startsWith("channel:")) return "channel";
   if (src.startsWith("brand:")) return "brand";
   if (src.startsWith("asset:")) return "asset";
   return "field";
@@ -966,6 +1026,7 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "image", label: "Fotka" },
   { value: "list", label: "Seznam / tabulka" },
   { value: "select", label: "Výběr" },
+  { value: "channel", label: "TV stanice" },
 ];
 
 function FieldsEditor({ t, commit }: { t: Template; commit: (t: Template, record?: boolean) => void }) {
@@ -1004,7 +1065,7 @@ function FieldsEditor({ t, commit }: { t: Template; commit: (t: Template, record
                   <Input value={c.label} onChange={(e) => upd(i, { columns: f.columns!.map((x, k) => (k === ci ? { ...x, label: e.target.value } : x)) })} className="h-7 text-[12px]" aria-label="Popisek sloupce" />
                   <Input value={c.key} onChange={(e) => upd(i, { columns: f.columns!.map((x, k) => (k === ci ? { ...x, key: e.target.value.replace(/[^a-zA-Z0-9_]/g, "_") } : x)) })} className="h-7 font-mono text-[11px]" aria-label="Klíč sloupce" />
                   <select value={c.type} onChange={(e) => upd(i, { columns: f.columns!.map((x, k) => (k === ci ? { ...x, type: e.target.value as FieldType } : x)) })} className="h-7 rounded border border-line text-[11px]" aria-label="Typ sloupce">
-                    {["text", "number", "team", "date"].map((x) => <option key={x}>{x}</option>)}
+                    {["text", "number", "team", "date", "channel"].map((x) => <option key={x}>{x}</option>)}
                   </select>
                   <button type="button" className="px-1 text-bad" onClick={() => upd(i, { columns: f.columns!.filter((_, k) => k !== ci) })} aria-label="Smazat sloupec">×</button>
                 </div>
