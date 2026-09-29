@@ -818,7 +818,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           text("time-tv", "Čas (s TV)", [160, 52, 229, 40], "{{time}}", { size: 38, align: "center", showIf: "tv" }),
           img("tv", "Logo TV", [185, 93, 179, 30], "channel:{{tv}}", { fit: "contain", showIf: "tv", fallback: "none" }),
           logo("al", "Logo H", [393, 8, 140, 115], "away", { logoVariant: "white" }),
-        ], { rowsBg: { src: "asset:demo-rows-bg", radius: 20 } }),
+        ], { rowsBg: { src: "asset:demo-rows-bg", radius: 20, opacity: 0.5, backing: "#000000" } }),
         img("partner", "Liga / partner", [396, 1250, 170, 66], "brand:partner", { fallback: "none", align: "right", locked: true }),
         brandLogo([578, 1246, 110, 74], { align: "left" }),
       ],

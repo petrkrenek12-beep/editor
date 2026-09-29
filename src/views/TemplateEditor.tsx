@@ -690,6 +690,17 @@ function ElementProps({
                   ]}
                 />
               </div>
+              <Toggle
+                checked={el.equalize !== false}
+                onChange={(v) => onChange({ equalize: v ? undefined : false } as Partial<ImageElement>)}
+                label="Vyrovnat velikost log (ořez okrajů, stejná plocha)"
+              />
+              {el.equalize !== false && (
+                <div>
+                  <Label hint={`${Math.round((el.equalize ?? 0.6) * 100)} %`}>Velikost log</Label>
+                  <input type="range" min={0.3} max={1} step={0.01} value={el.equalize ?? 0.6} onChange={(e) => onChange({ equalize: Number(e.target.value) } as Partial<ImageElement>)} className="w-full accent-[#2A4BFF]" aria-label="Velikost log" />
+                </div>
+              )}
             </>
           )}
           {srcKind(el.src) === "channel" && (
@@ -854,6 +865,13 @@ function ElementProps({
                   <input type="range" min={0} max={1} step={0.01} value={el.rowsBg.opacity ?? 1} onChange={(e) => onChange({ rowsBg: { ...el.rowsBg!, opacity: Number(e.target.value) } } as Partial<TemplateElement>)} className="w-full accent-[#2A4BFF]" aria-label="Krytí pozadí řádků" />
                 </div>
               </Row>
+            )}
+            {el.rowsBg && (
+              <Toggle
+                checked={!!el.rowsBg.backing}
+                onChange={(v) => onChange({ rowsBg: { ...el.rowsBg!, backing: v ? "#000000" : "" } } as Partial<TemplateElement>)}
+                label="Pod obrázkem plná černá"
+              />
             )}
           </div>
           <p className="text-[12px] text-mute">Když se řádky nevejdou, automaticky se zmenší. Prvky řádku vyberete ve Vrstvách.</p>

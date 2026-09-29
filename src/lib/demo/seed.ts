@@ -6,7 +6,7 @@ import { OBASKETU_BG } from "./obasketu-bg";
 import { STAR_PNG } from "./star";
 import { ROWS_BG } from "./rows-bg";
 
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -142,8 +142,13 @@ export function migrateTemplateV4(t: Template): Template | null {
       const slot = children.find((c) => c.type === "image" && c.id === "bgimg") as ImageElement | undefined;
       if (slot && !rowsBg) {
         const src = slot.src.trim();
-        rowsBg = { src: src && src !== "asset:" ? src : `asset:${ROWS_BG_ASSET}`, radius: slot.radius ?? 20 };
+        rowsBg = { src: src && src !== "asset:" ? src : `asset:${ROWS_BG_ASSET}`, radius: slot.radius ?? 20, opacity: slot.opacity ?? 0.5, backing: "#000000" };
         children = children.filter((c) => c !== slot && !(c.type === "rect" && c.id === "bg"));
+        changed = true;
+      }
+      // v5: pod pozadí řádků plná černá (jako v Affinity), výchozí obrázek na 50 %
+      if (rowsBg && rowsBg.backing === undefined) {
+        rowsBg = { ...rowsBg, backing: "#000000", opacity: rowsBg.opacity ?? (rowsBg.src === `asset:${ROWS_BG_ASSET}` ? 0.5 : undefined) };
         changed = true;
       }
       if (/-program$/.test(t.id) && el.field === "games" && !children.some((c) => c.id === "tv")) {

@@ -501,6 +501,43 @@ function processedImage(img: HTMLImageElement, tint?: string, gray?: boolean): C
   return c;
 }
 
+/** Ořez průhledných okrajů (bbox neprůhledných pixelů), cache podle obrázku. */
+const trims = new WeakMap<HTMLImageElement, { x: number; y: number; w: number; h: number }>();
+function trimBox(img: HTMLImageElement) {
+  let b = trims.get(img);
+  if (b) return b;
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
+  b = { x: 0, y: 0, w: W, h: H };
+  try {
+    const k = Math.min(1, 400 / Math.max(W, H));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(W * k));
+    c.height = Math.max(1, Math.round(H * k));
+    const x = c.getContext("2d", { willReadFrequently: true })!;
+    x.drawImage(img, 0, 0, c.width, c.height);
+    const d = x.getImageData(0, 0, c.width, c.height).data;
+    let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < c.height; y++)
+      for (let xx = 0; xx < c.width; xx++)
+        if (d[(y * c.width + xx) * 4 + 3] > 12) {
+          if (xx < x0) x0 = xx;
+          if (xx > x1) x1 = xx;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+    if (x1 >= x0 && y1 >= y0) {
+      const bx = Math.max(0, Math.floor((x0 - 1) / k));
+      const by = Math.max(0, Math.floor((y0 - 1) / k));
+      b = { x: bx, y: by, w: Math.min(W, Math.ceil((x1 + 2) / k)) - bx, h: Math.min(H, Math.ceil((y1 + 2) / k)) - by };
+    }
+  } catch {
+    /* cizí původ bez CORS – bez ořezu */
+  }
+  trims.set(img, b);
+  return b;
+}
+
 function drawMonogram(ctx: CanvasRenderingContext2D, frame: Frame, label: string, color: string, color2: string, env: RenderEnv) {
   const d = Math.min(frame.w, frame.h);
   const cx = frame.x + frame.w / 2;
@@ -581,15 +618,19 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     }
     return;
   }
-  const iw = img.naturalWidth;
-  const ih = img.naturalHeight;
   const fit = el.fit ?? "cover";
+  // loga týmů: ořez průhledných okrajů + stejná optická velikost
+  const eq = el.equalize ?? (el.src.trim().startsWith("team:") ? 0.6 : false);
+  const crop = eq !== false && fit === "contain" ? trimBox(img) : { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
+  const iw = crop.w;
+  const ih = crop.h;
   let dw: number;
   let dh: number;
   let dx: number;
   let dy: number;
   if (fit === "contain") {
-    const k = Math.min(frame.w / iw, frame.h / ih) * (ref.value?.zoom ?? 1);
+    let k = Math.min(frame.w / iw, frame.h / ih) * (ref.value?.zoom ?? 1);
+    if (eq !== false) k = Math.min(k, Math.sqrt((frame.w * frame.h * eq) / (iw * ih)));
     dw = iw * k;
     dh = ih * k;
     const al = el.align ?? "center";
@@ -630,11 +671,11 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     const steps = Math.max(8, Math.round(r * 6));
     for (let i = 0; i < steps; i++) {
       const a = (i / steps) * Math.PI * 2;
-      ctx.drawImage(halo, dx + Math.cos(a) * r, dy + Math.sin(a) * r, dw, dh);
+      ctx.drawImage(halo, crop.x, crop.y, crop.w, crop.h, dx + Math.cos(a) * r, dy + Math.sin(a) * r, dw, dh);
     }
     ctx.restore();
   }
-  ctx.drawImage(source, dx, dy, dw, dh);
+  ctx.drawImage(source, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
   ctx.restore();
 }
 
@@ -735,6 +776,10 @@ function drawElement(
             ctx.save();
             roundRectPath(ctx, r, (el.rowsBg!.radius ?? 0) * rk);
             ctx.clip();
+            if (el.rowsBg!.backing) {
+              ctx.fillStyle = resolveColor(el.rowsBg!.backing, env.brand, rc);
+              ctx.fillRect(r.x, r.y, r.w, r.h);
+            }
             ctx.globalAlpha *= el.rowsBg!.opacity ?? 1;
             ctx.drawImage(rbImg, U.x + (U.w - dw) / 2, U.y + (U.h - dh) / 2, dw, dh);
             ctx.restore();

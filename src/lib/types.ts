@@ -163,6 +163,12 @@ export interface ImageElement extends BaseElement {
   grayscale?: boolean;
   /** Varianta loga týmu (bílá = Team.logoWhite, když existuje) */
   logoVariant?: "color" | "white";
+  /**
+   * Vyrovnání velikosti log: ořízne průhledné okraje a všechna loga zmenší
+   * na stejnou „optickou“ plochu (podíl plochy rámečku, výchozí 0.6).
+   * false = vypnuto. U log týmů zapnuto automaticky.
+   */
+  equalize?: number | false;
   /** Záře kolem obrysu (Outer Glow) */
   glow?: { color: ColorRef; radius: number; intensity: number };
 }
@@ -180,7 +186,7 @@ export interface ListElement extends BaseElement {
   /** Když se řádky nevejdou, zmenší se (nikdy nepřetečou) */
   children: TemplateElement[];
   /** Jeden obrázek přes všechny řádky (každý řádek ukáže svůj výřez) */
-  rowsBg?: { src: string; radius?: number; opacity?: number };
+  rowsBg?: { src: string; radius?: number; opacity?: number; /** plná barva pod obrázkem (jako černá vrstva v Affinity) */ backing?: string };
 }
 
 export type TemplateElement =
