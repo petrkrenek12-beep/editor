@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { browserRemover, removeBgRemover } from "@/lib/bg-removal";
 import { parseCsv, parseResultLines, parseScheduleLines, toRows } from "@/lib/data-import";
 import { asImageValue, clamp } from "@/lib/graphic";
@@ -84,7 +85,7 @@ export function DataForm({
             ) : f.type === "image" ? (
               <ImageField id={id} value={asImageValue(v)} disabled={ro} assets={assets} project={project} cutout={cutKeys.has(f.key)} onChange={(x) => set(f.key, x)} />
             ) : f.type === "list" ? (
-              <ListField field={f} assets={assets} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
+              <ListField field={f} assets={assets} teams={project.teams} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
             ) : (
               <Input id={id} disabled={ro} value={String(v ?? "")} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} />
             )}
@@ -356,6 +357,100 @@ export function AssetLibrary({ open, onClose, onPick, project, kinds }: { open: 
 
 // ── Seznam (řádky tabulky) ───────────────────────────────────
 
+/** Tým v tabulce: logo + rozbalovací seznam všech týmů (mimo posuvnou tabulku) + záře kolem loga. */
+function TeamCell({ value, onChange, glow, onGlow, teams, assets, disabled, label }: { value: string; onChange: (v: string) => void; glow: boolean; onGlow: (v: boolean) => void; teams: Project["teams"]; assets: Record<string, string>; disabled?: boolean; label: string }) {
+  const team = findTeam(teams, value);
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [pos, setPos] = useState<{ left: number; top: number; up: boolean } | null>(null);
+  const anchor = React.useRef<HTMLDivElement>(null);
+  const pop = React.useRef<HTMLDivElement>(null);
+  const place = () => {
+    const r = anchor.current?.getBoundingClientRect();
+    if (!r) return;
+    const up = r.bottom + 320 > window.innerHeight && r.top > 320;
+    setPos({ left: Math.min(r.left, window.innerWidth - 272), top: up ? r.top - 4 : r.bottom + 4, up });
+  };
+  React.useEffect(() => {
+    if (!open) return;
+    place();
+    const close = (e: MouseEvent) => !anchor.current?.contains(e.target as Node) && !pop.current?.contains(e.target as Node) && setOpen(false);
+    const re = () => place();
+    document.addEventListener("mousedown", close);
+    window.addEventListener("scroll", re, true);
+    window.addEventListener("resize", re);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("scroll", re, true);
+      window.removeEventListener("resize", re);
+    };
+  }, [open]);
+  const norm = (x: string) => x.toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+  const list = teams.filter((t) => !q || [t.name, t.short, ...t.aliases].some((n) => norm(n).includes(norm(q))));
+  return (
+    <div ref={anchor} className="flex min-w-[150px] items-center gap-1">
+      <button type="button" disabled={disabled} onClick={() => { setQ(""); setOpen((o) => !o); }} className="relative shrink-0 rounded-full" title={team ? team.name : "Vybrat tým"} aria-label={`Vybrat tým – ${label}`}>
+        <TeamLogo team={team} assets={assets} size={26} />
+        {glow && <span className="absolute -right-1 -top-1 rounded-full bg-signal px-[3px] text-[9px] font-bold leading-[13px] text-white">✦</span>}
+      </button>
+      <input
+        disabled={disabled}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setQ(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => {
+          setQ("");
+          setOpen(true);
+        }}
+        aria-label={label}
+        autoComplete="off"
+        className="h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-1.5 text-[13px] hover:border-line focus:border-signal focus:bg-white focus:outline-none"
+      />
+      <button type="button" disabled={disabled} onClick={() => { setQ(""); setOpen((o) => !o); }} className="shrink-0 rounded p-0.5 text-mute hover:bg-paper hover:text-ink" aria-label="Zobrazit všechny týmy">
+        <Icon name="chevronDown" size={15} />
+      </button>
+      {open && pos &&
+        createPortal(
+          <div
+            ref={pop}
+            style={{ position: "fixed", left: pos.left, top: pos.top, transform: pos.up ? "translateY(-100%)" : undefined, width: 264 }}
+            className="z-[80] rounded-md border border-line bg-white shadow-pop"
+          >
+            <label className="flex cursor-pointer items-center gap-2 border-b border-line px-2.5 py-2 text-[12px]">
+              <input type="checkbox" className="h-3.5 w-3.5 accent-[#2A4BFF]" checked={glow} onChange={(e) => onGlow(e.target.checked)} />
+              Záře kolem loga (1 px, bílá)
+            </label>
+            <div className="max-h-64 overflow-y-auto py-1">
+              {list.length ? (
+                list.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(t.name);
+                      setOpen(false);
+                    }}
+                    className={cx("flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-sm hover:bg-signal-soft", team?.id === t.id && "bg-paper font-semibold")}
+                  >
+                    <TeamLogo team={t} assets={assets} size={24} />
+                    <span className="truncate">{t.name}</span>
+                    <span className="ml-auto text-[11px] text-mute">{t.short}</span>
+                  </button>
+                ))
+              ) : (
+                <p className="px-3 py-2 text-[13px] text-mute">Žádný tým neodpovídá.</p>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
 function ImageCell({ value, onChange, disabled, assets }: { value: unknown; onChange: (v: ImageValue | null) => void; disabled?: boolean; assets: Record<string, string> }) {
   const iv = asImageValue(value);
   const url = iv?.asset ? assets[iv.asset] ?? (/^(data:|https?:)/.test(iv.asset) ? iv.asset : undefined) : undefined;
@@ -392,7 +487,7 @@ function ImageCell({ value, onChange, disabled, assets }: { value: unknown; onCh
   );
 }
 
-function ListField({ field, rows, onChange, disabled, channels = [], assets = {} }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean; channels?: Channel[]; assets?: Record<string, string> }) {
+function ListField({ field, rows, onChange, disabled, channels = [], assets = {}, teams = [] }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean; channels?: Channel[]; assets?: Record<string, string>; teams?: Project["teams"] }) {
   const cols = field.columns ?? [];
   const [paste, setPaste] = useState(false);
   const [text, setText] = useState("");
@@ -441,7 +536,18 @@ function ListField({ field, rows, onChange, disabled, channels = [], assets = {}
               <tr key={i} className="border-t border-line">
                 {cols.map((c) => (
                   <td key={c.key} className="p-1">
-                    {c.type === "image" ? (
+                    {c.type === "team" ? (
+                      <TeamCell
+                        value={String(r[c.key] ?? "")}
+                        onChange={(v) => setCell(i, c.key, v)}
+                        glow={!!r[`${c.key}__glow`]}
+                        onGlow={(v) => setCell(i, `${c.key}__glow`, v ? "1" : "")}
+                        teams={teams}
+                        assets={assets}
+                        disabled={disabled}
+                        label={`${c.label} ${i + 1}`}
+                      />
+                    ) : c.type === "image" ? (
                       <ImageCell value={r[c.key]} disabled={disabled} assets={assets} onChange={(v) => setCell(i, c.key, v)} />
                     ) : c.type === "channel" ? (
                       <select
@@ -461,7 +567,6 @@ function ListField({ field, rows, onChange, disabled, channels = [], assets = {}
                     ) : (
                     <input
                       disabled={disabled}
-                      list={c.type === "team" ? "team-list" : undefined}
                       value={String(r[c.key] ?? "")}
                       onChange={(e) => setCell(i, c.key, e.target.value)}
                       aria-label={`${c.label} ${i + 1}`}
