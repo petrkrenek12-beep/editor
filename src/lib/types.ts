@@ -177,6 +177,8 @@ export interface ImageElement extends BaseElement {
   repeat?: { gap?: number; offset?: number };
   /** Použít vyříznutou verzi fotky (ImageValue.cut) – hráč před pásem */
   useCutout?: boolean;
+  /** Vlastní obrázek, který má přednost (např. "{{from_logo}}" – logo zahraničního týmu) */
+  override?: string;
   /** Panorama přes více slidů carouselu: obrázek se roztáhne přes `span` slidů, každá další skupina se zrcadlí */
   panorama?: { span: number; mirror?: boolean };
   /** Záře kolem obrysu (Outer Glow) */

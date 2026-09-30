@@ -64,6 +64,10 @@ function assetUrl(env: RenderEnv, idOrUrl: string | undefined): string | undefin
 }
 
 function resolveImage(el: ImageElement, env: RenderEnv, ctx: RenderContext): ImgRef {
+  if (el.override) {
+    const o = resolveImage({ ...el, override: undefined, src: el.override }, env, ctx);
+    if (o.url) return o;
+  }
   const src = el.src.trim();
   if (src.startsWith("team:")) {
     const name = interpolate(src.slice(5), ctx);

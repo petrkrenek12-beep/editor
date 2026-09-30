@@ -8,7 +8,7 @@ import { ROWS_BG } from "./rows-bg";
 import { BAR_PNG } from "./bar";
 import { MAZZARD } from "./mazzard";
 
-export const SEED_VERSION = 10;
+export const SEED_VERSION = 11;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";

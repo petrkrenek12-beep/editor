@@ -118,6 +118,20 @@ function applyFilter(val: string, filter: string, ctx: RenderContext): string {
 /** "{{home_team|upper}} – {{away_team}}" → text */
 export function interpolate(tpl: string, ctx: RenderContext): string {
   return tpl.replace(/\{\{([^}]+)\}\}/g, (_, expr: string) => {
+    // {{@join: · |position|height: cm|age: let}} – spojí jen vyplněné části
+    if (expr.startsWith("@join:")) {
+      const [sep, ...parts] = expr.slice(6).split("|");
+      return parts
+        .map((p) => {
+          const i = p.indexOf(":");
+          const key = (i >= 0 ? p.slice(0, i) : p).trim();
+          const suffix = i >= 0 ? p.slice(i + 1) : "";
+          const v = valueToString(getValue(ctx, key)).trim();
+          return v ? v + suffix : "";
+        })
+        .filter(Boolean)
+        .join(sep);
+    }
     const [key, ...filters] = expr.split("|");
     let v = valueToString(getValue(ctx, key));
     for (const f of filters) v = applyFilter(v, f, ctx);
@@ -148,6 +162,8 @@ export function isEmptyValue(v: DataValue) {
  * pravá strana může být číslo nebo klíč pole.
  */
 export function evalCondition(ctx: RenderContext, expr: string): boolean {
+  if (expr.includes("||")) return expr.split("||").some((e) => evalCondition(ctx, e.trim()));
+  if (expr.includes("&&")) return expr.split("&&").every((e) => evalCondition(ctx, e.trim()));
   const m = /^\s*([^<>=!\s]+)\s*(<=|>=|==|!=|<|>)\s*(.+?)\s*$/.exec(expr);
   if (!m) return !isEmptyValue(getValue(ctx, expr));
   const num = (x: string) => {
