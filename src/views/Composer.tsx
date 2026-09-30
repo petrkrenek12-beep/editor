@@ -279,7 +279,16 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
           )}
         </div>
       )}
-      <DataForm template={template} data={data} onChange={setData} project={project} assets={assets} readOnlyField={readOnlyField} />
+      <DataForm
+        template={template}
+        data={data}
+        onChange={setData}
+        project={project}
+        assets={assets}
+        readOnlyField={readOnlyField}
+        activeRow={template.paginate?.perPage === 1 ? page - 1 : undefined}
+        onActiveRow={template.paginate ? (i) => setPage(Math.floor(i / template.paginate!.perPage) + 1) : undefined}
+      />
     </div>
   );
 

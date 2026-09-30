@@ -8,7 +8,7 @@ import { dataUrlToBlob, fileToDataUrl, importImageFile } from "@/lib/images";
 import { getState, uid, upsert, useApp } from "@/lib/store";
 import { findTeam } from "@/lib/template-string";
 import type { Asset, Channel, DataRecord, FieldDef, ImageValue, Project, Template } from "@/lib/types";
-import { Button, cx, FileButton, Icon, IconButton, Input, Label, Modal, Select, Spinner, Textarea, toast } from "./ui";
+import { Button, cx, FileButton, Icon, IconButton, Input, Label, Modal, Segmented, Select, Spinner, Textarea, toast } from "./ui";
 
 export function DataForm({
   template,
@@ -18,6 +18,8 @@ export function DataForm({
   assets,
   readOnlyField,
   compact,
+  activeRow,
+  onActiveRow,
 }: {
   template: Template;
   data: DataRecord;
@@ -26,6 +28,9 @@ export function DataForm({
   assets: Record<string, string>;
   readOnlyField?: (f: FieldDef) => boolean;
   compact?: boolean;
+  /** carousel: řádek, který je právě v náhledu */
+  activeRow?: number;
+  onActiveRow?: (i: number) => void;
 }) {
   const set = (k: string, v: DataRecord[string]) => onChange({ ...data, [k]: v });
   // pole, jejichž fotka se kreslí i vyříznutá v popředí (hráč před pásem)
@@ -85,7 +90,7 @@ export function DataForm({
             ) : f.type === "image" ? (
               <ImageField id={id} value={asImageValue(v)} disabled={ro} assets={assets} project={project} cutout={cutKeys.has(f.key)} onChange={(x) => set(f.key, x)} />
             ) : f.type === "list" ? (
-              <ListField field={f} assets={assets} teams={project.teams} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
+              <ListField field={f} activeRow={template.paginate?.field === f.key ? activeRow : undefined} onActiveRow={template.paginate?.field === f.key ? onActiveRow : undefined} assets={assets} teams={project.teams} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
             ) : (
               <Input id={id} disabled={ro} value={String(v ?? "")} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} />
             )}
@@ -358,7 +363,7 @@ export function AssetLibrary({ open, onClose, onPick, project, kinds }: { open: 
 // ── Seznam (řádky tabulky) ───────────────────────────────────
 
 /** Tým v tabulce: logo + rozbalovací seznam všech týmů (mimo posuvnou tabulku) + záře kolem loga. */
-function TeamCell({ value, onChange, glow, onGlow, teams, assets, disabled, label }: { value: string; onChange: (v: string) => void; glow: boolean; onGlow: (v: boolean) => void; teams: Project["teams"]; assets: Record<string, string>; disabled?: boolean; label: string }) {
+function TeamCell({ value, onChange, glow, onGlow, teams, assets, disabled, label, boxed }: { value: string; onChange: (v: string) => void; glow: boolean; onGlow: (v: boolean) => void; teams: Project["teams"]; assets: Record<string, string>; disabled?: boolean; label: string; boxed?: boolean }) {
   const team = findTeam(teams, value);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -388,7 +393,7 @@ function TeamCell({ value, onChange, glow, onGlow, teams, assets, disabled, labe
   const norm = (x: string) => x.toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
   const list = teams.filter((t) => !q || [t.name, t.short, ...t.aliases].some((n) => norm(n).includes(norm(q))));
   return (
-    <div ref={anchor} className="flex min-w-[150px] items-center gap-1">
+    <div ref={anchor} className={cx("flex items-center gap-1", boxed ? "min-w-0 rounded border border-line bg-white pl-1" : "min-w-[150px]")}>
       <button type="button" disabled={disabled} onClick={() => { setQ(""); setOpen((o) => !o); }} className="relative shrink-0 rounded-full" title={team ? team.name : "Vybrat tým"} aria-label={`Vybrat tým – ${label}`}>
         <TeamLogo team={team} assets={assets} size={26} />
         {glow && <span className="absolute -right-1 -top-1 rounded-full bg-signal px-[3px] text-[9px] font-bold leading-[13px] text-white">✦</span>}
@@ -487,8 +492,11 @@ function ImageCell({ value, onChange, disabled, assets }: { value: unknown; onCh
   );
 }
 
-function ListField({ field, rows, onChange, disabled, channels = [], assets = {}, teams = [] }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean; channels?: Channel[]; assets?: Record<string, string>; teams?: Project["teams"] }) {
+function ListField({ field, rows, onChange, disabled, channels = [], assets = {}, teams = [], activeRow, onActiveRow }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean; channels?: Channel[]; assets?: Record<string, string>; teams?: Project["teams"]; activeRow?: number; onActiveRow?: (i: number) => void }) {
   const cols = field.columns ?? [];
+  // hodně sloupců (např. carousel zápasů) → přehlednější karty, jinak tabulka
+  const [view, setView] = useState<"cards" | "table">(cols.length > 5 ? "cards" : "table");
+  const wide = (c: (typeof cols)[number]) => c.type === "text" && !/^(time|detail|pct|credit)$/.test(c.key) ? true : c.type === "list";
   const [paste, setPaste] = useState(false);
   const [text, setText] = useState("");
   const setCell = (i: number, k: string, v: unknown) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
@@ -517,9 +525,95 @@ function ListField({ field, rows, onChange, disabled, channels = [], assets = {}
       toast((e as Error).message, "bad");
     }
   };
+  const cell = (c: NonNullable<FieldDef["columns"]>[number], r: Record<string, unknown>, i: number, boxed = false) => {
+    const box = boxed ? "border-line bg-white" : "border-transparent bg-transparent";
+    return (
+      <>
+                    {c.type === "team" ? (
+                      <TeamCell
+                        value={String(r[c.key] ?? "")}
+                        onChange={(v) => setCell(i, c.key, v)}
+                        glow={!!r[`${c.key}__glow`]}
+                        onGlow={(v) => setCell(i, `${c.key}__glow`, v ? "1" : "")}
+                        teams={teams}
+                        assets={assets}
+                        disabled={disabled}
+                        label={`${c.label} ${i + 1}`}
+                        boxed={boxed}
+                      />
+                    ) : c.type === "image" ? (
+                      <ImageCell value={r[c.key]} disabled={disabled} assets={assets} onChange={(v) => setCell(i, c.key, v)} />
+                    ) : c.type === "channel" ? (
+                      <select
+                        disabled={disabled}
+                        value={String(r[c.key] ?? "")}
+                        onChange={(e) => setCell(i, c.key, e.target.value)}
+                        aria-label={`${c.label} ${i + 1}`}
+                        title={channels.length ? undefined : "Přidejte TV stanice v Brand kitu"}
+                        className={cx(`h-8 w-full min-w-[64px] rounded border ${box} px-1 text-[13px] hover:border-line focus:border-signal focus:bg-white focus:outline-none`, r[c.key] ? "font-semibold text-signal" : "text-mute")}
+                      >
+                        <option value="">—</option>
+                        {channels.map((ch) => (
+                          <option key={ch.id}>{ch.name}</option>
+                        ))}
+                        {!!r[c.key] && !channels.some((ch) => ch.name === r[c.key]) && <option>{String(r[c.key])}</option>}
+                      </select>
+                    ) : (
+                    <input
+                      disabled={disabled}
+                      value={String(r[c.key] ?? "")}
+                      onChange={(e) => setCell(i, c.key, e.target.value)}
+                      aria-label={`${c.label} ${i + 1}`}
+                      className={cx(`h-8 w-full min-w-[48px] rounded border ${box} px-1.5 text-[13px] hover:border-line focus:border-signal focus:bg-white focus:outline-none`, c.type === "number" && "tabular-nums")}
+                    />
+                    )}
+                  </>
+    );
+  };
   return (
     <div className="rounded-md border border-line bg-white">
-      <div className="max-h-[340px] overflow-auto">
+      <div className="flex items-center justify-end gap-1 border-b border-line px-1.5 py-1">
+        <Segmented
+          size="sm"
+          value={view}
+          onChange={(v) => setView(v)}
+          options={[
+            { value: "cards", label: "Karty" },
+            { value: "table", label: "Tabulka" },
+          ]}
+        />
+      </div>
+      <div className={cx("overflow-auto", view === "cards" ? "max-h-[70vh]" : "max-h-[340px]")}>
+        {view === "cards" ? (
+          <div className="space-y-2 p-2">
+            {rows.map((r, i) => (
+              <div
+                key={i}
+                onFocusCapture={() => onActiveRow?.(i)}
+                onClick={() => onActiveRow?.(i)}
+                className={cx("rounded-md border p-2", activeRow === i ? "border-signal bg-signal-soft/40" : "border-line bg-paper/60")}
+              >
+                <div className="mb-1.5 flex items-center gap-1">
+                  <span className="font-cond text-[12px] font-bold uppercase tracking-wide text-mute">
+                    {i + 1}. {field.label.replace(/\s*\(.*\)$/, "").replace(/y$/, "")}
+                    {activeRow === i && <span className="ml-1.5 text-signal">· v náhledu</span>}
+                  </span>
+                  <span className="flex-1" />
+                  <IconButton icon="up" label="Nahoru" onClick={() => move(i, -1)} disabled={disabled || i === 0} className="h-7 w-7" />
+                  <IconButton icon="trash" label="Smazat" onClick={() => onChange(rows.filter((_, j) => j !== i))} disabled={disabled} className="h-7 w-7" />
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                  {cols.map((c) => (
+                    <div key={c.key} className={cx("min-w-0", wide(c) && "col-span-2")}>
+                      <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-mute">{c.label}</div>
+                      {cell(c, r, i, true)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-paper">
             <tr>
@@ -536,43 +630,7 @@ function ListField({ field, rows, onChange, disabled, channels = [], assets = {}
               <tr key={i} className="border-t border-line">
                 {cols.map((c) => (
                   <td key={c.key} className="p-1">
-                    {c.type === "team" ? (
-                      <TeamCell
-                        value={String(r[c.key] ?? "")}
-                        onChange={(v) => setCell(i, c.key, v)}
-                        glow={!!r[`${c.key}__glow`]}
-                        onGlow={(v) => setCell(i, `${c.key}__glow`, v ? "1" : "")}
-                        teams={teams}
-                        assets={assets}
-                        disabled={disabled}
-                        label={`${c.label} ${i + 1}`}
-                      />
-                    ) : c.type === "image" ? (
-                      <ImageCell value={r[c.key]} disabled={disabled} assets={assets} onChange={(v) => setCell(i, c.key, v)} />
-                    ) : c.type === "channel" ? (
-                      <select
-                        disabled={disabled}
-                        value={String(r[c.key] ?? "")}
-                        onChange={(e) => setCell(i, c.key, e.target.value)}
-                        aria-label={`${c.label} ${i + 1}`}
-                        title={channels.length ? undefined : "Přidejte TV stanice v Brand kitu"}
-                        className={cx("h-8 w-full min-w-[64px] rounded border border-transparent bg-transparent px-1 text-[13px] hover:border-line focus:border-signal focus:bg-white focus:outline-none", r[c.key] ? "font-semibold text-signal" : "text-mute")}
-                      >
-                        <option value="">—</option>
-                        {channels.map((ch) => (
-                          <option key={ch.id}>{ch.name}</option>
-                        ))}
-                        {!!r[c.key] && !channels.some((ch) => ch.name === r[c.key]) && <option>{String(r[c.key])}</option>}
-                      </select>
-                    ) : (
-                    <input
-                      disabled={disabled}
-                      value={String(r[c.key] ?? "")}
-                      onChange={(e) => setCell(i, c.key, e.target.value)}
-                      aria-label={`${c.label} ${i + 1}`}
-                      className={cx("h-8 w-full min-w-[48px] rounded border border-transparent bg-transparent px-1.5 text-[13px] hover:border-line focus:border-signal focus:bg-white focus:outline-none", c.type === "number" && "tabular-nums")}
-                    />
-                    )}
+                    {cell(c, r, i)}
                   </td>
                 ))}
                 <td className="whitespace-nowrap pr-1 text-right">
@@ -583,6 +641,7 @@ function ListField({ field, rows, onChange, disabled, channels = [], assets = {}
             ))}
           </tbody>
         </table>
+        )}
       </div>
       <div className="flex flex-wrap gap-1.5 border-t border-line p-1.5">
         <Button size="sm" icon="plus" disabled={disabled} onClick={() => onChange([...rows, Object.fromEntries(cols.map((c) => [c.key, ""]))])}>
