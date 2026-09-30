@@ -6,7 +6,8 @@ import { can, ROLE_LABEL } from "@/lib/permissions";
 import { navigate, useRoute } from "@/lib/router";
 import { initStore, updateSettings, useApp, useCurrentProject, useCurrentUser } from "@/lib/store";
 import { Composer } from "@/views/Composer";
-import { startAutoSync, useSyncStatus } from "@/lib/sync";
+import { enableSync, startAutoSync, syncServerInfo, useSyncStatus } from "@/lib/sync";
+import { HAS_SERVER } from "@/lib/runtime";
 import { TemplateEditor } from "@/views/TemplateEditor";
 import { Dashboard, RecentPage, TemplatePicker, TemplatesPage } from "@/views/Pages";
 import { BrandKitPage } from "@/views/BrandKit";
@@ -111,6 +112,7 @@ function Shell() {
       {fullBleed ? <Rail current={top} /> : <Sidebar current={top} />}
       <div className="flex min-w-0 flex-1 flex-col">
         {!fullBleed && <MobileTop />}
+        <SyncPrompt />
         <main className={cx("flex-1", !fullBleed && "pb-[calc(72px+env(safe-area-inset-bottom,0px))] lg:pb-0")}>{view}</main>
       </div>
       {!fullBleed && <BottomNav current={top} onMore={() => setMore(true)} />}
@@ -324,5 +326,63 @@ function Rail({ current }: { current: string }) {
         </button>
       </div>
     </aside>
+  );
+}
+
+/** Nové zařízení / nová adresa: nabídne načtení dat z cloudu. */
+function SyncPrompt() {
+  const sync = useApp((s) => s.settings.sync);
+  const [show, setShow] = React.useState(false);
+  const [pw, setPw] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState("");
+  React.useEffect(() => {
+    if (!HAS_SERVER || sync) return;
+    let hidden = false;
+    try {
+      hidden = sessionStorage.getItem("presetka-syncprompt") === "0";
+    } catch {}
+    if (hidden) return;
+    void syncServerInfo().then((i) => setShow(!!(i?.blob && i.password)));
+  }, [sync]);
+  if (!show || sync) return null;
+  return (
+    <div className="border-b border-line bg-[#FFF7E8] px-4 py-3 text-sm lg:px-8">
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setErr("");
+          try {
+            await enableSync(pw);
+            setShow(false);
+          } catch (x) {
+            setErr((x as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <span className="font-semibold">Načíst vaše šablony, brand kit a loga z cloudu?</span>
+        <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Heslo (APP_PASSWORD)" className="h-8 rounded-md border border-line bg-white px-2" />
+        <button type="submit" disabled={busy || !pw} className="h-8 rounded-md bg-ink px-3 font-semibold text-white disabled:opacity-50">
+          {busy ? "Načítám…" : "Zapnout synchronizaci"}
+        </button>
+        <button
+          type="button"
+          className="h-8 px-2 text-mute"
+          onClick={() => {
+            try {
+              sessionStorage.setItem("presetka-syncprompt", "0");
+            } catch {}
+            setShow(false);
+          }}
+        >
+          Teď ne
+        </button>
+        {err && <span className="w-full text-[12px] text-bad">{err}</span>}
+      </form>
+    </div>
   );
 }

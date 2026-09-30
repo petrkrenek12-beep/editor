@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useSyncExternalStore } from "react";
 import { HAS_SERVER } from "./runtime";
-import { getState, modTime, onLocalChange, remove, updateSettings, upsert } from "./store";
+import { getState, modTime, onLocalChange, remove, updateSettings, upgradeStoredTemplates, upsert } from "./store";
 import type { CollectionName } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Template } from "./types";
 import { dataUrlToBlob, fileToDataUrl } from "./images";
@@ -229,6 +229,8 @@ async function doSync() {
     const ids = new Set(next.map((x) => x.id));
     for (const id of cur.keys()) if (!ids.has(id)) await remove(c, id, { remote: true });
   }
+  // šablony z cloudu uložené starší verzí aplikace → aktuální verze
+  await upgradeStoredTemplates();
   // převzít cloudové adresy u obrázků, které už máme (nenahrávat je znovu)
   const remoteMeta = new Map(merged.assets.map((m) => [m.id, m]));
   for (const a of getState().assets) {

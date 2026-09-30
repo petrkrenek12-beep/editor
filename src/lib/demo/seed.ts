@@ -6,7 +6,7 @@ import { OBASKETU_BG } from "./obasketu-bg";
 import { STAR_PNG } from "./star";
 import { ROWS_BG } from "./rows-bg";
 
-export const SEED_VERSION = 5;
+export const SEED_VERSION = 6;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -66,16 +66,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     rowsBgAsset(),
   );
 
-  const templates = [...buildTemplates(nbl.id, shared), ...buildTemplates(repre.id, shared)];
-  // Reprezentace: přepsat ukázková data na národní týmy
-  for (const t of templates.filter((x) => x.projectId === repre.id)) {
-    const d = { ...t.sampleData };
-    if ("home_team" in d) d.home_team = "Česko";
-    if ("away_team" in d) d.away_team = "Srbsko";
-    if ("competition" in d) d.competition = "Kvalifikace MS 2027";
-    if ("venue" in d) d.venue = "O2 universum, Praha";
-    t.sampleData = d;
-  }
+  const templates = [...builtInTemplates(nbl.id), ...builtInTemplates(repre.id)];
 
   const ds = (id: string, name: string, kind: Dataset["kind"], rows: Dataset["rows"], source?: string): Dataset => ({
     id: `${nbl.id}-${id}`,
@@ -100,12 +91,41 @@ export function bgAsset(): Asset {
   return { id: BG_ASSET, projectId: "p-nbl", name: "Pozadí OBASKETU", kind: "background", dataUrl: OBASKETU_BG, w: 1024, h: 1024, createdAt: Date.now() };
 }
 
-/** Aktualizace demo obsahu u existujících instalací (jen neupravené vestavěné šablony). */
-export function upgradeTemplates(projectId: string): Template[] {
-  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /-(result|program)$/.test(t.id));
+/** Vestavěné šablony projektu v aktuální verzi návrhu. */
+export function builtInTemplates(projectId: string): Template[] {
+  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" });
+  for (const t of list) t.rev = SEED_VERSION;
   if (projectId === "p-repre")
-    for (const t of list) if ("home_team" in t.sampleData) t.sampleData = { ...t.sampleData, home_team: "Česko", away_team: "Srbsko" };
+    for (const t of list) {
+      const d = { ...t.sampleData };
+      if ("home_team" in d) d.home_team = "Česko";
+      if ("away_team" in d) d.away_team = "Srbsko";
+      if ("competition" in d) d.competition = "Kvalifikace MS 2027";
+      if ("venue" in d) d.venue = "O2 universum, Praha";
+      t.sampleData = d;
+    }
   return list;
+}
+
+/**
+ * Aktualizace jedné šablony na aktuální verzi aplikace:
+ *  - neupravená vestavěná šablona ze starší verze → nahradí se novým návrhem
+ *  - upravená šablona → jen bezpečné migrace (bílá loga, pozadí řádků, TV)
+ * Vrací null, když není co měnit.
+ */
+export function upgradeTemplate(t: Template): Template | null {
+  const pid = /^(p-nbl|p-repre)-/.exec(t.id)?.[1];
+  if (t.builtIn && pid && (t.rev ?? 0) < SEED_VERSION) {
+    const fresh = builtInTemplates(pid).find((x) => x.id === t.id);
+    if (fresh) return { ...fresh, createdAt: t.createdAt };
+  }
+  return migrateTemplateV4(t);
+}
+
+/** Původní podoba vestavěné šablony (pro „Obnovit původní návrh“). */
+export function originalTemplate(id: string): Template | undefined {
+  const pid = /^(p-nbl|p-repre)-/.exec(id)?.[1];
+  return pid ? builtInTemplates(pid).find((x) => x.id === id) : undefined;
 }
 
 export function starAsset(): Asset {

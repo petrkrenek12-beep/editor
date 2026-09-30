@@ -10,6 +10,7 @@ import { FORMATS, FORMAT_ORDER } from "@/lib/formats";
 import { frameUpdate } from "@/lib/graphic";
 import { autoAnchorX, autoAnchorY, framesOverlap, resolveElement } from "@/lib/layout";
 import { can } from "@/lib/permissions";
+import { originalTemplate } from "@/lib/demo/seed";
 import type { RenderEnv } from "@/lib/render";
 import { navigate } from "@/lib/router";
 import { uid, upsert, useApp, useAssetMap, useCurrentProject, useCurrentUser } from "@/lib/store";
@@ -256,6 +257,24 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         <div className="ml-auto flex items-center gap-1.5">
           <IconButton icon="chevronLeft" label="Zpět (Ctrl+Z)" onClick={undo} disabled={!past.length} />
           <IconButton icon="chevronRight" label="Znovu (Ctrl+Shift+Z)" onClick={redo} disabled={!future.length} />
+          {!t.builtIn && originalTemplate(t.id) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="refresh"
+              onClick={async () => {
+                if (!(await confirm("Vrátit šablonu na původní (nejnovější) návrh? Vaše úpravy této šablony se ztratí."))) return;
+                const o = originalTemplate(t.id)!;
+                const fresh = { ...o, createdAt: t.createdAt };
+                await upsert("templates", fresh);
+                setT(fresh);
+                setDirty(false);
+                toast("Šablona obnovena na původní návrh");
+              }}
+            >
+              Původní návrh
+            </Button>
+          )}
           <Button size="sm" icon="eye" onClick={() => navigate(`/create/${t.id}`)} disabled={dirty}>
             Použít
           </Button>

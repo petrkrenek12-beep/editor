@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, upgradeTemplates, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, migrateTemplateV4 } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate } from "./demo/seed";
 
 export interface AppState {
   ready: boolean;
@@ -133,25 +133,17 @@ export function initStore() {
           return np;
         }),
       );
+      // nové vestavěné šablony z aktualizace (kromě těch, které uživatel smazal)
+      const tomb = settings?.tombstones ?? {};
       for (const pid of ["p-nbl", "p-repre"]) {
-        for (const nt of upgradeTemplates(pid)) {
-          const old = templates.find((t) => t.id === nt.id);
-          if (old && !old.builtIn) continue; // uživatel šablonu upravil – nepřepisovat
+        if (!projects.some((p) => p.id === pid)) continue;
+        for (const nt of builtInTemplates(pid)) {
+          if (templates.some((t) => t.id === nt.id) || tomb[`templates:${nt.id}`]) continue;
           (nt as { _mod?: number })._mod = Date.now();
           await a.put("templates", nt);
-          templates = [...templates.filter((t) => t.id !== nt.id), nt];
+          templates = [...templates, nt];
         }
       }
-      // upravené šablony: bílý tint log → bílé varianty, společné pozadí řádků, TV
-      templates = await Promise.all(
-        templates.map(async (t) => {
-          const nt = migrateTemplateV4(t);
-          if (!nt) return t;
-          (nt as { _mod?: number })._mod = Date.now();
-          await a.put("templates", nt);
-          return nt;
-        }),
-      );
       settings = { ...(settings ?? state.settings), seedVersion: SEED_VERSION };
       await a.putSettings(settings);
     }
@@ -168,6 +160,7 @@ export function initStore() {
       datasets,
       graphics: graphics.sort((x, y) => y.createdAt - x.createdAt),
     });
+    await upgradeStoredTemplates();
   })();
   return initPromise;
 }
@@ -240,10 +233,20 @@ export async function importProject(json: ReturnType<typeof exportProject>) {
   if (json?.app !== "presetka" || !json.project) throw new Error("Soubor není záloha Presetky.");
   await upsert("projects", json.project);
   for (const t of json.templates ?? []) await upsert("templates", t);
+  // šablony ze staré zálohy převést na aktuální verzi
+  await upgradeStoredTemplates();
   for (const a of json.assets ?? []) await upsert("assets", a);
   for (const d of json.datasets ?? []) await upsert("datasets", d);
   for (const g of json.graphics ?? []) await upsert("graphics", g);
   await updateSettings({ currentProjectId: json.project.id });
+}
+
+/** Převede uložené šablony na aktuální verzi (po startu, po obnově zálohy a po synchronizaci). */
+export async function upgradeStoredTemplates() {
+  for (const t of getState().templates) {
+    const nt = upgradeTemplate(t);
+    if (nt) await upsert("templates", nt);
+  }
 }
 
 // ── selektory ────────────────────────────────────────────────

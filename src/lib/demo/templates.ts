@@ -152,6 +152,7 @@ const ANCHORS: Record<string, Record<string, AnchorY>> = {
   breaking: { kicker: "bottom", headline: "bottom" },
   "results-carousel": { games: "stretch" },
   program: { games: "stretch" },
+  "results-round": { games: "stretch" },
   quote: { quote: "center" },
 };
 
@@ -821,6 +822,50 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         ], { rowsBg: { src: "asset:demo-rows-bg", radius: 20, opacity: 0.5, backing: "#000000" } }),
         img("partner", "Liga / partner", [396, 1250, 170, 66], "brand:partner", { fallback: "none", align: "right", locked: true }),
         brandLogo([578, 1246, 110, 74], { align: "left" }),
+      ],
+    },
+    // 17 ── VÝSLEDKY KOLA (jeden slide, minimalistický styl)
+    {
+      id: "results-round",
+      name: "Výsledky kola",
+      category: "Soutěž",
+      description: "Celé kolo na jednom slidu: loga, skóre a čtvrtiny. Pozadí z brand kitu, logo soutěže dole.",
+      background: "@dark",
+      fields: [
+        { key: "title", label: "Titulek", type: "text" },
+        f.round,
+        {
+          key: "games",
+          label: "Zápasy",
+          type: "list",
+          help: "Vložte i jako text: Nymburk – Brno 92:78",
+          columns: [
+            { key: "home", label: "Domácí", type: "team" },
+            { key: "away", label: "Hosté", type: "team" },
+            { key: "home_score", label: "Skóre D", type: "number" },
+            { key: "away_score", label: "Skóre H", type: "number" },
+            { key: "detail", label: "Čtvrtiny", type: "text" },
+          ],
+        },
+        { key: "comp_logo", label: "Logo soutěže (jinak z brand kitu)", type: "image" },
+      ],
+      sampleData: { title: "Výsledky", round: "2. kolo", games: RESULTS_2_KOLO.slice(0, 6) },
+      elements: [
+        img("bg", "Pozadí (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", zone: "bg", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+        rect("shade", "Ztmavení", [0, 0, 1080, 1350], lin(90, [0, "@dark/15"], [0.5, "@dark/45"], [1, "@dark/25"]), { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        img("lines", "Čáry nahoře", [620, 0, 460, 430], "asset:", { fit: "contain", align: "right", valign: "top", anchorX: "right", anchorY: "top", fallback: "placeholder" }),
+        text("title", "Titulek", [140, 40, 800, 160], "{{title}}", { size: 196, uppercase: true, align: "center", color: "@accent", letterSpacing: -0.01 }),
+        text("round", "Kolo", [240, 206, 600, 58], "{{round}}", { font: "body", weight: 700, size: 36, uppercase: true, align: "center", pill: { fill: "@accent", padX: 30, padY: 8, radius: 3 } }),
+        list("games", "Zápasy", [140, 296, 800, 910], "games", 140, 14, [
+          rect("bg", "Pozadí řádku", [0, 0, 800, 140], "@dark/45", { radius: 18 }),
+          logo("hl", "Logo D", [34, 14, 180, 112], "home", { logoVariant: "white", equalize: 0.55 }),
+          text("score", "Skóre", [220, 8, 360, 92], "{{home_score}}[:]{{away_score}}", { size: 104, align: "center", highlight: "@accent" }),
+          text("detail", "Čtvrtiny", [180, 98, 440, 34], "{{detail}}", { font: "body", weight: 600, size: 27, align: "center", opacity: 0.8, showIf: "detail" }),
+          logo("al", "Logo H", [586, 14, 180, 112], "away", { logoVariant: "white", equalize: 0.55 }),
+        ]),
+        img("comp-logo", "Logo soutěže", [360, 1240, 210, 76], "{{comp_logo}}", { fit: "contain", align: "right", showIf: "comp_logo", fallback: "none" }),
+        img("partner", "Liga / partner", [360, 1240, 210, 76], "brand:partner", { fallback: "none", align: "right", hideIf: "comp_logo" }),
+        brandLogo([590, 1238, 120, 80], { align: "left" }),
       ],
     },
   ];

@@ -252,6 +252,8 @@ export interface Template {
   createdAt: number;
   updatedAt: number;
   builtIn?: boolean;
+  /** Verze vestavěného návrhu (pro automatické aktualizace nezměněných šablon) */
+  rev?: number;
 }
 
 export interface BrandFont {
