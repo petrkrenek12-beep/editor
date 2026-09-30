@@ -10,7 +10,7 @@ export const FONT_LIBRARY: { family: string; weights: number[]; italic?: boolean
   { family: "Teko", weights: [500, 600, 700], kind: "Condensed" },
   { family: "Archivo Black", weights: [400], kind: "Heavy sans" },
   { family: "Roboto Condensed", weights: [400, 700], italic: true, kind: "Condensed" },
-  { family: "Montserrat", weights: [500, 700, 800, 900], italic: true, kind: "Sans" },
+  { family: "Montserrat", weights: [400, 500, 600, 700, 800, 900], italic: true, kind: "Sans" },
   { family: "Rubik", weights: [400, 500, 700, 900], italic: true, kind: "Sans" },
 ];
 

@@ -140,6 +140,10 @@ export interface TextElement extends BaseElement {
   strokeText?: { color: ColorRef; width: number };
   /** Obrázek před textem (např. hvězda): src jako u obrázku, scale = výška vůči písmu, gap = mezera v em */
   icon?: { src: string; scale?: number; gap?: number };
+  /** Váha písma pro [zvýrazněná] slova (např. příjmení tučně) */
+  highlightWeight?: number;
+  /** Běžící pás: text se opakuje přes celou šířku (střídavě tučně / tence) */
+  ticker?: { gap?: number; alternate?: boolean; lightWeight?: number; offset?: number };
 }
 
 export interface ImageElement extends BaseElement {
@@ -169,6 +173,10 @@ export interface ImageElement extends BaseElement {
    * false = vypnuto. U log týmů zapnuto automaticky.
    */
   equalize?: number | false;
+  /** Opakovat obrázek vodorovně přes celý rámeček (pás s logy) */
+  repeat?: { gap?: number; offset?: number };
+  /** Použít vyříznutou verzi fotky (ImageValue.cut) – hráč před pásem */
+  useCutout?: boolean;
   /** Záře kolem obrysu (Outer Glow) */
   glow?: { color: ColorRef; radius: number; intensity: number };
 }
@@ -230,6 +238,8 @@ export interface ImageValue {
   zoom?: number; // 1 = cover
   fx?: number; // 0..1 střed ořezu
   fy?: number;
+  /** Vyříznutá verze stejné fotky (bez pozadí) pro vrstvu v popředí */
+  cut?: string;
 }
 
 export type DataValue = string | number | ImageValue | Record<string, unknown>[] | null | undefined;

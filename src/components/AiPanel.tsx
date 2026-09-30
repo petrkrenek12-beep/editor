@@ -54,7 +54,7 @@ export function AiPanel({ template, data, onApply, disabled }: { template: Templ
       <p className="text-[13px] text-mute">Navrhne titulek, teaser a text příspěvku. Design šablony nemění.</p>
       <div>
         <Label htmlFor="ai-in">Co se stalo</Label>
-        <Textarea id="ai-in" rows={3} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Nymburk porazil Brno 92:78 a postupuje do finále." disabled={disabled} />
+        <Textarea id="ai-in" rows={3} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Pardubice porazily Brno 92:78 a jdou do čela tabulky." disabled={disabled} />
       </div>
       <div>
         <Label htmlFor="ai-tone">Tón</Label>

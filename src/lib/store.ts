@@ -3,7 +3,8 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset } from "./demo/seed";
+import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
   ready: boolean;
@@ -108,6 +109,21 @@ export function initStore() {
         await a.put("assets", st);
         assets = [...assets, st];
       }
+      if (!assets.some((x) => x.id === "demo-bar")) {
+        const ba = barAsset();
+        await a.put("assets", ba);
+        assets = [...assets, ba];
+      }
+      // v7: Nymburk už v lize není – z týmů pryč, ukázkové datové sady bez něj
+      for (const [id, rows] of [["p-nbl-program", PROGRAM_3_KOLO], ["p-nbl-results", RESULTS_2_KOLO], ["p-nbl-standings", STANDINGS]] as const) {
+        const d = datasets.find((x) => x.id === id);
+        if (d && JSON.stringify(d.rows).includes("Nymburk")) {
+          const nd = { ...d, rows: rows as unknown as typeof d.rows, updatedAt: Date.now() };
+          (nd as { _mod?: number })._mod = Date.now();
+          await a.put("datasets", nd);
+          datasets = datasets.map((x) => (x.id === id ? nd : x));
+        }
+      }
       if (!assets.some((x) => x.id === ROWS_BG_ASSET)) {
         const rb = rowsBgAsset();
         await a.put("assets", rb);
@@ -123,9 +139,13 @@ export function initStore() {
           if (p.id !== "p-nbl") return p;
           const needBg = !p.brand.backgrounds.includes(BG_ASSET);
           const needCh = !p.brand.channels;
-          if (!needBg && !needCh) return p;
+          const nym = p.teams.some((t) => /nymburk/i.test(t.name));
+          if (!needBg && !needCh && !nym) return p;
           const np = {
             ...p,
+            teams: p.teams
+              .filter((t) => !/nymburk/i.test(t.name))
+              .map((t) => (t.name === "Slavia Praha" && !t.aliases.includes("Slavia Praha ERA NBK") ? { ...t, aliases: [...t.aliases, "Slavia Praha ERA NBK"] } : t)),
             brand: { ...p.brand, backgrounds: needBg ? [BG_ASSET, ...p.brand.backgrounds] : p.brand.backgrounds, channels: p.brand.channels ?? defaultChannels() },
           };
           (np as { _mod?: number })._mod = Date.now();

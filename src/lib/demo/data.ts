@@ -2,7 +2,6 @@
 import type { Team } from "../types";
 
 export const DEMO_TEAMS: Omit<Team, "id">[] = [
-  { name: "ERA Nymburk", short: "NYM", aliases: ["Nymburk", "BK Nymburk"], color: "#C8102E", color2: "#FFFFFF" },
   { name: "Basket Brno", short: "BRN", aliases: ["Brno"], color: "#1C2D6B", color2: "#E30613" },
   { name: "USK Praha", short: "USK", aliases: ["Basketbal USK Praha", "USK"], color: "#1E2A5A", color2: "#9FB4FF" },
   { name: "Sluneta Ústí nad Labem", short: "ÚST", aliases: ["Sluneta", "Ústí", "Ústí n. L."], color: "#F5A800", color2: "#1B3F8B" },
@@ -14,7 +13,7 @@ export const DEMO_TEAMS: Omit<Team, "id">[] = [
   { name: "BK Lokomotiva Plzeň", short: "PLZ", aliases: ["Plzeň", "Plzen", "Lokomotiva Plzeň"], color: "#5B2D8E", color2: "#FFFFFF" },
   { name: "Sršni Písek", short: "PÍS", aliases: ["Písek", "Sršni"], color: "#F6C400", color2: "#111111" },
   { name: "BK GAPA Hradec Králové", short: "HKR", aliases: ["Hradec Králové", "Hradec", "GAPA"], color: "#6B2C91", color2: "#FFFFFF" },
-  { name: "Slavia Praha", short: "SLA", aliases: ["Slavia"], color: "#E30613", color2: "#FFFFFF" },
+  { name: "Slavia Praha", short: "SLA", aliases: ["Slavia", "Slavia Praha ERA NBK"], color: "#E30613", color2: "#FFFFFF" },
 ];
 
 export const DEMO_REPRE_TEAMS: Omit<Team, "id">[] = [
@@ -28,7 +27,7 @@ export const DEMO_REPRE_TEAMS: Omit<Team, "id">[] = [
 
 export const PROGRAM_3_KOLO = [
   { home: "USK Praha", away: "Sluneta Ústí nad Labem", date: "2026-09-26", time: "17:30", venue: "Hala USK, Praha" },
-  { home: "Basket Brno", away: "ERA Nymburk", date: "2026-09-26", time: "18:00", venue: "Hala Vodova, Brno" },
+  { home: "Basket Brno", away: "BK Opava", date: "2026-09-26", time: "18:00", venue: "Hala Vodova, Brno" },
   { home: "BK GAPA Hradec Králové", away: "BK Kvis Pardubice", date: "2026-09-26", time: "18:00", venue: "Hala Třebeš" },
   { home: "Slavia Praha", away: "BK Armex Energy Děčín", date: "2026-09-26", time: "18:00", venue: "Folimanka" },
   { home: "BK Olomoucko", away: "NH Ostrava", date: "2026-09-27", time: "17:00", venue: "Prostějov" },
@@ -36,7 +35,7 @@ export const PROGRAM_3_KOLO = [
 ];
 
 export const RESULTS_2_KOLO = [
-  { home: "ERA Nymburk", away: "Basket Brno", home_score: 92, away_score: 78, detail: "24:18 | 22:20 | 25:21 | 21:19" },
+  { home: "Slavia Praha", away: "Basket Brno", home_score: 92, away_score: 78, detail: "24:18 | 22:20 | 25:21 | 21:19" },
   { home: "BK Opava", away: "BK Armex Energy Děčín", home_score: 81, away_score: 76, detail: "18:22 | 23:17 | 20:19 | 20:18" },
   { home: "BK Kvis Pardubice", away: "Sluneta Ústí nad Labem", home_score: 88, away_score: 84, detail: "20:21 | 25:19 | 19:24 | 24:20" },
   { home: "BK Armex Energy Děčín", away: "USK Praha", home_score: 74, away_score: 57, detail: "19:12 | 18:16 | 20:14 | 17:15" },
@@ -47,19 +46,18 @@ export const RESULTS_2_KOLO = [
 ];
 
 export const STANDINGS = [
-  { pos: 1, team: "ERA Nymburk", w: 2, l: 0, pts: 4 },
-  { pos: 2, team: "BK Armex Energy Děčín", w: 2, l: 0, pts: 4 },
-  { pos: 3, team: "Basket Brno", w: 1, l: 1, pts: 3 },
-  { pos: 4, team: "BK Opava", w: 1, l: 1, pts: 3 },
-  { pos: 5, team: "BK Kvis Pardubice", w: 1, l: 1, pts: 3 },
-  { pos: 6, team: "Sršni Písek", w: 1, l: 1, pts: 3 },
-  { pos: 7, team: "BK Lokomotiva Plzeň", w: 1, l: 1, pts: 3 },
-  { pos: 8, team: "BK Olomoucko", w: 1, l: 1, pts: 3 },
-  { pos: 9, team: "Sluneta Ústí nad Labem", w: 1, l: 1, pts: 3 },
-  { pos: 10, team: "NH Ostrava", w: 1, l: 1, pts: 3 },
-  { pos: 11, team: "BK GAPA Hradec Králové", w: 0, l: 2, pts: 2 },
-  { pos: 12, team: "USK Praha", w: 0, l: 2, pts: 2 },
-  { pos: 13, team: "Slavia Praha", w: 0, l: 2, pts: 2 },
+  { pos: 1, team: "BK Kvis Pardubice", g: 3, w: 3, l: 0, pct: "1.000" },
+  { pos: 2, team: "Slavia Praha", g: 3, w: 3, l: 0, pct: "1.000" },
+  { pos: 3, team: "Sršni Písek", g: 3, w: 3, l: 0, pct: "1.000" },
+  { pos: 4, team: "Sluneta Ústí nad Labem", g: 3, w: 2, l: 1, pct: "0.667" },
+  { pos: 5, team: "BK Armex Energy Děčín", g: 3, w: 2, l: 1, pct: "0.667" },
+  { pos: 6, team: "NH Ostrava", g: 3, w: 2, l: 1, pct: "0.667" },
+  { pos: 7, team: "BK GAPA Hradec Králové", g: 3, w: 1, l: 2, pct: "0.333" },
+  { pos: 8, team: "BK Opava", g: 3, w: 1, l: 2, pct: "0.333" },
+  { pos: 9, team: "BK Olomoucko", g: 3, w: 1, l: 2, pct: "0.333" },
+  { pos: 10, team: "Basket Brno", g: 3, w: 0, l: 3, pct: "0.000" },
+  { pos: 11, team: "USK Praha", g: 3, w: 0, l: 3, pct: "0.000" },
+  { pos: 12, team: "BK Lokomotiva Plzeň", g: 3, w: 0, l: 3, pct: "0.000" },
 ];
 
 export const ROSTER_CSV = `player,number,position,height,age,nationality

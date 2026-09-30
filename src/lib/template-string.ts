@@ -46,6 +46,8 @@ export function getValue(ctx: RenderContext, key: string): DataValue {
   if (k === "#" || k === "index") return (ctx.rowIndex ?? 0) + 1;
   if (k === "page") return ctx.page ?? 1;
   if (k === "pages") return ctx.pages ?? 1;
+  if (k === "odd") return (ctx.rowIndex ?? 0) % 2 === 0 ? "1" : "";
+  if (k === "even") return (ctx.rowIndex ?? 0) % 2 === 1 ? "1" : "";
   if (ctx.row && k in ctx.row) return ctx.row[k] as DataValue;
   if (k.startsWith("row.") && ctx.row) return ctx.row[k.slice(4)] as DataValue;
   return ctx.data[k];
@@ -100,6 +102,12 @@ function applyFilter(val: string, filter: string, ctx: RenderContext): string {
     }
     case "default":
       return val || arg;
+    case "pct": {
+      // úspěšnost jako na Livesportu: 0.667 / 1.000
+      const n = Number(val.replace(",", "."));
+      if (val.trim() === "" || !isFinite(n)) return val;
+      return (n > 1 ? n / 100 : n).toFixed(Number(arg) || 3);
+    }
     case "pad":
       return val.padStart(Number(arg) || 2, "0");
     default:
@@ -133,4 +141,28 @@ export function isEmptyValue(v: DataValue) {
   if (Array.isArray(v)) return v.length === 0;
   if (typeof v === "object" && "asset" in v) return !(v as ImageValue).asset;
   return false;
+}
+
+/**
+ * Podmínka zobrazení: "klíč" (vyplněno) nebo porovnání "pos <= 8", "pos > zone1_to",
+ * pravá strana může být číslo nebo klíč pole.
+ */
+export function evalCondition(ctx: RenderContext, expr: string): boolean {
+  const m = /^\s*([^<>=!\s]+)\s*(<=|>=|==|!=|<|>)\s*(.+?)\s*$/.exec(expr);
+  if (!m) return !isEmptyValue(getValue(ctx, expr));
+  const num = (x: string) => {
+    const v = /^-?\d+(\.\d+)?$/.test(x) ? x : valueToString(getValue(ctx, x));
+    return Number(String(v).replace(",", "."));
+  };
+  const a = num(m[1]);
+  const b = num(m[3]);
+  if (!isFinite(a) || !isFinite(b)) return false;
+  switch (m[2]) {
+    case "<=": return a <= b;
+    case ">=": return a >= b;
+    case "<": return a < b;
+    case ">": return a > b;
+    case "==": return a === b;
+    default: return a !== b;
+  }
 }

@@ -27,6 +27,17 @@ export function DataForm({
   compact?: boolean;
 }) {
   const set = (k: string, v: DataRecord[string]) => onChange({ ...data, [k]: v });
+  // pole, jejichž fotka se kreslí i vyříznutá v popředí (hráč před pásem)
+  const cutKeys = new Set<string>();
+  const scan = (els: Template["elements"]) =>
+    els.forEach((e) => {
+      if (e.type === "image" && e.useCutout) {
+        const m = /^\{\{([^}|]+)/.exec(e.src.trim());
+        if (m) cutKeys.add(m[1].trim());
+      }
+      if (e.type === "list") scan(e.children);
+    });
+  scan(template.elements);
   return (
     <div className={cx("flex flex-col", compact ? "gap-3" : "gap-4")}>
       <datalist id="team-list">
@@ -71,7 +82,7 @@ export function DataForm({
                 ))}
               </Select>
             ) : f.type === "image" ? (
-              <ImageField id={id} value={asImageValue(v)} disabled={ro} assets={assets} project={project} onChange={(x) => set(f.key, x)} />
+              <ImageField id={id} value={asImageValue(v)} disabled={ro} assets={assets} project={project} cutout={cutKeys.has(f.key)} onChange={(x) => set(f.key, x)} />
             ) : f.type === "list" ? (
               <ListField field={f} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
             ) : (
@@ -180,7 +191,7 @@ export async function saveImageAsset(file: File | Blob, name: string, kind: Asse
   return a;
 }
 
-function ImageField({ id, value, onChange, disabled, assets, project }: { id: string; value: ImageValue | null; onChange: (v: ImageValue | null) => void; disabled?: boolean; assets: Record<string, string>; project: Project }) {
+function ImageField({ id, value, onChange, disabled, assets, project, cutout }: { id: string; value: ImageValue | null; onChange: (v: ImageValue | null) => void; disabled?: boolean; assets: Record<string, string>; project: Project; cutout?: boolean }) {
   const [lib, setLib] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const settings = useApp((s) => s.settings);
@@ -198,7 +209,7 @@ function ImageField({ id, value, onChange, disabled, assets, project }: { id: st
     }
   };
 
-  const removeBg = async () => {
+  const removeBg = async (mode: "replace" | "cut" = "replace") => {
     if (!url) return;
     const remover = settings.bgProvider === "removebg" ? removeBgRemover(settings.removeBgKey) : browserRemover;
     const why = remover.unavailableReason();
@@ -210,9 +221,14 @@ function ImageField({ id, value, onChange, disabled, assets, project }: { id: st
       setBusy("Připravuji…");
       const blob = await dataUrlToBlob(url);
       const out = await remover.remove(blob, (msg, r) => setBusy(r !== undefined ? `${msg} ${Math.round(r * 100)} %` : msg));
-      const a = await saveImageAsset(out, "Bez pozadí", "photo");
-      onChange({ asset: a.id, zoom: 1, fx: 0.5, fy: 0.5 });
-      toast("Pozadí odstraněno");
+      const a = await saveImageAsset(out, mode === "cut" ? "Vyříznutý hráč" : "Bez pozadí", "photo");
+      if (mode === "cut" && value) {
+        onChange({ ...value, cut: a.id });
+        toast("Hráč je teď před pásem");
+      } else {
+        onChange({ asset: a.id, zoom: 1, fx: 0.5, fy: 0.5 });
+        toast("Pozadí odstraněno");
+      }
     } catch (e) {
       toast("Odstranění pozadí selhalo: " + (e as Error).message, "bad");
     } finally {
@@ -239,9 +255,21 @@ function ImageField({ id, value, onChange, disabled, assets, project }: { id: st
             <Button size="sm" icon="grid" onClick={() => setLib(true)} disabled={disabled}>
               Knihovna
             </Button>
-            <Button size="sm" icon="scissors" onClick={removeBg} disabled={disabled || !url || !!busy} title="Odstranit pozadí (AI)">
-              Pozadí
-            </Button>
+            {cutout ? (
+              value?.cut ? (
+                <Button size="sm" icon="scissors" variant="ghost" onClick={() => value && onChange({ ...value, cut: undefined })} disabled={disabled} title="Zrušit vyříznutého hráče v popředí">
+                  Hráč před pásem ✓
+                </Button>
+              ) : (
+                <Button size="sm" icon="scissors" onClick={() => removeBg("cut")} disabled={disabled || !url || !!busy} title="Vyřízne hráče (AI) a dá ho před pás – fotka zůstane celá">
+                  Hráč před pás
+                </Button>
+              )
+            ) : (
+              <Button size="sm" icon="scissors" onClick={() => removeBg()} disabled={disabled || !url || !!busy} title="Odstranit pozadí (AI)">
+                Pozadí
+              </Button>
+            )}
             {value && <IconButton icon="trash" label="Odebrat fotku" onClick={() => onChange(null)} disabled={disabled} />}
           </div>
           {busy ? (

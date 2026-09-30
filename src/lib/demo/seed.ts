@@ -5,8 +5,9 @@ import { buildTemplates } from "./templates";
 import { OBASKETU_BG } from "./obasketu-bg";
 import { STAR_PNG } from "./star";
 import { ROWS_BG } from "./rows-bg";
+import { BAR_PNG } from "./bar";
 
-export const SEED_VERSION = 6;
+export const SEED_VERSION = 7;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -64,6 +65,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     bgAsset(),
     starAsset(),
     rowsBgAsset(),
+    barAsset(),
   );
 
   const templates = [...builtInTemplates(nbl.id), ...builtInTemplates(repre.id)];
@@ -198,4 +200,8 @@ export function migrateTemplateV4(t: Template): Template | null {
     );
   }
   return changed ? { ...t, elements, fields } : null;
+}
+
+export function barAsset(): Asset {
+  return { id: "demo-bar", projectId: SHARED, name: "Oranžová čárka (před jménem)", kind: "element", dataUrl: BAR_PNG, w: 14, h: 72, createdAt: Date.now() };
 }

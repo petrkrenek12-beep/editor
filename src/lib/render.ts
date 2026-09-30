@@ -7,7 +7,7 @@ import { fontStack, loadFonts, registerCustomFont, registerFamilies } from "./fo
 import { FORMATS } from "./formats";
 import { loadImage } from "./images";
 import { constrain, autoAnchorX, layoutList, resolveElement } from "./layout";
-import { findTeam, getValue, interpolate, isEmptyValue, normalize, type RenderContext } from "./template-string";
+import { evalCondition, findTeam, getValue, interpolate, isEmptyValue, normalize, type RenderContext } from "./template-string";
 import type {
   BrandKit,
   DataRecord,
@@ -96,8 +96,10 @@ function resolveImage(el: ImageElement, env: RenderEnv, ctx: RenderContext): Img
     const v = getValue(ctx, m[1]);
     if (v && typeof v === "object" && !Array.isArray(v) && "asset" in v) {
       const iv = v as ImageValue;
+      if (el.useCutout) return iv.cut ? { value: iv, url: assetUrl(env, iv.cut) } : {};
       return { value: iv, url: assetUrl(env, iv.asset) };
     }
+    if (el.useCutout) return {};
     if (typeof v === "string" && v) return { url: assetUrl(env, v) };
     return {};
   }
@@ -125,11 +127,8 @@ function listRows(el: ListElement, env: RenderEnv): Record<string, unknown>[] {
 function isVisible(el: TemplateElement, env: RenderEnv, ctx: RenderContext) {
   if (el.hidden) return false;
   if (el.hideIn?.includes(env.format)) return false;
-  if (el.showIf) {
-    const v = getValue(ctx, el.showIf);
-    if (isEmptyValue(v)) return false;
-  }
-  if (el.hideIf && !isEmptyValue(getValue(ctx, el.hideIf))) return false;
+  if (el.showIf && !evalCondition(ctx, el.showIf)) return false;
+  if (el.hideIf && evalCondition(ctx, el.hideIf)) return false;
   return true;
 }
 
@@ -147,6 +146,8 @@ function collect(env: RenderEnv) {
       if (iu) urls.add(iu);
       const fam = fontFamily(el, env.brand);
       fonts.add(`${el.italic ? "italic " : ""}${el.weight ?? 400} 60px ${fontStack(fam)}`);
+      if (el.highlightWeight) fonts.add(`${el.italic ? "italic " : ""}${el.highlightWeight} 60px ${fontStack(fam)}`);
+      if (el.ticker?.alternate) fonts.add(`${el.italic ? "italic " : ""}${el.ticker.lightWeight ?? 400} 60px ${fontStack(fam)}`);
     } else if (el.type === "list") {
       if (el.rowsBg?.src) {
         const u = resolveImage({ id: "rb", name: "rb", type: "image", frame: el.frame, src: el.rowsBg.src } as ImageElement, env, ctx).url;
@@ -301,10 +302,38 @@ function iconUrl(el: TextElement, env: RenderEnv, rc: RenderContext) {
   return resolveImage({ id: "icon", name: "icon", type: "image", frame: el.frame, src: el.icon.src } as ImageElement, env, rc).url;
 }
 
+function drawTicker(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, content: string) {
+  const t = el.ticker!;
+  const family = fontFamily(el, env.brand);
+  const size = Math.min(el.size * s, frame.h * 0.9);
+  const ls = (el.letterSpacing ?? 0) * size;
+  const gap = (t.gap ?? 0.6) * size;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(frame.x, frame.y, frame.w, frame.h);
+  ctx.clip();
+  applyShadow(ctx, el, s, env, rc);
+  ctx.fillStyle = resolveColor(el.color, env.brand, rc);
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "left";
+  ctx.font = `${el.italic ? "italic " : ""}${el.weight ?? 700} ${size}px ${fontStack(family)}`;
+  const capH = ctx.measureText("H").actualBoundingBoxAscent || size * 0.7;
+  const y = frame.y + (frame.h + capH) / 2;
+  let x = frame.x + (t.offset ?? 0) * s;
+  for (let i = 0; x < frame.x + frame.w && i < 200; i++) {
+    const light = t.alternate && i % 2 === 1;
+    ctx.font = `${el.italic ? "italic " : ""}${light ? t.lightWeight ?? 400 : el.weight ?? 700} ${size}px ${fontStack(family)}`;
+    drawSpaced(ctx, content, x, y, ls);
+    x += measure(ctx, content, ls) + gap;
+  }
+  ctx.restore();
+}
+
 function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, images?: Images) {
   let content = interpolate(el.text, rc);
   if (el.uppercase) content = content.toLocaleUpperCase("cs-CZ");
   if (!content.trim()) return;
+  if (el.ticker) return drawTicker(ctx, el, frame, s, env, rc, content);
   const family = fontFamily(el, env.brand);
   const weight = el.weight ?? 400;
   const style = el.italic ? "italic " : "";
@@ -340,12 +369,20 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
     }
   }
 
+  const fontAt = (size: number, hl = false) => `${style}${hl && el.highlightWeight ? el.highlightWeight : weight} ${size}px ${fontStack(family)}`;
   const layoutAt = (size: number) => {
-    ctx.font = `${style}${weight} ${size}px ${fontStack(family)}`;
+    ctx.font = fontAt(size);
     const ls = lsEm * size;
     const iconW = iconImg ? size * (el.icon?.scale ?? 1) * (iconImg.naturalWidth / iconImg.naturalHeight) + size * (el.icon?.gap ?? 0.2) : 0;
-    const words: Word[] = tokens.map((t) => ({ ...t, w: t.icon ? iconW : t.text === "\n" ? 0 : measure(ctx, t.text, ls) }));
     const spaceW = ctx.measureText(" ").width + ls;
+    const words: Word[] = tokens.map((t) => {
+      if (t.icon) return { ...t, w: iconW };
+      if (t.text === "\n") return { ...t, w: 0 };
+      ctx.font = fontAt(size, t.hl);
+      const w = measure(ctx, t.text, ls);
+      ctx.font = fontAt(size);
+      return { ...t, w };
+    });
     const lines = wrap(words, availW, spaceW);
     const lh = size * lhMul;
     const widest = Math.max(...lines.map((l) => lineWidth(l, spaceW)));
@@ -375,7 +412,7 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
   const { lh, spaceW, ls } = best;
 
   // i na minimální velikosti přetéká → zkrátit poslední řádek (nikdy nepřekrýt jiné prvky)
-  const maxFitLines = Math.max(1, Math.min(maxLines, Math.floor((availH + (lh - size)) / lh)));
+  const maxFitLines = Math.max(1, Math.min(maxLines, Math.floor((availH + 1 + (lh - size)) / lh)));
   if (lines.length > maxFitLines) lines = lines.slice(0, maxFitLines);
   lines = lines.map((line) => {
     let lw = lineWidth(line, spaceW);
@@ -394,6 +431,7 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
     return l;
   });
 
+  ctx.font = fontAt(size);
   // cap height pro opticky přesné svislé centrování
   const capH = ctx.measureText("H").actualBoundingBoxAscent || size * 0.7;
   const blockH = lines.length * lh - (lh - capH);
@@ -458,10 +496,12 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
         ctx.lineJoin = "round";
         ctx.strokeStyle = resolveColor(el.strokeText.color, env.brand, rc);
         ctx.lineWidth = el.strokeText.width * s;
+        if (el.highlightWeight) ctx.font = fontAt(size, w.hl);
         drawSpaced(ctx, w.text, x, y, ls, true);
         ctx.restore();
       }
       ctx.fillStyle = w.hl ? hl : color;
+      if (el.highlightWeight) ctx.font = fontAt(size, w.hl);
       drawSpaced(ctx, w.text, x, y, ls);
       x += w.w;
     });
@@ -616,6 +656,20 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     } else if (env.placeholders && el.fallback !== "none" && (env.editor || /^\{\{/.test(el.src.trim()))) {
       drawPlaceholder(ctx, frame, el.src.startsWith("brand:") ? "LOGO" : el.src.startsWith("asset:") ? el.name.toUpperCase() : "FOTO");
     }
+    return;
+  }
+  if (el.repeat) {
+    // pás s opakovaným logem
+    const h = frame.h;
+    const w = h * (img.naturalWidth / img.naturalHeight);
+    const gap = (el.repeat.gap ?? 20) * s;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(frame.x, frame.y, frame.w, frame.h);
+    ctx.clip();
+    const src = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale);
+    for (let x = frame.x + (el.repeat.offset ?? 0) * s; x < frame.x + frame.w; x += w + gap) ctx.drawImage(src, x, frame.y, w, h);
+    ctx.restore();
     return;
   }
   const fit = el.fit ?? "cover";

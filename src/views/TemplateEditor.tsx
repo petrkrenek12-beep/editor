@@ -918,6 +918,7 @@ function ElementProps({
             <Label>Zobrazit jen když</Label>
             <Select value={el.showIf ?? ""} onChange={(e) => onChange({ showIf: e.target.value || undefined })}>
               <option value="">vždy</option>
+              {el.showIf && !condKeys.some((k) => k.key === el.showIf) && <option value={el.showIf}>{el.showIf}</option>}
               {condKeys.map((f) => <option key={f.key} value={f.key}>{f.label} vyplněno</option>)}
             </Select>
           </div>
@@ -926,6 +927,7 @@ function ElementProps({
           <Label>Skrýt když</Label>
           <Select value={el.hideIf ?? ""} onChange={(e) => onChange({ hideIf: e.target.value || undefined })}>
             <option value="">nikdy</option>
+            {el.hideIf && !condKeys.some((k) => k.key === el.hideIf) && <option value={el.hideIf}>{el.hideIf}</option>}
             {condKeys.map((f) => <option key={f.key} value={f.key}>{f.label} vyplněno</option>)}
           </Select>
         </div>
