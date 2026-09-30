@@ -308,7 +308,7 @@ export function BrandKitPage() {
             </div>
           </Card>
           {admin && (
-            <Button className="mt-3 w-full" variant="ghost" icon="refresh" onClick={() => setBrand({ colors: { primary: "#5B21B6", secondary: "#2A0B5E", accent: "#FF6A13", dark: "#0B0614", light: "#FFFFFF", text: "#FFFFFF" } })}>
+            <Button className="mt-3 w-full" variant="ghost" icon="refresh" onClick={() => setBrand({ colors: { primary: "#5B21B6", secondary: "#2A0B5E", accent: "#FF4800", dark: "#0B0614", light: "#FFFFFF", text: "#FFFFFF" } })}>
               Obnovit výchozí barvy
             </Button>
           )}

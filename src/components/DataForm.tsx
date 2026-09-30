@@ -84,7 +84,7 @@ export function DataForm({
             ) : f.type === "image" ? (
               <ImageField id={id} value={asImageValue(v)} disabled={ro} assets={assets} project={project} cutout={cutKeys.has(f.key)} onChange={(x) => set(f.key, x)} />
             ) : f.type === "list" ? (
-              <ListField field={f} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
+              <ListField field={f} assets={assets} channels={project.brand.channels ?? []} rows={Array.isArray(v) ? (v as Record<string, unknown>[]) : []} disabled={ro} onChange={(rows) => set(f.key, rows)} />
             ) : (
               <Input id={id} disabled={ro} value={String(v ?? "")} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} />
             )}
@@ -257,13 +257,33 @@ function ImageField({ id, value, onChange, disabled, assets, project, cutout }: 
             </Button>
             {cutout ? (
               value?.cut ? (
-                <Button size="sm" icon="scissors" variant="ghost" onClick={() => value && onChange({ ...value, cut: undefined })} disabled={disabled} title="Zrušit vyříznutého hráče v popředí">
-                  Hráč před pásem ✓
+                <Button size="sm" icon="scissors" variant="ghost" onClick={() => value && onChange({ ...value, cut: undefined })} disabled={disabled} title="Odebrat ořez hráče nad pásem">
+                  Ořez nad pásem ✓ ✕
                 </Button>
               ) : (
-                <Button size="sm" icon="scissors" onClick={() => removeBg("cut")} disabled={disabled || !url || !!busy} title="Vyřízne hráče (AI) a dá ho před pás – fotka zůstane celá">
-                  Hráč před pás
-                </Button>
+                <>
+                  <FileButton
+                    size="sm"
+                    accept="image/png,image/webp"
+                    disabled={disabled || !value}
+                    onFile={async (f) => {
+                      if (!value) return;
+                      setBusy("Nahrávám ořez…");
+                      try {
+                        const a = await saveImageAsset(f[0], "Ořez – " + f[0].name, "photo");
+                        onChange({ ...value, cut: a.id });
+                        toast("Ořez je nad pásem");
+                      } finally {
+                        setBusy(null);
+                      }
+                    }}
+                  >
+                    Nahrát ořez
+                  </FileButton>
+                  <Button size="sm" icon="scissors" onClick={() => removeBg("cut")} disabled={disabled || !url || !!busy} title="Vyřízne hráče (AI) ze stejné fotky a dá ho nad pás">
+                    Vyříznout AI
+                  </Button>
+                </>
               )
             ) : (
               <Button size="sm" icon="scissors" onClick={() => removeBg()} disabled={disabled || !url || !!busy} title="Odstranit pozadí (AI)">
@@ -336,11 +356,47 @@ export function AssetLibrary({ open, onClose, onPick, project, kinds }: { open: 
 
 // ── Seznam (řádky tabulky) ───────────────────────────────────
 
-function ListField({ field, rows, onChange, disabled, channels = [] }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean; channels?: Channel[] }) {
+function ImageCell({ value, onChange, disabled, assets }: { value: unknown; onChange: (v: ImageValue | null) => void; disabled?: boolean; assets: Record<string, string> }) {
+  const iv = asImageValue(value);
+  const url = iv?.asset ? assets[iv.asset] ?? (/^(data:|https?:)/.test(iv.asset) ? iv.asset : undefined) : undefined;
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="flex items-center gap-1">
+      <label className={cx("relative flex h-8 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded border border-line bg-paper text-mute", disabled && "pointer-events-none opacity-50")} title="Nahrát fotku">
+        {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : busy ? <Spinner className="h-4 w-4" /> : <Icon name="image" size={15} />}
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          disabled={disabled}
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (!f) return;
+            setBusy(true);
+            try {
+              const a = await saveImageAsset(f, f.name);
+              onChange({ asset: a.id, zoom: 1, fx: 0.5, fy: 0.3 });
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      </label>
+      {url && !disabled && (
+        <button type="button" className="px-0.5 text-[13px] text-mute hover:text-bad" onClick={() => onChange(null)} aria-label="Odebrat fotku">
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ListField({ field, rows, onChange, disabled, channels = [], assets = {} }: { field: FieldDef; rows: Record<string, unknown>[]; onChange: (r: Record<string, unknown>[]) => void; disabled?: boolean; channels?: Channel[]; assets?: Record<string, string> }) {
   const cols = field.columns ?? [];
   const [paste, setPaste] = useState(false);
   const [text, setText] = useState("");
-  const setCell = (i: number, k: string, v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  const setCell = (i: number, k: string, v: unknown) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const move = (i: number, d: number) => {
     const n = [...rows];
     const [x] = n.splice(i, 1);
@@ -358,7 +414,7 @@ function ListField({ field, rows, onChange, disabled, channels = [] }: { field: 
         if (!out.length) out = parseScheduleLines(t);
       }
       if (!out.length) throw new Error("Nerozpoznal jsem žádné řádky.");
-      onChange(out);
+      onChange(keepImages(field, rows, out));
       setPaste(false);
       setText("");
       toast(`Načteno ${out.length} řádků`);
@@ -385,7 +441,9 @@ function ListField({ field, rows, onChange, disabled, channels = [] }: { field: 
               <tr key={i} className="border-t border-line">
                 {cols.map((c) => (
                   <td key={c.key} className="p-1">
-                    {c.type === "channel" ? (
+                    {c.type === "image" ? (
+                      <ImageCell value={r[c.key]} disabled={disabled} assets={assets} onChange={(v) => setCell(i, c.key, v)} />
+                    ) : c.type === "channel" ? (
                       <select
                         disabled={disabled}
                         value={String(r[c.key] ?? "")}
@@ -452,3 +510,16 @@ function ListField({ field, rows, onChange, disabled, channels = [] }: { field: 
 }
 
 export { fileToDataUrl };
+
+/** Při nahrazení řádků (vložení textu, screenshot) zachová nahrané fotky ve stejném pořadí. */
+export function keepImages(field: FieldDef, oldRows: Record<string, unknown>[], newRows: Record<string, unknown>[]) {
+  const imgCols = (field.columns ?? []).filter((c) => c.type === "image").map((c) => c.key);
+  if (!imgCols.length) return newRows;
+  return newRows.map((r, i) => {
+    const o = oldRows[i];
+    if (!o) return r;
+    const keep: Record<string, unknown> = {};
+    for (const k of imgCols) if (o[k] && !r[k]) keep[k] = o[k];
+    return { ...r, ...keep };
+  });
+}

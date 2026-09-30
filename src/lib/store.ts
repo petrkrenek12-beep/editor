@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets } from "./demo/seed";
 import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
@@ -109,10 +109,15 @@ export function initStore() {
         await a.put("assets", st);
         assets = [...assets, st];
       }
-      if (!assets.some((x) => x.id === "demo-bar")) {
+      for (const fa of fontAssets()) {
+        if (assets.some((x) => x.id === fa.id)) continue;
+        await a.put("assets", fa);
+        assets = [...assets, fa];
+      }
+      if (!assets.some((x) => x.id === "demo-bar" && x.dataUrl === barAsset().dataUrl)) {
         const ba = barAsset();
         await a.put("assets", ba);
-        assets = [...assets, ba];
+        assets = [...assets.filter((x) => x.id !== ba.id), ba];
       }
       // v7: Nymburk už v lize není – z týmů pryč, ukázkové datové sady bez něj
       for (const [id, rows] of [["p-nbl-program", PROGRAM_3_KOLO], ["p-nbl-results", RESULTS_2_KOLO], ["p-nbl-standings", STANDINGS]] as const) {
@@ -140,13 +145,20 @@ export function initStore() {
           const needBg = !p.brand.backgrounds.includes(BG_ASSET);
           const needCh = !p.brand.channels;
           const nym = p.teams.some((t) => /nymburk/i.test(t.name));
-          if (!needBg && !needCh && !nym) return p;
+          // v9: barva OBASKETU #FF4800 (jen když byla původní výchozí oranžová)
+          const oldAccent = p.brand.colors.accent.toUpperCase() === "#FF6A13";
+          if (!needBg && !needCh && !nym && !oldAccent) return p;
           const np = {
             ...p,
             teams: p.teams
               .filter((t) => !/nymburk/i.test(t.name))
               .map((t) => (t.name === "Slavia Praha" && !t.aliases.includes("Slavia Praha ERA NBK") ? { ...t, aliases: [...t.aliases, "Slavia Praha ERA NBK"] } : t)),
-            brand: { ...p.brand, backgrounds: needBg ? [BG_ASSET, ...p.brand.backgrounds] : p.brand.backgrounds, channels: p.brand.channels ?? defaultChannels() },
+            brand: {
+              ...p.brand,
+              colors: oldAccent ? { ...p.brand.colors, accent: "#FF4800" } : p.brand.colors,
+              backgrounds: needBg ? [BG_ASSET, ...p.brand.backgrounds] : p.brand.backgrounds,
+              channels: p.brand.channels ?? defaultChannels(),
+            },
           };
           (np as { _mod?: number })._mod = Date.now();
           await a.put("projects", np);

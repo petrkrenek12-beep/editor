@@ -1,7 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GraphicCanvas } from "@/components/GraphicCanvas";
-import { DataForm } from "@/components/DataForm";
+import { DataForm, keepImages } from "@/components/DataForm";
 import { AiPanel } from "@/components/AiPanel";
 import { ScreenshotImport } from "@/components/ScreenshotImport";
 import { Badge, Button, cx, Icon, IconButton, Label, Modal, Segmented, Select, toast, Textarea, useWindowHeight, ZoomControl } from "@/components/ui";
@@ -70,18 +70,32 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
       const el = template?.elements.find((e) => e.id === id);
       const key = el ? imageFieldOf(el) : null;
       if (!key) return;
-      setData((d) => {
-        const v = asImageValue(d[key]);
-        if (!v) return d;
+      const move = (v: ReturnType<typeof asImageValue>) => {
+        if (!v) return null;
         if (containEls.has(id)) {
           // vyříznutý hráč: posun v rámu
-          return { ...d, [key]: { ...v, fx: clamp((v.fx ?? 0.5) + dx / frame.w, 0, 1), fy: clamp((v.fy ?? 0.5) + dy / frame.h, 0, 1) } };
+          return { ...v, fx: clamp((v.fx ?? 0.5) + dx / frame.w, 0, 1), fy: clamp((v.fy ?? 0.5) + dy / frame.h, 0, 1) };
         }
         const k = 1 / (Math.max(frame.w, frame.h) * 0.6 * (v.zoom ?? 1));
-        return { ...d, [key]: { ...v, fx: clamp((v.fx ?? 0.5) - dx * k, 0, 1), fy: clamp((v.fy ?? 0.3) - dy * k, 0, 1) } };
+        return { ...v, fx: clamp((v.fx ?? 0.5) - dx * k, 0, 1), fy: clamp((v.fy ?? 0.3) - dy * k, 0, 1) };
+      };
+      setData((d) => {
+        const p = template?.paginate;
+        // carousel „co slide, to zápas“: fotka je v řádku aktuálního slidu
+        if (p?.rowAsData && Array.isArray(d[p.field])) {
+          const rows = d[p.field] as Record<string, unknown>[];
+          const row = rows[page - 1];
+          if (row && key in row) {
+            const nv = move(asImageValue(row[key]));
+            if (!nv) return d;
+            return { ...d, [p.field]: rows.map((r, i) => (i === page - 1 ? { ...r, [key]: nv } : r)) as DataRecord[string] };
+          }
+        }
+        const nv = move(asImageValue(d[key]));
+        return nv ? { ...d, [key]: nv } : d;
       });
     },
-    [template, containEls],
+    [template, containEls, page],
   );
 
   if (!template || !tpl || !env) {
@@ -227,7 +241,15 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
 
   const dataPanel = (
     <div className="flex flex-col gap-4">
-      {role !== "viewer" && <ScreenshotImport template={template} teams={project.teams} onData={(d) => setData((cur) => ({ ...cur, ...d }))} />}
+      {role !== "viewer" && <ScreenshotImport template={template} teams={project.teams} onData={(d) =>
+            setData((cur) => {
+              const next = { ...cur, ...d };
+              for (const f of template.fields)
+                if (f.type === "list" && Array.isArray(d[f.key]) && Array.isArray(cur[f.key]))
+                  next[f.key] = keepImages(f, cur[f.key] as Record<string, unknown>[], d[f.key] as Record<string, unknown>[]) as DataRecord[string];
+              return next;
+            })
+          } />}
       <div className="flex flex-wrap gap-2">
         <Button size="sm" icon="database" onClick={() => setDsOpen(true)} disabled={role === "viewer"}>
           Načíst data

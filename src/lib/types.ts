@@ -143,7 +143,7 @@ export interface TextElement extends BaseElement {
   /** Váha písma pro [zvýrazněná] slova (např. příjmení tučně) */
   highlightWeight?: number;
   /** Běžící pás: text se opakuje přes celou šířku (střídavě tučně / tence) */
-  ticker?: { gap?: number; alternate?: boolean; lightWeight?: number; offset?: number };
+  ticker?: { gap?: number; alternate?: boolean; lightWeight?: number; offset?: number; /** přesný počet opakování – roztáhne se přes celou šířku (offset = okraj) */ count?: number };
 }
 
 export interface ImageElement extends BaseElement {
@@ -177,6 +177,8 @@ export interface ImageElement extends BaseElement {
   repeat?: { gap?: number; offset?: number };
   /** Použít vyříznutou verzi fotky (ImageValue.cut) – hráč před pásem */
   useCutout?: boolean;
+  /** Panorama přes více slidů carouselu: obrázek se roztáhne přes `span` slidů, každá další skupina se zrcadlí */
+  panorama?: { span: number; mirror?: boolean };
   /** Záře kolem obrysu (Outer Glow) */
   glow?: { color: ColorRef; radius: number; intensity: number };
 }
@@ -258,7 +260,7 @@ export interface Template {
   fields: FieldDef[];
   sampleData: DataRecord;
   /** Carousel: rozdělí seznam na více slidů */
-  paginate?: { field: string; perPage: number };
+  paginate?: { field: string; perPage: number; /** každý slide = jeden řádek; jeho sloupce jsou dostupné jako {{klíč}} v celé šabloně */ rowAsData?: boolean };
   createdAt: number;
   updatedAt: number;
   builtIn?: boolean;

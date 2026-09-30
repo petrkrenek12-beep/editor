@@ -135,7 +135,7 @@ function describeFields(t: Template) {
     .filter((f) => f.type !== "image" && f.type !== "channel")
     .map((f) => {
       if (f.type === "list")
-        return `- "${f.key}" (${f.label}): POLE objektů, každý má klíče ${(f.columns ?? []).filter((c) => c.type !== "channel").map((c) => `"${c.key}" (${c.label}, ${c.type})`).join(", ")}`;
+        return `- "${f.key}" (${f.label}): POLE objektů, každý má klíče ${(f.columns ?? []).filter((c) => c.type !== "channel" && c.type !== "image").map((c) => `"${c.key}" (${c.label}, ${c.type})`).join(", ")}`;
       return `- "${f.key}" (${f.label}, typ ${f.type})`;
     })
     .join("\n");
@@ -155,6 +155,7 @@ Pravidla:
 - Čas ve formátu HH:MM. Skóre jako čísla.
 - Kolo piš např. "4. kolo". Termín (dates) krátce, např. "30.9." nebo "30.9. - 1.10.".
 - Hráč zápasu: když jsou na obrázku statistiky hráčů a šablona má pole "mvp", NEVYPLŇUJ "mvp" textem, ale přidej klíč "_mvp" = {"name": jméno tak, jak je na screenshotu, "pts": body (sloupec B/PTS), "reb": doskoky (DOS/REB), "ast": asistence (A/AST)} pro hráče s nejvíce body z VÍTĚZNÉHO týmu.
+- Když má seznam zápasů sloupec "mvp", napiš do něj nejlepšího hráče vítězného týmu ve tvaru "Jméno Příjmení (21 PTS, 8 AST)" – body vždy, REB a AST jen když jich má aspoň 5.
 - Seznamy (např. zápasy) vyplň ve stejném pořadí jako na screenshotu, všechny řádky.
 - Pole, která ze screenshotu nejdou zjistit, VYNECH (nevymýšlej).
 
@@ -202,7 +203,7 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
         const r0 = (row ?? {}) as Record<string, unknown>;
         const r1: Record<string, unknown> = {};
         for (const c of f.columns ?? []) {
-          if (!(c.key in r0) || c.type === "channel") continue;
+          if (!(c.key in r0) || c.type === "channel" || c.type === "image") continue;
           r1[c.key] = c.type === "team" ? teamName(r0[c.key]) : c.type === "number" && r0[c.key] !== "" ? Number(r0[c.key]) : String(r0[c.key] ?? "");
         }
         return r1;

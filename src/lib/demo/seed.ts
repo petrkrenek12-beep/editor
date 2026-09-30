@@ -6,15 +6,16 @@ import { OBASKETU_BG } from "./obasketu-bg";
 import { STAR_PNG } from "./star";
 import { ROWS_BG } from "./rows-bg";
 import { BAR_PNG } from "./bar";
+import { MAZZARD } from "./mazzard";
 
-export const SEED_VERSION = 7;
+export const SEED_VERSION = 10;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
 
 export function defaultBrand(): BrandKit {
   return {
-    colors: { primary: "#5B21B6", secondary: "#2A0B5E", accent: "#FF6A13", dark: "#0B0614", light: "#FFFFFF", text: "#FFFFFF" },
+    colors: { primary: "#5B21B6", secondary: "#2A0B5E", accent: "#FF4800", dark: "#0B0614", light: "#FFFFFF", text: "#FFFFFF" },
     fonts: { display: { family: "Bebas Neue" }, body: { family: "Barlow Condensed" }, accent: { family: "Barlow" } },
     backgrounds: [],
     elements: [],
@@ -66,6 +67,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     starAsset(),
     rowsBgAsset(),
     barAsset(),
+    ...fontAssets(),
   );
 
   const templates = [...builtInTemplates(nbl.id), ...builtInTemplates(repre.id)];
@@ -204,4 +206,9 @@ export function migrateTemplateV4(t: Template): Template | null {
 
 export function barAsset(): Asset {
   return { id: "demo-bar", projectId: SHARED, name: "Oranžová čárka (před jménem)", kind: "element", dataUrl: BAR_PNG, w: 14, h: 72, createdAt: Date.now() };
+}
+
+/** Písmo Mazzard H (pás „Změna v týmu“, Breaking news) – sdílené pro všechny projekty. */
+export function fontAssets(): Asset[] {
+  return MAZZARD.map((f) => ({ id: "font-" + f.name.replace(/\.otf$/, "").toLowerCase(), projectId: SHARED, name: f.name, kind: "font" as const, dataUrl: f.dataUrl, createdAt: Date.now() }));
 }

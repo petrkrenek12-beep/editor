@@ -1104,7 +1104,7 @@ function FieldsEditor({ t, commit }: { t: Template; commit: (t: Template, record
                   <Input value={c.label} onChange={(e) => upd(i, { columns: f.columns!.map((x, k) => (k === ci ? { ...x, label: e.target.value } : x)) })} className="h-7 text-[12px]" aria-label="Popisek sloupce" />
                   <Input value={c.key} onChange={(e) => upd(i, { columns: f.columns!.map((x, k) => (k === ci ? { ...x, key: e.target.value.replace(/[^a-zA-Z0-9_]/g, "_") } : x)) })} className="h-7 font-mono text-[11px]" aria-label="Klíč sloupce" />
                   <select value={c.type} onChange={(e) => upd(i, { columns: f.columns!.map((x, k) => (k === ci ? { ...x, type: e.target.value as FieldType } : x)) })} className="h-7 rounded border border-line text-[11px]" aria-label="Typ sloupce">
-                    {["text", "number", "team", "date", "channel"].map((x) => <option key={x}>{x}</option>)}
+                    {["text", "number", "team", "date", "channel", "image"].map((x) => <option key={x}>{x}</option>)}
                   </select>
                   <button type="button" className="px-1 text-bad" onClick={() => upd(i, { columns: f.columns!.filter((_, k) => k !== ci) })} aria-label="Smazat sloupec">×</button>
                 </div>

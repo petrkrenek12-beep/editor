@@ -109,6 +109,13 @@ function resolveImage(el: ImageElement, env: RenderEnv, ctx: RenderContext): Img
 // ── průchod prvky (včetně řádků seznamů) ─────────────────────
 
 function baseContext(env: RenderEnv): RenderContext {
+  const p = env.template.paginate;
+  if (p?.rowAsData) {
+    // carousel „co slide, to zápas“: sloupce aktuálního řádku jako běžná pole
+    const rows = env.data[p.field];
+    const row = Array.isArray(rows) ? (rows[(env.page ?? 1) - 1] as Record<string, unknown> | undefined) : undefined;
+    return { data: { ...env.data, ...(row as DataRecord) }, teams: env.teams, page: env.page, pages: env.pages };
+  }
   return { data: env.data, teams: env.teams, page: env.page, pages: env.pages };
 }
 
@@ -147,7 +154,7 @@ function collect(env: RenderEnv) {
       const fam = fontFamily(el, env.brand);
       fonts.add(`${el.italic ? "italic " : ""}${el.weight ?? 400} 60px ${fontStack(fam)}`);
       if (el.highlightWeight) fonts.add(`${el.italic ? "italic " : ""}${el.highlightWeight} 60px ${fontStack(fam)}`);
-      if (el.ticker?.alternate) fonts.add(`${el.italic ? "italic " : ""}${el.ticker.lightWeight ?? 400} 60px ${fontStack(fam)}`);
+      if (el.ticker?.alternate) fonts.add(`${el.italic ? "italic " : ""}${el.ticker.lightWeight ?? (el.ticker.count ? 300 : 400)} 60px ${fontStack(fam)}`);
     } else if (el.type === "list") {
       if (el.rowsBg?.src) {
         const u = resolveImage({ id: "rb", name: "rb", type: "image", frame: el.frame, src: el.rowsBg.src } as ImageElement, env, ctx).url;
@@ -302,9 +309,49 @@ function iconUrl(el: TextElement, env: RenderEnv, rc: RenderContext) {
   return resolveImage({ id: "icon", name: "icon", type: "image", frame: el.frame, src: el.icon.src } as ImageElement, env, rc).url;
 }
 
+/** Přesně N opakování přes celou šířku (střídavě tučně / tence), jako v Affinity. */
+function drawTickerFit(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, content: string, family: string) {
+  const t = el.ticker!;
+  const n = t.count!;
+  const pad = (t.offset ?? 0) * s;
+  const availW = Math.max(10, frame.w - pad * 2);
+  const fontOf = (i: number, size: number) => `${el.italic ? "italic " : ""}${t.alternate && i % 2 === 1 ? t.lightWeight ?? 300 : el.weight ?? 700} ${size}px ${fontStack(family)}`;
+  const widths = (size: number) =>
+    Array.from({ length: n }, (_, i) => {
+      ctx.font = fontOf(i, size);
+      return measure(ctx, content, (el.letterSpacing ?? 0) * size);
+    });
+  const s0 = el.size * s;
+  const gapEm = t.gap ?? 0.5;
+  const w0 = widths(s0);
+  const total0 = w0.reduce((a, b) => a + b, 0) + gapEm * s0 * (n - 1);
+  const size = Math.min(s0 * (availW / total0), frame.h * 0.75);
+  const w = widths(size);
+  const gap = n > 1 ? (availW - w.reduce((a, b) => a + b, 0)) / (n - 1) : 0;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(frame.x, frame.y, frame.w, frame.h);
+  ctx.clip();
+  applyShadow(ctx, el, s, env, rc);
+  ctx.fillStyle = resolveColor(el.color, env.brand, rc);
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "left";
+  ctx.font = fontOf(0, size);
+  const capH = ctx.measureText("H").actualBoundingBoxAscent || size * 0.7;
+  const y = frame.y + (frame.h + capH) / 2;
+  let x = frame.x + pad + (n === 1 ? (availW - w[0]) / 2 : 0);
+  for (let i = 0; i < n; i++) {
+    ctx.font = fontOf(i, size);
+    drawSpaced(ctx, content, x, y, (el.letterSpacing ?? 0) * size);
+    x += w[i] + gap;
+  }
+  ctx.restore();
+}
+
 function drawTicker(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, content: string) {
   const t = el.ticker!;
   const family = fontFamily(el, env.brand);
+  if (t.count && t.count > 0) return drawTickerFit(ctx, el, frame, s, env, rc, content, family);
   const size = Math.min(el.size * s, frame.h * 0.9);
   const ls = (el.letterSpacing ?? 0) * size;
   const gap = (t.gap ?? 0.6) * size;
@@ -678,6 +725,7 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   const crop = eq !== false && fit === "contain" ? trimBox(img) : { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
   const iw = crop.w;
   const ih = crop.h;
+  let mirrorX: number | null = null;
   let dw: number;
   let dh: number;
   let dx: number;
@@ -696,13 +744,18 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
       dy += ((ref.value.fy ?? 0.5) - 0.5) * frame.h;
     }
   } else {
-    const k = Math.max(frame.w / iw, frame.h / ih) * Math.max(1, ref.value?.zoom ?? 1);
+    // panorama: obrázek jde přes několik slidů vedle sebe
+    const pi = (env.page ?? 1) - 1;
+    const span = Math.max(1, el.panorama?.span ?? 1);
+    const F = el.panorama ? { x: frame.x - (pi % span) * frame.w, y: frame.y, w: frame.w * span, h: frame.h } : frame;
+    const k = Math.max(F.w / iw, F.h / ih) * Math.max(1, ref.value?.zoom ?? 1);
     dw = iw * k;
     dh = ih * k;
     const fx = ref.value?.fx ?? 0.5;
     const fy = ref.value?.fy ?? (el.valign === "top" ? 0 : el.valign === "bottom" ? 1 : 0.5);
-    dx = frame.x - (dw - frame.w) * fx;
-    dy = frame.y - (dh - frame.h) * fy;
+    dx = F.x - (dw - F.w) * fx;
+    dy = F.y - (dh - F.h) * fy;
+    if (el.panorama?.mirror && Math.floor(pi / span) % 2 === 1) mirrorX = F.x + F.w / 2;
   }
   ctx.save();
   if (fit === "cover" || el.radius) {
@@ -728,6 +781,10 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
       ctx.drawImage(halo, crop.x, crop.y, crop.w, crop.h, dx + Math.cos(a) * r, dy + Math.sin(a) * r, dw, dh);
     }
     ctx.restore();
+  }
+  if (mirrorX !== null) {
+    ctx.translate(mirrorX * 2, 0);
+    ctx.scale(-1, 1);
   }
   ctx.drawImage(source, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
   ctx.restore();
