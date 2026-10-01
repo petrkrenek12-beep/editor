@@ -564,9 +564,9 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
 
 const processed = new Map<string, HTMLCanvasElement>();
 
-function processedImage(img: HTMLImageElement, tint?: string, gray?: boolean): CanvasImageSource {
-  if (!tint && !gray) return img;
-  const key = `${img.src.length}:${img.src.slice(-64)}:${tint}:${gray}`;
+function processedImage(img: HTMLImageElement, tint?: string, gray?: boolean, luma?: number): CanvasImageSource {
+  if (!tint && !gray && !luma) return img;
+  const key = `${img.src.length}:${img.src.slice(-64)}:${tint}:${gray}:${luma}`;
   let c = processed.get(key);
   if (c) return c;
   c = document.createElement("canvas");
@@ -579,6 +579,16 @@ function processedImage(img: HTMLImageElement, tint?: string, gray?: boolean): C
     for (let i = 0; i < d.data.length; i += 4) {
       const l = 0.299 * d.data[i] + 0.587 * d.data[i + 1] + 0.114 * d.data[i + 2];
       d.data[i] = d.data[i + 1] = d.data[i + 2] = l;
+    }
+    x.putImageData(d, 0, 0);
+  }
+  if (luma) {
+    // jas → průhlednost (jako Screen v Affinity, ale bez závoje)
+    const d = x.getImageData(0, 0, c.width, c.height);
+    for (let i = 0; i < d.data.length; i += 4) {
+      const l = (0.299 * d.data[i] + 0.587 * d.data[i + 1] + 0.114 * d.data[i + 2]) / 255;
+      d.data[i + 3] = Math.round(255 * Math.pow(l, luma) * (d.data[i + 3] / 255));
+      d.data[i] = d.data[i + 1] = d.data[i + 2] = 255;
     }
     x.putImageData(d, 0, 0);
   }
@@ -769,7 +779,7 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   applyShadow(ctx, el, s, env, rc);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  const source = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale);
+  const source = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale, el.lumaKey);
   // záře kolem loga (jako Outer Glow v Affinity): ze šablony, nebo zaškrtnutím u týmu
   const teamKey = /^team:\{\{([^}|]+)/.exec(el.src.trim())?.[1]?.trim();
   const glow = el.glow ?? (teamKey && (rc.row ? rc.row[`${teamKey}__glow`] : rc.data[`${teamKey}__glow`]) ? { color: "#FFFFFF", radius: 1, intensity: 0.5 } : undefined);
@@ -809,6 +819,16 @@ function drawElement(
   if (!isVisible(el, env, rc)) return;
   ctx.save();
   ctx.globalAlpha *= el.opacity ?? 1;
+  if (el.blend && el.blend !== "normal") ctx.globalCompositeOperation = el.blend;
+  if (el.dim && evalCondition(rc, el.dim.when)) {
+    const mode = el.dim.mode ? String(getValue(rc, el.dim.mode) ?? "").toLowerCase() : "";
+    if (mode !== "nic") {
+      const fade = !mode.startsWith("černobíl");
+      const gray = !!el.dim.gray && mode !== "ztlumit";
+      if (fade) ctx.globalAlpha *= el.dim.opacity ?? 0.4;
+      if (gray && el.type === "image") el = { ...el, grayscale: true };
+    }
+  }
   if (el.rotation) {
     const cx = frame.x + frame.w / 2;
     const cy = frame.y + frame.h / 2;

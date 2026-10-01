@@ -5,7 +5,7 @@ import { DataForm, AssetLibrary, saveImageAsset } from "@/components/DataForm";
 import { ColorField, FillField } from "@/components/ColorField";
 import { useWindowHeight, ZoomControl } from "@/components/ui";
 import { Badge, Button, cx, FileButton, Icon, IconButton, Input, Label, NumberInput, Segmented, Select, Textarea, Toggle, toast, useConfirm } from "@/components/ui";
-import { FONT_LIBRARY } from "@/lib/fonts";
+import { FONT_LIBRARY, parseFontName } from "@/lib/fonts";
 import { FORMATS, FORMAT_ORDER } from "@/lib/formats";
 import { frameUpdate } from "@/lib/graphic";
 import { autoAnchorX, autoAnchorY, framesOverlap, resolveElement } from "@/lib/layout";
@@ -970,6 +970,9 @@ function srcKind(src: string) {
 
 function TextProps({ el, onChange, brand, fields }: { el: TextElement; onChange: (p: Partial<TemplateElement>) => void; brand: import("@/lib/types").BrandKit; fields: FieldDef[] }) {
   const p = (x: Partial<TextElement>) => onChange(x as Partial<TemplateElement>);
+  // fonty nahrané v brand kitu / knihovně (např. Blackheat, Mazzard H)
+  const fontAssets = useApp((st) => st.assets.filter((a) => a.kind === "font"));
+  const uploadedFamilies = useMemo(() => [...new Set(fontAssets.map((a) => parseFontName(a.name).family))].sort(), [fontAssets]);
   return (
     <Section title="Text">
       <div>
@@ -992,9 +995,15 @@ function TextProps({ el, onChange, brand, fields }: { el: TextElement; onChange:
               <option value="body">Textové ({brand.fonts.body.family})</option>
               <option value="accent">Doplňkové ({brand.fonts.accent.family})</option>
             </optgroup>
+            {uploadedFamilies.length > 0 && (
+              <optgroup label="Nahrané fonty">
+                {uploadedFamilies.map((f) => <option key={f} value={f}>{f}</option>)}
+              </optgroup>
+            )}
             <optgroup label="Konkrétní font">
               {FONT_LIBRARY.map((f) => <option key={f.family} value={f.family}>{f.family}</option>)}
             </optgroup>
+            {!["display", "body", "accent", ...uploadedFamilies, ...FONT_LIBRARY.map((f) => f.family)].includes(el.font) && <option value={el.font}>{el.font}</option>}
           </Select>
         </div>
         <div>

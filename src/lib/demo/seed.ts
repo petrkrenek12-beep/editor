@@ -7,8 +7,9 @@ import { STAR_PNG } from "./star";
 import { ROWS_BG } from "./rows-bg";
 import { BAR_PNG } from "./bar";
 import { MAZZARD } from "./mazzard";
+import { LINES_JPG } from "./lines";
 
-export const SEED_VERSION = 11;
+export const SEED_VERSION = 13;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -67,6 +68,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     starAsset(),
     rowsBgAsset(),
     barAsset(),
+    linesAsset(),
     ...fontAssets(),
   );
 
@@ -211,4 +213,8 @@ export function barAsset(): Asset {
 /** Písmo Mazzard H (pás „Změna v týmu“, Breaking news) – sdílené pro všechny projekty. */
 export function fontAssets(): Asset[] {
   return MAZZARD.map((f) => ({ id: "font-" + f.name.replace(/\.otf$/, "").toLowerCase(), projectId: SHARED, name: f.name, kind: "font" as const, dataUrl: f.dataUrl, createdAt: Date.now() }));
+}
+
+export function linesAsset(): Asset {
+  return { id: "demo-lines", projectId: SHARED, name: "Čáry – míč (režim Screen)", kind: "element", dataUrl: LINES_JPG, w: 1536, h: 1024, createdAt: Date.now() };
 }

@@ -60,6 +60,10 @@ export interface Shadow {
 }
 
 interface BaseElement {
+  /** Režim prolnutí jako v Affinity (screen = černá zmizí, zůstanou světlé čáry) */
+  blend?: "normal" | "screen" | "multiply" | "overlay" | "lighten" | "soft-light";
+  /** Ztlumení (např. poraženého): když platí `when`, sníží krytí / černobílá. `mode` = klíč pole s volbou „Ztlumit“ / „Černobíle“ / „Ztlumit a černobíle“ / „Nic“. */
+  dim?: { when: string; opacity?: number; gray?: boolean; mode?: string };
   id: string;
   name: string;
   frame: Frame; // v px vůči základnímu formátu šablony
@@ -173,6 +177,8 @@ export interface ImageElement extends BaseElement {
    * false = vypnuto. U log týmů zapnuto automaticky.
    */
   equalize?: number | false;
+  /** Černá → průhledná (jen světlé čáry zůstanou). Číslo = kontrast (1 = měkce, 3 = jen ostré čáry) */
+  lumaKey?: number;
   /** Opakovat obrázek vodorovně přes celý rámeček (pás s logy) */
   repeat?: { gap?: number; offset?: number };
   /** Použít vyříznutou verzi fotky (ImageValue.cut) – hráč před pásem */

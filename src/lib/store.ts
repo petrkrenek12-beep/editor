@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset } from "./demo/seed";
 import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
@@ -109,7 +109,7 @@ export function initStore() {
         await a.put("assets", st);
         assets = [...assets, st];
       }
-      for (const fa of fontAssets()) {
+      for (const fa of [...fontAssets(), linesAsset()]) {
         if (assets.some((x) => x.id === fa.id)) continue;
         await a.put("assets", fa);
         assets = [...assets, fa];
