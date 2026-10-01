@@ -113,11 +113,25 @@ function GraphicCard({ g }: { g: Graphic }) {
   );
 }
 
-export function TemplateCard({ t, project, assets, onClick, footer }: { t: Template; project: Project; assets: Record<string, string>; onClick: () => void; footer?: React.ReactNode }) {
+export function TemplateCard({ t, project, assets, onClick, footer, fav, onFav }: { t: Template; project: Project; assets: Record<string, string>; onClick: () => void; footer?: React.ReactNode; fav?: boolean; onFav?: () => void }) {
   const env: RenderEnv = useMemo(() => ({ template: t, data: t.sampleData, format: t.baseFormat, brand: project.brand, teams: project.teams, assets, page: 1, pages: 2 }), [t, project, assets]);
   const key = `${t.id}:${t.updatedAt}:${JSON.stringify(project.brand).length}:${project.brand.colors.primary}${project.brand.colors.accent}${project.brand.fonts.display.family}${project.brand.logo}`;
   return (
-    <div className="group overflow-hidden rounded-lg border border-line bg-white transition-colors hover:border-ink">
+    <div className="group relative overflow-hidden rounded-lg border border-line bg-white transition-colors hover:border-ink">
+      {onFav && (
+        <button
+          type="button"
+          onClick={onFav}
+          title={fav ? "Odebrat z oblíbených" : "Přidat do oblíbených"}
+          aria-label={fav ? "Odebrat z oblíbených" : "Přidat do oblíbených"}
+          className={cx(
+            "absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full text-[20px] leading-none shadow transition-opacity",
+            fav ? "bg-[#FF4800] text-white opacity-100" : "bg-black/55 text-white opacity-80 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100",
+          )}
+        >
+          {fav ? "★" : "☆"}
+        </button>
+      )}
       <button type="button" onClick={onClick} className="block w-full text-left">
         <Thumb env={env} cacheKey={key} className="w-full" />
         <div className="px-3 pb-2 pt-2.5">
@@ -142,6 +156,18 @@ export function TemplatePicker() {
   const [cat, setCat] = useState("Vše");
   const cats = ["Vše", ...Array.from(new Set(templates.map((t) => t.category)))];
   const list = templates.filter((t) => (cat === "Vše" || t.category === cat) && (!q || (t.name + " " + t.description).toLowerCase().includes(q.toLowerCase())));
+  const favIds = project.favorites ?? [];
+  const favs = favIds.map((id) => list.find((t) => t.id === id)).filter(Boolean) as Template[];
+  const rest = list.filter((t) => !favIds.includes(t.id));
+  const toggleFav = (id: string) =>
+    upsert("projects", { ...project, favorites: favIds.includes(id) ? favIds.filter((x) => x !== id) : [...favIds, id] });
+  const grid = (items: Template[]) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {items.map((t) => (
+        <TemplateCard key={t.id} t={t} project={project} assets={assets} fav={favIds.includes(t.id)} onFav={() => toggleFav(t.id)} onClick={() => navigate(`/create/${t.id}`)} />
+      ))}
+    </div>
+  );
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-6 lg:px-8 lg:py-8">
       <PageHeader title="Vytvořit grafiku" sub="Vyberte šablonu. Pak jen vyplníte data – rozložení se postará samo." />
@@ -156,11 +182,17 @@ export function TemplatePicker() {
         </div>
       </div>
       {list.length ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {list.map((t) => (
-            <TemplateCard key={t.id} t={t} project={project} assets={assets} onClick={() => navigate(`/create/${t.id}`)} />
-          ))}
-        </div>
+        <>
+          {favs.length > 0 && (
+            <>
+              <h2 className="mb-2 font-cond text-[13px] font-bold uppercase tracking-[0.1em] text-mute">★ Oblíbené</h2>
+              {grid(favs)}
+              <h2 className="mb-2 mt-7 font-cond text-[13px] font-bold uppercase tracking-[0.1em] text-mute">Ostatní šablony</h2>
+            </>
+          )}
+          {favs.length === 0 && <p className="mb-3 text-[12px] text-mute">Tip: hvězdičkou ☆ na náhledu si šablonu přidáte do oblíbených – budou nahoře.</p>}
+          {grid(rest)}
+        </>
       ) : (
         <Empty title="Nic nenalezeno">Zkuste jiný výraz nebo kategorii.</Empty>
       )}

@@ -6,7 +6,7 @@ import { resolveColor, readableOn } from "./color";
 import { fontStack, loadFonts, registerCustomFont, registerFamilies } from "./fonts";
 import { FORMATS } from "./formats";
 import { loadImage } from "./images";
-import { constrain, autoAnchorX, layoutList, resolveElement } from "./layout";
+import { constrain, autoAnchorX, layoutGrid, layoutList, resolveElement } from "./layout";
 import { evalCondition, findTeam, getValue, interpolate, isEmptyValue, normalize, type RenderContext } from "./template-string";
 import type {
   BrandKit,
@@ -896,7 +896,9 @@ function drawElement(
         break;
       case "list": {
         const rows = listRows(el, env);
-        const { rows: rf, k: rk } = layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true);
+        const { rows: rf, k: rk } = el.grid
+          ? layoutGrid(frame, el.grid.cols, el.grid.colWidth, el.rowHeight, el.grid.colGap ?? el.gap, el.gap, rows.length)
+          : layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true);
         // společné pozadí: jeden obrázek přes celý blok, každý řádek ukáže svůj výřez
         const rbUrl = el.rowsBg?.src ? resolveImage({ id: "rb", name: "rb", type: "image", frame: el.frame, src: el.rowsBg.src } as ImageElement, env, rc).url : undefined;
         const rbImg = rbUrl ? images.get(rbUrl) : null;
@@ -922,7 +924,7 @@ function drawElement(
         }
         rows.forEach((row, i) => {
           const rowCtx: RenderContext = { ...rc, row, rowIndex: i + (env.template.paginate?.field === el.field ? ((env.page ?? 1) - 1) * env.template.paginate.perPage : 0) };
-          const B = { w: el.frame.w, h: el.rowHeight };
+          const B = { w: el.grid ? el.grid.colWidth : el.frame.w, h: el.rowHeight };
           for (const c of el.children) {
             const r = constrain(c.frame, B, rf[i], c.anchorX ?? autoAnchorX(c.frame, B.w), c.anchorY ?? "scale");
             const cs = Math.min(rf[i].w / B.w, rf[i].h / B.h);

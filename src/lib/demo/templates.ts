@@ -154,6 +154,7 @@ const ANCHORS: Record<string, Record<string, AnchorY>> = {
   "results-carousel": { games: "stretch" },
   program: { games: "stretch" },
   "results-round": { games: "stretch" },
+  streak: { kicker: "center", "kicker-own": "center", record: "center", games: "center" },
   quote: { mark: "bottom", marks: "bottom", quote: "bottom", "quote-c": "bottom", "name-box": "bottom", "speaker-logo": "bottom", name: "bottom" },
 };
 
@@ -971,6 +972,91 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         brandLogo([578, 1254, 110, 74], { align: "left" }),
       ],
     },
+    // 19 ── KOLÁŽ HRÁČŮ (2–4 fotky se statistikami)
+    {
+      id: "collage",
+      name: "Koláž hráčů",
+      category: "Hráči",
+      description: "2 až 4 fotky na jednom posteru, u každé jméno a statistiky. Rozložení se samo přizpůsobí počtu fotek, titulek je nepovinný.",
+      background: "@dark",
+      fields: [
+        { key: "title", label: "Titulek (nepovinné)", type: "text" },
+        { key: "subtitle", label: "Podtitulek / kolo (nepovinné)", type: "text" },
+        ...[1, 2, 3, 4].flatMap((n): FieldDef[] => [
+          { key: `p${n}_photo`, label: `${n}. fotka${n > 2 ? " (nepovinná)" : ""}`, type: "image" },
+          { key: `p${n}_name`, label: `${n}. jméno`, type: "text" },
+          { key: `p${n}_stats`, label: `${n}. statistiky`, type: "text", placeholder: "24 PTS · 8 REB · 5 AST" },
+          { key: `p${n}_team`, label: `${n}. tým (logo, nepovinné)`, type: "team" },
+        ]),
+      ],
+      sampleData: {
+        title: "Hráči kola",
+        subtitle: "4. kolo Maxa NBL",
+        p1_photo: PHOTO(a.arena), p1_name: "Jaborri McGhee", p1_stats: "27 PTS · 5 REB", p1_team: "Sluneta Ústí nad Labem",
+        p2_photo: PHOTO(a.ball), p2_name: "Javian McCollum", p2_stats: "20 PTS · 5 AST", p2_team: "Slavia Praha",
+        p3_photo: PHOTO(a.arena), p3_name: "Andre Screen", p3_stats: "26 PTS · 12 REB", p3_team: "NH Ostrava",
+        p4_photo: PHOTO(a.ball), p4_name: "Martin Svoboda", p4_stats: "23 PTS · 7 REB", p4_team: "Sršni Písek",
+      },
+      elements: collageElements(),
+    },
+    // 20 ── FORMA / SÉRIE TÝMU (výhry a prohry v řadě)
+    {
+      id: "streak",
+      name: "Forma týmu – série",
+      category: "Klub",
+      description: "Dlaždice V/P s logy soupeřů za posledních až 20 zápasů. Série („15 výher v řadě“) i bilance se spočítají samy.",
+      background: "@dark",
+      fields: [
+        { key: "team", label: "Tým", type: "team" },
+        { key: "headline", label: "Titulek dole", type: "text", placeholder: "Dlouhá neporazitelnost Nymburka je u konce" },
+        { key: "kicker", label: "Nadpis nahoře (prázdné = série se spočítá sama)", type: "text" },
+        {
+          key: "games",
+          label: "Zápasy (od nejstaršího)",
+          type: "list",
+          help: "Do sloupce Výsledek pište V nebo P.",
+          columns: [
+            { key: "result", label: "Výsledek (V/P)", type: "text" },
+            { key: "opp", label: "Soupeř", type: "team" },
+            { key: "score", label: "Skóre (nepovinné)", type: "text" },
+          ],
+        },
+        f.photo,
+        f.credit,
+        { key: "comp_logo", label: "Logo soutěže (jinak z brand kitu)", type: "image" },
+      ],
+      sampleData: {
+        team: "BK Kvis Pardubice",
+        headline: "Pardubice drží šňůru bez porážky",
+        kicker: "",
+        games: [
+          ["V", "NH Ostrava"], ["V", "BK Armex Energy Děčín"], ["P", "Slavia Praha"], ["V", "Sluneta Ústí nad Labem"], ["V", "Sršni Písek"], ["V", "Basket Brno"],
+          ["V", "NH Ostrava"], ["V", "BK Opava"], ["V", "USK Praha"], ["V", "BK Olomoucko"], ["V", "BK GAPA Hradec Králové"], ["V", "BK Lokomotiva Plzeň"],
+        ].map(([result, opp]) => ({ result, opp, score: "" })),
+        photo: PHOTO(a.arena),
+        photo_credit: "",
+      },
+      elements: [
+        img("photo", "Fotka", [0, 0, 1080, 1350], "{{photo}}", { fit: "cover", zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "placeholder" }),
+        rect("shade", "Ztmavení", [0, 0, 1080, 1350], lin(90, [0, "@dark/55"], [0.25, "@dark/15"], [0.45, "@dark/35"], [1, "@dark/95"]), { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        brandLogo([40, 40, 110, 80], { align: "left", anchorY: "top" }),
+        text("credit", "Foto credit", [560, 36, 480, 42], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 30, align: "right", showIf: "photo_credit", anchorX: "right", anchorY: "top", shadow: { color: "rgba(0,0,0,0.5)", blur: 8, x: 0, y: 2 } }),
+        img("comp-logo", "Logo soutěže", [390, 40, 300, 100], "{{comp_logo}}", { fit: "contain", showIf: "comp_logo", fallback: "none", anchorY: "top" }),
+        img("partner", "Liga / partner", [390, 40, 300, 100], "brand:partner", { fit: "contain", hideIf: "comp_logo", fallback: "none", anchorY: "top" }),
+        text("kicker", "Nadpis (série)", [60, 480, 960, 110], "{{@streak:games}}", { size: 120, uppercase: true, align: "center", color: "@accent", hideIf: "kicker", shadow: { color: "rgba(0,0,0,0.5)", blur: 16, x: 0, y: 4 } }),
+        text("kicker-own", "Nadpis (vlastní)", [60, 480, 960, 110], "{{kicker}}", { size: 120, uppercase: true, align: "center", color: "@accent", showIf: "kicker", shadow: { color: "rgba(0,0,0,0.5)", blur: 16, x: 0, y: 4 } }),
+        text("record", "Bilance", [340, 590, 400, 46], "Bilance {{@record:games}}", { font: "body", weight: 700, size: 30, uppercase: true, align: "center", letterSpacing: 0.06 }),
+        list("games", "Série zápasů", [80, 660, 920, 470], "games", 150, 18, [
+          rect("win", "Výhra", [0, 0, 150, 150], "#18B23A", { radius: 14, showIf: "result == V || result == W" }),
+          rect("loss", "Prohra", [0, 0, 150, 150], "#D81E2C", { radius: 14, showIf: "result == P || result == L" }),
+          text("letter", "Písmeno", [0, 8, 150, 104], "{{result|upper}}", { size: 112, align: "center" }),
+          logo("opp", "Soupeř", [42, 108, 66, 56], "opp", { equalize: 0.85 }),
+        ], { grid: { cols: 6, colWidth: 150, colGap: 18 } }),
+        logo("team-logo", "Logo týmu", [60, 1190, 110, 100], "team", { anchorY: "bottom" }),
+        rect("bar", "Čárka", [186, 1196, 5, 88], "@accent", { anchorY: "bottom" }),
+        text("headline", "Titulek", [208, 1190, 830, 100], "{{headline}}", { font: "Mazzard H", weight: 600, size: 40, uppercase: true, maxLines: 2, lineHeight: 1.1, anchorY: "bottom" }),
+      ],
+    },
   ];
 
   for (const d of defs) {
@@ -1021,4 +1107,36 @@ export function blankTemplate(projectId: string, id: string): Template {
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/** Koláž: tři rozložení (2 / 3 / 4 fotky), zobrazí se jen to, které odpovídá počtu nahraných fotek. */
+function collageElements(): TemplateElement[] {
+  const layouts: { id: string; show: string; hide?: string; cells: Box[] }[] = [
+    { id: "l2", show: "p1_photo", hide: "p3_photo", cells: [[0, 0, 538, 1350], [542, 0, 538, 1350]] },
+    { id: "l3", show: "p3_photo", hide: "p4_photo", cells: [[0, 0, 1080, 673], [0, 677, 538, 673], [542, 677, 538, 673]] },
+    { id: "l4", show: "p4_photo", cells: [[0, 0, 538, 673], [542, 0, 538, 673], [0, 677, 538, 673], [542, 677, 538, 673]] },
+  ];
+  const out: TemplateElement[] = [];
+  for (const L of layouts) {
+    const cond = { showIf: L.show, ...(L.hide ? { hideIf: L.hide } : {}) };
+    L.cells.forEach(([x, y, w, h], i) => {
+      const n = i + 1;
+      const big = w > 600;
+      const tag = `${L.id}-${n}`;
+      out.push(
+        img(`${tag}-photo`, `${n}. fotka (${L.id})`, [x, y, w, h], `{{p${n}_photo}}`, { fit: "cover", fallback: "placeholder", ...cond }),
+        rect(`${tag}-shade`, `${n}. ztmavení (${L.id})`, [x, y + h * 0.5, w, h * 0.5], lin(90, [0, "@dark/0"], [1, "@dark/92"]), cond),
+        logo(`${tag}-team`, `${n}. logo týmu (${L.id})`, [x + w / 2 - 40, y + h - 236, 80, 70], `p${n}_team`, { equalize: 0.8, ...cond, showIf: `${L.show} && p${n}_team` }),
+        text(`${tag}-name`, `${n}. jméno (${L.id})`, [x + 24, y + h - 158, w - 48, 70], `{{p${n}_name}}`, { font: "Mazzard H", weight: 900, size: big ? 66 : 50, uppercase: true, align: "center", ...cond }),
+        text(`${tag}-stats`, `${n}. statistiky (${L.id})`, [x + 30, y + h - 80, w - 60, 46], `{{p${n}_stats}}`, { font: "body", weight: 700, size: big ? 34 : 28, uppercase: true, align: "center", pill: { fill: "@accent", padX: 16, padY: 6, radius: 3 }, ...cond, showIf: `${L.show} && p${n}_stats` }),
+      );
+    });
+  }
+  out.push(
+    rect("title-shade", "Titulek – ztmavení", [0, 0, 1080, 300], lin(90, [0, "@dark/90"], [1, "@dark/0"]), { showIf: "title", anchorX: "stretch", anchorY: "top" }),
+    text("title", "Titulek", [140, 34, 800, 130], "{{title}}", { size: 140, uppercase: true, align: "center", color: "@accent", showIf: "title", anchorY: "top", shadow: { color: "rgba(0,0,0,0.5)", blur: 14, x: 0, y: 4 } }),
+    text("subtitle", "Podtitulek", [240, 168, 600, 48], "{{subtitle}}", { font: "body", weight: 700, size: 32, uppercase: true, align: "center", pill: { fill: "@accent", padX: 22, padY: 6, radius: 3 }, showIf: "subtitle", anchorY: "top" }),
+    brandLogo([36, 36, 96, 72], { align: "left", anchorY: "top" }),
+  );
+  return out;
 }

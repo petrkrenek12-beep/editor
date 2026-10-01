@@ -9,7 +9,7 @@ import { BAR_PNG } from "./bar";
 import { MAZZARD } from "./mazzard";
 import { LINES_JPG } from "./lines";
 
-export const SEED_VERSION = 13;
+export const SEED_VERSION = 14;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";

@@ -162,3 +162,24 @@ export function layoutList(
 export function framesOverlap(a: Frame, b: Frame) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
+
+/** Mřížka dlaždic (série zápasů): zmenší se, aby se vešla, řádky i poslední neúplný řádek na střed. */
+export function layoutGrid(frame: Frame, cols: number, tileW: number, tileH: number, gapX: number, gapY: number, count: number): { rows: Frame[]; k: number } {
+  if (count <= 0) return { rows: [], k: 1 };
+  const c = Math.max(1, Math.min(cols, count));
+  const lines = Math.ceil(count / c);
+  const needW = c * tileW + (c - 1) * gapX;
+  const needH = lines * tileH + (lines - 1) * gapY;
+  const k = Math.min(frame.w / needW, frame.h / needH, frame.w / (cols * tileW + (cols - 1) * gapX) * 1.6);
+  const tw = tileW * k, th = tileH * k, gx = gapX * k, gy = gapY * k;
+  const y0 = frame.y + (frame.h - (lines * th + (lines - 1) * gy)) / 2;
+  const out: Frame[] = [];
+  for (let i = 0; i < count; i++) {
+    const line = Math.floor(i / c);
+    const inLine = line === lines - 1 ? count - line * c : c;
+    const lw = inLine * tw + (inLine - 1) * gx;
+    const x0 = frame.x + (frame.w - lw) / 2;
+    out.push({ x: x0 + (i - line * c) * (tw + gx), y: y0 + line * (th + gy), w: tw, h: th });
+  }
+  return { rows: out, k };
+}

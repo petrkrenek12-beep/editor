@@ -205,6 +205,8 @@ export interface ListElement extends BaseElement {
   children: TemplateElement[];
   /** Jeden obrázek přes všechny řádky (každý řádek ukáže svůj výřez) */
   rowsBg?: { src: string; radius?: number; opacity?: number; /** plná barva pod obrázkem (jako černá vrstva v Affinity) */ backing?: string };
+  /** Mřížka dlaždic místo řádků: `cols` na řádek, dlaždice colWidth × rowHeight, poslední řádek na střed */
+  grid?: { cols: number; colWidth: number; colGap?: number };
 }
 
 export type TemplateElement =
@@ -336,6 +338,8 @@ export interface Project {
   parentName?: string; // např. "Obasketu.cz"
   brand: BrandKit;
   teams: Team[];
+  /** oblíbené šablony (id) – v pořadí, jak byly označeny */
+  favorites?: string[];
   createdAt: number;
 }
 

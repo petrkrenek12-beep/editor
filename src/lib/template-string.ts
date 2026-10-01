@@ -120,6 +120,7 @@ function applyFilter(val: string, filter: string, ctx: RenderContext): string {
 export function interpolate(tpl: string, ctx: RenderContext): string {
   return tpl.replace(/\{\{([^}]+)\}\}/g, (_, expr: string) => {
     // {{@join: · |position|height: cm|age: let}} – spojí jen vyplněné části
+    if (expr.startsWith("@streak:") || expr.startsWith("@record:")) return seriesText(ctx, expr);
     if (expr.startsWith("@join:")) {
       const [sep, ...parts] = expr.slice(6).split("|");
       return parts
@@ -173,6 +174,13 @@ export function evalCondition(ctx: RenderContext, expr: string): boolean {
   };
   const a = num(m[1]);
   const b = num(m[3]);
+  if ((!isFinite(a) || !isFinite(b)) && (m[2] === "==" || m[2] === "!=")) {
+    // textové porovnání: result == V
+    const lv = normalize(valueToString(getValue(ctx, m[1])));
+    const rk = valueToString(getValue(ctx, m[3]));
+    const rv = normalize(rk || m[3].replace(/^["']|["']$/g, ""));
+    return m[2] === "==" ? lv === rv : lv !== rv;
+  }
   if (!isFinite(a) || !isFinite(b)) return false;
   switch (m[2]) {
     case "<=": return a <= b;
@@ -182,4 +190,23 @@ export function evalCondition(ctx: RenderContext, expr: string): boolean {
     case "==": return a === b;
     default: return a !== b;
   }
+}
+
+const plural = (n: number, one: string, few: string, many: string) => (n === 1 ? one : n >= 2 && n <= 4 ? few : many);
+
+/** {{@streak:games}} → „15 výher v řadě“, {{@record:games}} → „15–1“ (sloupec result: V/P, W/L) */
+function seriesText(ctx: RenderContext, expr: string): string {
+  const [kind, field, col = "result"] = expr.slice(1).split(":");
+  const rows = getValue(ctx, field);
+  if (!Array.isArray(rows)) return "";
+  const res = (rows as Record<string, unknown>[]).map((r) => {
+    const v = normalize(String(r[col] ?? ""));
+    return v.startsWith("v") || v.startsWith("w") ? "W" : v.startsWith("p") || v.startsWith("l") ? "L" : "";
+  }).filter(Boolean);
+  if (!res.length) return "";
+  if (kind === "record") return `${res.filter((x) => x === "W").length}–${res.filter((x) => x === "L").length}`;
+  const last = res[res.length - 1];
+  let n = 0;
+  for (let i = res.length - 1; i >= 0 && res[i] === last; i--) n++;
+  return last === "W" ? `${n} ${plural(n, "výhra", "výhry", "výher")} v řadě` : `${n} ${plural(n, "prohra", "prohry", "proher")} v řadě`;
 }
