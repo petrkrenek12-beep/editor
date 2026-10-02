@@ -180,6 +180,31 @@ export function initStore() {
         await a.put("projects", z.project);
         projects = [...projects, z.project];
       }
+      // v16: nové pozadí řádků ŽBL
+      if (projects.some((p) => p.id === "p-zbl") && !assets.some((x) => x.id === "zbl-rows-bg2")) {
+        const rb = zblProject(projects.find((p) => p.id === "p-zbl")!.brand).assets.find((x) => x.id === "zbl-rows-bg2")!;
+        await a.put("assets", rb);
+        assets = [...assets, rb];
+      }
+      // v16: TV stanice sdílené napříč projekty (sjednotit)
+      {
+        const all = new Map<string, NonNullable<Project["brand"]["channels"]>[number]>();
+        for (const p of projects) for (const c of p.brand.channels ?? []) {
+          const k = c.name.trim().toLowerCase();
+          const prev = all.get(k);
+          if (!prev || (!prev.logo && c.logo)) all.set(k, c);
+        }
+        const merged = [...all.values()];
+        projects = await Promise.all(
+          projects.map(async (p) => {
+            if (JSON.stringify(p.brand.channels ?? []) === JSON.stringify(merged)) return p;
+            const np = { ...p, brand: { ...p.brand, channels: merged } };
+            (np as { _mod?: number })._mod = Date.now();
+            await a.put("projects", np);
+            return np;
+          }),
+        );
+      }
       for (const pid of ["p-nbl", "p-repre", "p-zbl"]) {
         if (!projects.some((p) => p.id === pid)) continue;
         for (const nt of builtInTemplates(pid)) {
@@ -315,7 +340,9 @@ let lastMap: Record<string, string> = {};
 export function assetMapFrom(assets: Asset[], projectId?: string) {
   if (assets === lastAssets && projectId === lastPid) return lastMap;
   const m: Record<string, string> = {};
-  for (const a of assets) if (!projectId || a.projectId === projectId || a.projectId === "shared") m[a.id] = a.dataUrl;
+  // všechny projekty: fonty, loga TV stanic apod. jsou sdílené napříč projekty (id jsou jedinečná)
+  for (const a of assets) m[a.id] = a.dataUrl;
+  void projectId;
   lastAssets = assets;
   lastPid = projectId;
   lastMap = m;

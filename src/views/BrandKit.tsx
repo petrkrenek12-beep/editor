@@ -38,7 +38,12 @@ export function BrandKitPage() {
 
   const setBrand = (b: Partial<BK>) => upsert("projects", { ...project, brand: { ...brand, ...b } });
   const channels = brand.channels ?? [];
-  const setChannel = (id: string, p: Partial<Channel>) => setBrand({ channels: channels.map((c) => (c.id === id ? { ...c, ...p } : c)) });
+  const allProjects = useApp((s) => s.projects);
+  // TV stanice jsou společné pro všechny projekty (NBL, ŽBL…)
+  const setChannels = async (list: Channel[]) => {
+    for (const p of allProjects) await upsert("projects", p.id === project.id ? { ...project, brand: { ...brand, channels: list } } : { ...p, brand: { ...p.brand, channels: list } });
+  };
+  const setChannel = (id: string, p: Partial<Channel>) => setChannels(channels.map((c) => (c.id === id ? { ...c, ...p } : c)));
 
   const uploadLogo = async (key: "logo" | "logoAlt" | "partnerLogo", files: File[]) => {
     const a = await saveImageAsset(files[0], files[0].name, "logo");
@@ -62,7 +67,8 @@ export function BrandKitPage() {
     toast(`Font „${family}“ nahrán`);
   };
 
-  const customFonts = allAssets.filter((a) => a.projectId === project.id && a.kind === "font");
+  // nahrané fonty jsou společné pro všechny projekty
+  const customFonts = allAssets.filter((a) => a.kind === "font");
   const preview = templates.find((t) => t.id.endsWith("-result")) ?? templates[0];
   const preview2 = templates.find((t) => t.id.endsWith("-player-stats")) ?? templates[1];
   const envs = useMemo(
@@ -114,13 +120,13 @@ export function BrandKitPage() {
             <SectionTitle
               action={
                 admin && (
-                  <Button size="sm" icon="plus" onClick={() => setBrand({ channels: [...channels, { id: uid("ch-"), name: "Nová stanice" }] })}>
+                  <Button size="sm" icon="plus" onClick={() => setChannels([...channels, { id: uid("ch-"), name: "Nová stanice" }])}>
                     Přidat
                   </Button>
                 )
               }
             >
-              TV stanice
+              TV stanice <span className="normal-case tracking-normal text-mute">· společné pro všechny projekty</span>
             </SectionTitle>
             <div className="grid gap-3 sm:grid-cols-2">
               {channels.map((c) => (
@@ -148,7 +154,7 @@ export function BrandKitPage() {
                       >
                         Logo
                       </FileButton>
-                      {admin && <IconButton icon="trash" label="Smazat stanici" onClick={() => setBrand({ channels: channels.filter((x) => x.id !== c.id) })} />}
+                      {admin && <IconButton icon="trash" label="Smazat stanici" onClick={() => setChannels(channels.filter((x) => x.id !== c.id))} />}
                     </div>
                   </div>
                 </div>

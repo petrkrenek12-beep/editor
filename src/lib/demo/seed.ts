@@ -10,7 +10,7 @@ import { MAZZARD } from "./mazzard";
 import { LINES_JPG } from "./lines";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 15;
+export const SEED_VERSION = 16;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -254,7 +254,7 @@ export function zblProject(nblBrand: BrandKit, createdAt = Date.now()): { projec
   const assets: Asset[] = [
     { id: "p-zbl-bg0", projectId: pid, name: "Pozadí ŽBL", kind: "background", dataUrl: ZBL_BG, w: 1080, h: 1350, createdAt },
     { id: "p-zbl-league", projectId: pid, name: "Chance ŽBL", kind: "logo", dataUrl: ZBL_LOGO, w: ZBL_LOGO_SIZE[0], h: ZBL_LOGO_SIZE[1], createdAt },
-    { id: "zbl-rows-bg", projectId: pid, name: "Pozadí řádků programu (ŽBL)", kind: "background", dataUrl: ZBL_ROWS_BG, w: 1402, h: 1122, createdAt },
+    { id: "zbl-rows-bg2", projectId: pid, name: "Pozadí řádků programu (ŽBL)", kind: "background", dataUrl: ZBL_ROWS_BG, w: 1254, h: 1254, createdAt },
   ];
   const teams: Team[] = ZBL_TEAMS.map((t, i) => {
     const id = `${pid}-team-${i}`;
@@ -302,7 +302,7 @@ function zblTemplates(): Template[] {
     [/hráče nad pás/g, "hráčku nad pás"],
     [/hráč nad pás/g, "hráčka nad pás"],
     [/Vyřízne hráče/g, "Vyřízne hráčku"],
-    [/asset:demo-rows-bg/g, "asset:zbl-rows-bg"],
+    [/asset:demo-rows-bg/g, "asset:zbl-rows-bg2"],
   ];
   const games = [
     [T[0], T[9], 81, 64, "21:14 | 19:18 | 22:16 | 19:16"],
@@ -329,6 +329,38 @@ function zblTemplates(): Template[] {
     if (id === "player-stats") Object.assign(d, { player: "Tereza Nováková", s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "7/12", s3_label: "FG", opponent: T[3] });
     if (id === "transfer") Object.assign(d, { first_name: "Anna", last_name: "Králová", position: "Rozehrávačka", from_team: "", to_team: T[0] });
     if (id === "breaking") Object.assign(d, { headline: "Žabiny posilují pod košem" });
+    if (id === "program") {
+      // bez čar nahoře → nadpis a kolo na střed, méně zápasů → větší loga dole, pozadí řádků víc průhledné
+      nt.elements = nt.elements
+        .filter((e) => e.id !== "lines")
+        .map((e) => {
+          if (e.id === "title") return { ...e, frame: { ...e.frame, x: 140, w: 800 }, align: "center" } as TemplateElement;
+          if (e.id === "pill-bg" || e.id === "pill") return { ...e, frame: { ...e.frame, x: 375 } } as TemplateElement;
+          if (e.id === "partner") return { ...e, frame: { x: 290, y: 1112, w: 270, h: 108 } } as TemplateElement;
+          if (e.id === "brand-logo") return { ...e, frame: { x: 586, y: 1108, w: 170, h: 116 } } as TemplateElement;
+          if (e.type === "list" && e.rowsBg) return { ...e, rowsBg: { ...e.rowsBg, opacity: 0.42, backing: "#000000" } } as TemplateElement;
+          return e;
+        });
+    }
+    if (id === "standings") {
+      // 10 týmů: 5 postupuje, 5 baráž; vyšší řádky, aby tabulka vyplnila panel
+      Object.assign(d, { zone1_to: 5, zone2_to: 10, zone1_label: "Play-off", zone2_label: "Baráž" });
+      const f = 76 / 62;
+      nt.elements = nt.elements.map((e) => {
+        if (e.type !== "list") return e;
+        return {
+          ...e,
+          rowHeight: 76,
+          gap: 5,
+          children: e.children.map((c) => {
+            const fr = { ...c.frame, y: c.frame.y * f, h: c.frame.h * f };
+            if (c.type === "text") return { ...c, frame: fr, size: Math.round(c.size * 1.15) } as TemplateElement;
+            if (c.type === "image") return { ...c, frame: { ...fr, x: c.frame.x - (c.frame.w * (f - 1)) / 2, w: c.frame.w * f } } as TemplateElement;
+            return { ...c, frame: fr } as TemplateElement;
+          }),
+        } as TemplateElement;
+      });
+    }
     nt.sampleData = d;
     nt.rev = SEED_VERSION;
     nt.baseHash = designHash(nt);
