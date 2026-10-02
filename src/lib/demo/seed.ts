@@ -8,8 +8,9 @@ import { ROWS_BG } from "./rows-bg";
 import { BAR_PNG } from "./bar";
 import { MAZZARD } from "./mazzard";
 import { LINES_JPG } from "./lines";
+import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 14;
+export const SEED_VERSION = 15;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -90,7 +91,10 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     ds("roster", "Soupiska Basket Brno", "csv", PLAYERS),
   ];
 
-  return { projects: [nbl, repre], templates, assets, datasets };
+  const zbl = zblProject(nbl.brand, now + 2);
+  assets.push(...zbl.assets, { id: "p-zbl-logo", projectId: "p-zbl", name: "Logo (demo)", kind: "logo", dataUrl: logoNbl, createdAt: now });
+  templates.push(...builtInTemplates("p-zbl"));
+  return { projects: [nbl, repre, zbl.project], templates, assets, datasets };
 }
 
 export function bgAsset(): Asset {
@@ -99,8 +103,12 @@ export function bgAsset(): Asset {
 
 /** Vestavěné šablony projektu v aktuální verzi návrhu. */
 export function builtInTemplates(projectId: string): Template[] {
+  if (projectId === "p-zbl") return zblTemplates();
   const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" });
-  for (const t of list) t.rev = SEED_VERSION;
+  for (const t of list) {
+    t.rev = SEED_VERSION;
+    t.baseHash = designHash(t);
+  }
   if (projectId === "p-repre")
     for (const t of list) {
       const d = { ...t.sampleData };
@@ -120,17 +128,17 @@ export function builtInTemplates(projectId: string): Template[] {
  * Vrací null, když není co měnit.
  */
 export function upgradeTemplate(t: Template): Template | null {
-  const pid = /^(p-nbl|p-repre)-/.exec(t.id)?.[1];
-  if (t.builtIn && pid && (t.rev ?? 0) < SEED_VERSION) {
+  const pid = /^(p-nbl|p-repre|p-zbl)-/.exec(t.id)?.[1];
+  if (t.builtIn && pid) {
     const fresh = builtInTemplates(pid).find((x) => x.id === t.id);
-    if (fresh) return { ...fresh, createdAt: t.createdAt };
+    if (fresh && (t.baseHash !== fresh.baseHash || (t.rev ?? 0) < SEED_VERSION)) return { ...fresh, createdAt: t.createdAt };
   }
   return migrateTemplateV4(t);
 }
 
 /** Původní podoba vestavěné šablony (pro „Obnovit původní návrh“). */
 export function originalTemplate(id: string): Template | undefined {
-  const pid = /^(p-nbl|p-repre)-/.exec(id)?.[1];
+  const pid = /^(p-nbl|p-repre|p-zbl)-/.exec(id)?.[1];
   return pid ? builtInTemplates(pid).find((x) => x.id === id) : undefined;
 }
 
@@ -217,4 +225,113 @@ export function fontAssets(): Asset[] {
 
 export function linesAsset(): Asset {
   return { id: "demo-lines", projectId: SHARED, name: "Čáry – míč (režim Screen)", kind: "element", dataUrl: LINES_JPG, w: 1536, h: 1024, createdAt: Date.now() };
+}
+
+/** Otisk návrhu šablony (prvky, pole, pozadí) – mění se jen když se změní návrh. */
+export function designHash(t: Pick<Template, "elements" | "fields" | "background" | "paginate">): string {
+  const str = JSON.stringify([t.elements, t.fields, t.background, t.paginate ?? null]);
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+/** Upravená šablona, ke které mezitím vyšel novější vestavěný návrh. */
+export function newerDesign(t: Template): Template | undefined {
+  if (t.builtIn) return undefined;
+  const o = originalTemplate(t.id);
+  if (!o || t.baseHash === o.baseHash) return undefined;
+  if (designHash(t) === o.baseHash) return undefined;
+  return o;
+}
+
+// ── ŽBL (ženská liga) ───────────────────────────────────────
+
+export const ZBL_IDS = ["result", "results-panorama", "results-round", "program", "standings", "player-stats", "transfer", "breaking"];
+
+/** Projekt ŽBL: zelené pozadí, logo Chance ŽBL, týmy s barevnými i bílými logy. Brand (logo, fonty) převezme z NBL. */
+export function zblProject(nblBrand: BrandKit, createdAt = Date.now()): { project: Project; assets: Asset[] } {
+  const pid = "p-zbl";
+  const assets: Asset[] = [
+    { id: "p-zbl-bg0", projectId: pid, name: "Pozadí ŽBL", kind: "background", dataUrl: ZBL_BG, w: 1080, h: 1350, createdAt },
+    { id: "p-zbl-league", projectId: pid, name: "Chance ŽBL", kind: "logo", dataUrl: ZBL_LOGO, w: ZBL_LOGO_SIZE[0], h: ZBL_LOGO_SIZE[1], createdAt },
+    { id: "zbl-rows-bg", projectId: pid, name: "Pozadí řádků programu (ŽBL)", kind: "background", dataUrl: ZBL_ROWS_BG, w: 1402, h: 1122, createdAt },
+  ];
+  const teams: Team[] = ZBL_TEAMS.map((t, i) => {
+    const id = `${pid}-team-${i}`;
+    assets.push(
+      { id: `${id}-logo`, projectId: pid, name: `${t.name} logo`, kind: "team", dataUrl: t.logo, createdAt },
+      { id: `${id}-logo-w`, projectId: pid, name: `${t.name} logo bílé`, kind: "team", dataUrl: t.logoWhite, createdAt },
+    );
+    return { id, name: t.name, short: t.short, aliases: t.aliases, color: t.color, color2: t.color2, logo: `${id}-logo`, logoWhite: `${id}-logo-w` };
+  });
+  const project: Project = {
+    id: pid,
+    name: "ŽBL",
+    parentName: nblBrand ? "Obasketu.cz" : undefined,
+    brand: {
+      ...nblBrand,
+      colors: { primary: "#0E6B3A", secondary: "#06331B", accent: "#FF4800", dark: "#040D07", light: "#FFFFFF", text: "#FFFFFF" },
+      logo: "p-zbl-logo",
+      logoAlt: undefined,
+      partnerLogo: "p-zbl-league",
+      backgrounds: ["p-zbl-bg0"],
+      elements: [],
+      channels: nblBrand.channels ?? defaultChannels(),
+    },
+    teams,
+    createdAt,
+  };
+  return { project, assets };
+}
+
+/** Šablony NBL přepsané pro ženskou ligu (hráčka, ŽBL týmy, zelené pozadí řádků). */
+function zblTemplates(): Template[] {
+  const base = buildTemplates("p-zbl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => ZBL_IDS.includes(t.id.replace(/^p-zbl-/, "")));
+  const T = ZBL_TEAMS.map((t) => t.name);
+  const fem: [RegExp, string][] = [
+    [/Hráč zápasu/g, "Hráčka zápasu"],
+    [/Statistiky hráče/g, "Statistiky hráčky"],
+    [/Fotka hráče/g, "Fotka hráčky"],
+    [/Hráč vlevo/g, "Hráčka vlevo"],
+    [/Hráč vpravo/g, "Hráčka vpravo"],
+    [/Hráč nad přechodem/g, "Hráčka nad přechodem"],
+    [/Hráč před pásem/g, "Hráčka před pásem"],
+    [/hráči po stranách/g, "hráčky po stranách"],
+    [/"Hráč"/g, '"Hráčka"'],
+    [/Ořez hráče/g, "Ořez hráčky"],
+    [/hráče nad pás/g, "hráčku nad pás"],
+    [/hráč nad pás/g, "hráčka nad pás"],
+    [/Vyřízne hráče/g, "Vyřízne hráčku"],
+    [/asset:demo-rows-bg/g, "asset:zbl-rows-bg"],
+  ];
+  const games = [
+    [T[0], T[9], 81, 64, "21:14 | 19:18 | 22:16 | 19:16"],
+    [T[1], T[8], 72, 75, "18:20 | 17:19 | 20:17 | 17:19"],
+    [T[2], T[7], 88, 59, "24:12 | 20:15 | 22:18 | 22:14"],
+    [T[3], T[6], 77, 70, "19:17 | 20:18 | 18:20 | 20:15"],
+    [T[4], T[5], 66, 68, "15:16 | 18:17 | 16:19 | 17:16"],
+  ];
+  const mvps = ["Tereza Nováková (21 PTS, 9 REB)", "Klára Dvořáková (18 PTS, 6 AST)", "Anna Svobodová (16 PTS, 11 REB)", "Lucie Černá (19 PTS)", "Eliška Malá (17 PTS, 7 REB)"];
+  return base.map((t) => {
+    const nt = JSON.parse(fem.reduce((str, [re, to]) => str.replace(re, to), JSON.stringify(t))) as Template;
+    const id = nt.id.replace(/^p-zbl-/, "");
+    const d = { ...nt.sampleData };
+    if (id === "result") Object.assign(d, { home_team: T[2], away_team: T[8], home_score: 78, away_score: 71, mvp: mvps[0] });
+    if (id === "results-panorama")
+      d.games = games.map((g, i) => ({ home: g[0], away: g[1], home_score: g[2], away_score: g[3], mvp: mvps[i], photo: { asset: i % 2 ? "demo-ball" : "demo-arena", zoom: 1, fx: 0.5, fy: 0.3 }, credit: "" }));
+    if (id === "results-round") d.games = games.map((g) => ({ home: g[0], away: g[1], home_score: g[2], away_score: g[3], detail: g[4] }));
+    if (id === "program") Object.assign(d, { dates: "4.10.", round: "2. kolo" });
+    if (id === "standings") d.round_label = "Po 1. kole";
+    if (id === "results-round") d.round = "1. kolo";
+    if (id === "program") d.games = games.map((g, i) => ({ home: g[1], away: g[0], date: "2026-10-04", time: i < 2 ? "17:00" : "18:00", tv: "" }));
+    if (id === "standings")
+      d.rows = T.map((team, i) => ({ pos: i + 1, team, g: i < 8 ? 1 : 0, w: i < 4 ? 1 : 0, l: i >= 4 && i < 8 ? 1 : 0, pct: i < 4 ? "1.000" : i < 8 ? "0.000" : "" }));
+    if (id === "player-stats") Object.assign(d, { player: "Tereza Nováková", s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "7/12", s3_label: "FG", opponent: T[3] });
+    if (id === "transfer") Object.assign(d, { first_name: "Anna", last_name: "Králová", position: "Rozehrávačka", from_team: "", to_team: T[0] });
+    if (id === "breaking") Object.assign(d, { headline: "Žabiny posilují pod košem" });
+    nt.sampleData = d;
+    nt.rev = SEED_VERSION;
+    nt.baseHash = designHash(nt);
+    return nt;
+  });
 }

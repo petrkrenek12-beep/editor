@@ -276,6 +276,8 @@ export interface Template {
   builtIn?: boolean;
   /** Verze vestavěného návrhu (pro automatické aktualizace nezměněných šablon) */
   rev?: number;
+  /** Otisk vestavěného návrhu, ze kterého šablona vychází (pozná se tak novější verze) */
+  baseHash?: string;
 }
 
 export interface BrandFont {

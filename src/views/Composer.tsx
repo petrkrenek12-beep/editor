@@ -4,6 +4,7 @@ import { GraphicCanvas } from "@/components/GraphicCanvas";
 import { DataForm, keepImages } from "@/components/DataForm";
 import { AiPanel } from "@/components/AiPanel";
 import { ScreenshotImport } from "@/components/ScreenshotImport";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { Badge, Button, cx, Icon, IconButton, Label, Modal, Segmented, Select, toast, Textarea, useWindowHeight, ZoomControl } from "@/components/ui";
 import { applyMapping, autoMap, parseJson } from "@/lib/data-import";
 import { canShareFiles, downloadBlob, fileName, renderPages, shareFiles, zipFiles, type ImageType } from "@/lib/export";
@@ -241,6 +242,7 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
 
   const dataPanel = (
     <div className="flex flex-col gap-4">
+      {role !== "viewer" && <UpdateBanner template={template} />}
       {role !== "viewer" && <ScreenshotImport template={template} teams={project.teams} onData={(d) =>
             setData((cur) => {
               const next = { ...cur, ...d };

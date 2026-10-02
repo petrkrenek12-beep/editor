@@ -11,6 +11,7 @@ import { frameUpdate } from "@/lib/graphic";
 import { autoAnchorX, autoAnchorY, framesOverlap, resolveElement } from "@/lib/layout";
 import { can } from "@/lib/permissions";
 import { originalTemplate } from "@/lib/demo/seed";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import type { RenderEnv } from "@/lib/render";
 import { navigate } from "@/lib/router";
 import { uid, upsert, useApp, useAssetMap, useCurrentProject, useCurrentUser } from "@/lib/store";
@@ -284,6 +285,11 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         </div>
       </div>
 
+      {!dirty && (
+        <div className="px-4 pt-3 lg:px-6">
+          <UpdateBanner template={t} onUpdated={(nt) => setT(nt)} />
+        </div>
+      )}
       <div className="grid flex-1 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)_300px]">
         {/* LEVÝ PANEL */}
         <aside className="order-2 border-line bg-white lg:order-1 lg:h-[calc(100vh-57px)] lg:overflow-y-auto lg:border-r">

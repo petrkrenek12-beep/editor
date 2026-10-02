@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, zblProject } from "./demo/seed";
 import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
@@ -167,7 +167,20 @@ export function initStore() {
       );
       // nové vestavěné šablony z aktualizace (kromě těch, které uživatel smazal)
       const tomb = settings?.tombstones ?? {};
-      for (const pid of ["p-nbl", "p-repre"]) {
+      // v15: nová liga ŽBL (převezme logo a fonty z NBL)
+      const nblP = projects.find((p) => p.id === "p-nbl");
+      if (nblP && !projects.some((p) => p.id === "p-zbl") && !tomb["projects:p-zbl"]) {
+        const z = zblProject(nblP.brand, Date.now());
+        const logo = assets.find((x) => x.id === nblP.brand.logo);
+        if (logo) z.assets.push({ ...logo, id: "p-zbl-logo", projectId: "p-zbl", remoteUrl: undefined, createdAt: Date.now() });
+        else z.project.brand.logo = undefined;
+        for (const x of z.assets) await a.put("assets", x);
+        assets = [...assets, ...z.assets];
+        (z.project as { _mod?: number })._mod = Date.now();
+        await a.put("projects", z.project);
+        projects = [...projects, z.project];
+      }
+      for (const pid of ["p-nbl", "p-repre", "p-zbl"]) {
         if (!projects.some((p) => p.id === pid)) continue;
         for (const nt of builtInTemplates(pid)) {
           if (templates.some((t) => t.id === nt.id) || tomb[`templates:${nt.id}`]) continue;
