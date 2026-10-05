@@ -476,7 +476,7 @@ function ImageCell({ value, onChange, disabled, assets }: { value: unknown; onCh
             setBusy(true);
             try {
               const a = await saveImageAsset(f, f.name);
-              onChange({ asset: a.id, zoom: 1, fx: 0.5, fy: 0.3 });
+              onChange({ asset: a.id });
             } finally {
               setBusy(false);
             }
