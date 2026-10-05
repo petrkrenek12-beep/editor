@@ -98,6 +98,7 @@ function applyFilter(val: string, filter: string, ctx: RenderContext): string {
       const d = parseDate(val);
       if (!d) return val;
       if (arg === "short") return `${d.getDate()}.${d.getMonth() + 1}.`;
+      if (arg === "spaced") return `${d.getDate()}. ${d.getMonth() + 1}.`;
       if (arg === "tight") return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
       return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
     }

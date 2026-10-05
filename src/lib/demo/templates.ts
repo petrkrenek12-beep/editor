@@ -1057,6 +1057,64 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         text("headline", "Titulek", [208, 1190, 830, 100], "{{headline}}", { font: "Mazzard H", weight: 600, size: 40, uppercase: true, maxLines: 2, lineHeight: 1.1, anchorY: "bottom" }),
       ],
     },
+    // 21 ── PROGRAM BCL (Liga mistrů FIBA)
+    {
+      id: "bcl-program",
+      name: "Program – Liga mistrů",
+      category: "Soutěž",
+      description: "Pozadí BCL, vyříznutý hráč vlevo pod kartami, karty zápasů s tyrkysovým obrysem a oranžovým proužkem, TV stanice.",
+      background: "#020D24",
+      fields: [
+        { key: "title", label: "Nadpis", type: "text" },
+        { key: "subtitle", label: "Pruh pod nadpisem", type: "text", placeholder: "Liga mistrů FIBA · 2. kolo" },
+        {
+          key: "games",
+          label: "Zápasy",
+          type: "list",
+          help: "Loga soupeřů: vyberte tým, nebo nahrajte logo přímo do řádku (sloupec Logo D / Logo H).",
+          columns: [
+            { key: "home", label: "Domácí", type: "team" },
+            { key: "away", label: "Hosté", type: "team" },
+            { key: "date", label: "Datum", type: "date" },
+            { key: "time", label: "Čas", type: "text" },
+            { key: "tv", label: "TV", type: "channel" },
+            { key: "home_logo", label: "Logo D (vlastní)", type: "image" },
+            { key: "away_logo", label: "Logo H (vlastní)", type: "image" },
+          ],
+        },
+        { key: "photo", label: "Hráč (vyříznutý, bez pozadí)", type: "image" },
+      ],
+      sampleData: {
+        title: "Program",
+        subtitle: "Liga mistrů FIBA",
+        games: [
+          { home: "Reggiana", away: "BK Kvis Pardubice", date: "2026-10-06", time: "20:00", tv: "" },
+          { home: "Slavia Praha", away: "Alba Berlín", date: "2026-10-07", time: "18:00", tv: "Prima Sport" },
+        ],
+        photo: { asset: a.player },
+      },
+      elements: [
+        img("bg", "Pozadí (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", zone: "bg", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+        img("player", "Hráč (pod kartami)", [-90, 300, 620, 1050], "{{photo}}", { fit: "contain", align: "left", valign: "bottom", anchorX: "left", anchorY: "bottom", showIf: "photo" }),
+        text("title", "Nadpis", [340, 140, 720, 170], "{{title}}", { font: "Mazzard H", weight: 900, size: 148, uppercase: true, align: "left", letterSpacing: -0.01, shadow: { color: "rgba(0,0,0,0.35)", blur: 18, x: 0, y: 6 } }),
+        rect("pill-bg", "Pruh", [340, 322, 680, 64], "@accent", { radius: 12 }),
+        text("pill", "Pruh – text", [360, 322, 640, 64], "{{subtitle}}", { font: "Mazzard H", weight: 600, size: 36, uppercase: true, align: "center", letterSpacing: 0.14 }),
+        list("games", "Zápasy", [340, 470, 700, 620], "games", 180, 34, [
+          rect("stripe", "Oranžový proužek", [12, 0, 688, 180], "@accent", { radius: 20 }),
+          rect("card", "Karta", [0, 0, 690, 180], "#020D24", { radius: 20, stroke: "#22B8C4", strokeWidth: 3 }),
+          logo("hl", "Logo D", [26, 20, 170, 140], "home", { override: "{{home_logo}}", equalize: 0.62 }),
+          text("day", "Den", [200, 34, 290, 62], "{{date|day}}", { font: "Mazzard H", weight: 900, size: 54, align: "center", hideIf: "tv" }),
+          text("when", "Datum a čas", [200, 98, 290, 50], "{{date|date:spaced}}  |  {{time}}", { font: "Mazzard H", weight: 600, size: 42, align: "center", hideIf: "tv" }),
+          text("day-tv", "Den (s TV)", [200, 14, 290, 56], "{{date|day}}", { font: "Mazzard H", weight: 900, size: 50, align: "center", showIf: "tv" }),
+          text("when-tv", "Datum a čas (s TV)", [200, 72, 290, 46], "{{date|date:spaced}}  |  {{time}}", { font: "Mazzard H", weight: 600, size: 38, align: "center", showIf: "tv" }),
+          img("tv", "Logo TV", [255, 126, 180, 40], "channel:{{tv}}", { fit: "contain", showIf: "tv", fallback: "none" }),
+          logo("al", "Logo H", [494, 20, 170, 140], "away", { override: "{{away_logo}}", equalize: 0.62 }),
+        ]),
+        img("partner", "Logo BCL", [748, 1222, 140, 92], "brand:partner", { fit: "contain", align: "right", fallback: "none", anchorX: "right", anchorY: "bottom" }),
+        rect("sep", "Dělicí čára", [910, 1206, 3, 124], "#FFFFFF", { anchorX: "right", anchorY: "bottom" }),
+        brandLogo([934, 1218, 120, 100], { align: "left", anchorX: "right", anchorY: "bottom" }),
+      ],
+    },
   ];
 
   for (const d of defs) {

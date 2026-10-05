@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, zblProject } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, zblProject, bclProject } from "./demo/seed";
 import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
@@ -205,7 +205,19 @@ export function initStore() {
           }),
         );
       }
-      for (const pid of ["p-nbl", "p-repre", "p-zbl"]) {
+      // v18: projekt BCL (Liga mistrů FIBA)
+      if (nblP && !projects.some((p) => p.id === "p-bcl") && !tomb["projects:p-bcl"]) {
+        const z = bclProject(projects.find((p) => p.id === "p-nbl")!.brand, Date.now());
+        const logo = assets.find((x) => x.id === nblP.brand.logo);
+        if (logo) z.assets.push({ ...logo, id: "p-bcl-logo", projectId: "p-bcl", remoteUrl: undefined, createdAt: Date.now() });
+        else z.project.brand.logo = undefined;
+        for (const x of z.assets) await a.put("assets", x);
+        assets = [...assets, ...z.assets];
+        (z.project as { _mod?: number })._mod = Date.now();
+        await a.put("projects", z.project);
+        projects = [...projects, z.project];
+      }
+      for (const pid of ["p-nbl", "p-repre", "p-zbl", "p-bcl"]) {
         if (!projects.some((p) => p.id === pid)) continue;
         for (const nt of builtInTemplates(pid)) {
           if (templates.some((t) => t.id === nt.id) || tomb[`templates:${nt.id}`]) continue;
@@ -297,6 +309,40 @@ export function exportProject(projectId: string) {
     datasets: state.datasets.filter((d) => d.projectId === projectId),
     graphics: state.graphics.filter((g) => g.projectId === projectId),
   };
+}
+
+/** Záloha všech projektů najednou (bez vestavěných demo obrázků a fontů, ty si aplikace doplní sama). */
+export function exportAll() {
+  return {
+    app: "presetka",
+    version: 2,
+    all: true,
+    exportedAt: new Date().toISOString(),
+    currentProjectId: state.settings.currentProjectId,
+    projects: state.projects,
+    templates: state.templates,
+    assets: state.assets.filter((a) => a.projectId !== "shared"),
+    datasets: state.datasets,
+    graphics: state.graphics,
+  };
+}
+
+/** Obnoví zálohu – celou (všechny projekty) i starší zálohu jednoho projektu. */
+export async function importBackup(json: Record<string, unknown>): Promise<number> {
+  if (json?.app !== "presetka") throw new Error("Soubor není záloha Presetky.");
+  if (!json.all) {
+    await importProject(json as ReturnType<typeof exportProject>);
+    return 1;
+  }
+  const j = json as ReturnType<typeof exportAll>;
+  for (const a of j.assets ?? []) await upsert("assets", a);
+  for (const p of j.projects ?? []) await upsert("projects", p);
+  for (const t of j.templates ?? []) await upsert("templates", t);
+  await upgradeStoredTemplates();
+  for (const d of j.datasets ?? []) await upsert("datasets", d);
+  for (const g of j.graphics ?? []) await upsert("graphics", g);
+  if (j.currentProjectId && (j.projects ?? []).some((p) => p.id === j.currentProjectId)) await updateSettings({ currentProjectId: j.currentProjectId });
+  return (j.projects ?? []).length;
 }
 
 export async function importProject(json: ReturnType<typeof exportProject>) {

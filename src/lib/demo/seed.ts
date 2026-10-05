@@ -8,9 +8,10 @@ import { ROWS_BG } from "./rows-bg";
 import { BAR_PNG } from "./bar";
 import { MAZZARD } from "./mazzard";
 import { LINES_JPG } from "./lines";
+import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 16;
+export const SEED_VERSION = 18;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -92,9 +93,12 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
   ];
 
   const zbl = zblProject(nbl.brand, now + 2);
+  const bcl = bclProject(nbl.brand, now + 3);
+  assets.push(...bcl.assets, { id: "p-bcl-logo", projectId: "p-bcl", name: "Logo (demo)", kind: "logo", dataUrl: logoNbl, createdAt: now });
+  templates.push(...builtInTemplates("p-bcl"));
   assets.push(...zbl.assets, { id: "p-zbl-logo", projectId: "p-zbl", name: "Logo (demo)", kind: "logo", dataUrl: logoNbl, createdAt: now });
   templates.push(...builtInTemplates("p-zbl"));
-  return { projects: [nbl, repre, zbl.project], templates, assets, datasets };
+  return { projects: [nbl, repre, zbl.project, bcl.project], templates, assets, datasets };
 }
 
 export function bgAsset(): Asset {
@@ -104,7 +108,8 @@ export function bgAsset(): Asset {
 /** Vestavěné šablony projektu v aktuální verzi návrhu. */
 export function builtInTemplates(projectId: string): Template[] {
   if (projectId === "p-zbl") return zblTemplates();
-  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" });
+  if (projectId === "p-bcl") return bclTemplates();
+  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !t.id.endsWith("-bcl-program"));
   for (const t of list) {
     t.rev = SEED_VERSION;
     t.baseHash = designHash(t);
@@ -128,7 +133,7 @@ export function builtInTemplates(projectId: string): Template[] {
  * Vrací null, když není co měnit.
  */
 export function upgradeTemplate(t: Template): Template | null {
-  const pid = /^(p-nbl|p-repre|p-zbl)-/.exec(t.id)?.[1];
+  const pid = /^(p-nbl|p-repre|p-zbl|p-bcl)-/.exec(t.id)?.[1];
   if (t.builtIn && pid) {
     const fresh = builtInTemplates(pid).find((x) => x.id === t.id);
     if (fresh && (t.baseHash !== fresh.baseHash || (t.rev ?? 0) < SEED_VERSION)) return { ...fresh, createdAt: t.createdAt };
@@ -138,7 +143,7 @@ export function upgradeTemplate(t: Template): Template | null {
 
 /** Původní podoba vestavěné šablony (pro „Obnovit původní návrh“). */
 export function originalTemplate(id: string): Template | undefined {
-  const pid = /^(p-nbl|p-repre|p-zbl)-/.exec(id)?.[1];
+  const pid = /^(p-nbl|p-repre|p-zbl|p-bcl)-/.exec(id)?.[1];
   return pid ? builtInTemplates(pid).find((x) => x.id === id) : undefined;
 }
 
@@ -345,13 +350,13 @@ function zblTemplates(): Template[] {
     if (id === "standings") {
       // 10 týmů: 5 postupuje, 5 baráž; vyšší řádky, aby tabulka vyplnila panel
       Object.assign(d, { zone1_to: 5, zone2_to: 10, zone1_label: "Play-off", zone2_label: "Baráž" });
-      const f = 76 / 62;
+      const f = 74 / 62;
       nt.elements = nt.elements.map((e) => {
         if (e.type !== "list") return e;
         return {
           ...e,
-          rowHeight: 76,
-          gap: 5,
+          rowHeight: 74,
+          gap: 4,
           children: e.children.map((c) => {
             const fr = { ...c.frame, y: c.frame.y * f, h: c.frame.h * f };
             if (c.type === "text") return { ...c, frame: fr, size: Math.round(c.size * 1.15) } as TemplateElement;
@@ -365,5 +370,53 @@ function zblTemplates(): Template[] {
     nt.rev = SEED_VERSION;
     nt.baseHash = designHash(nt);
     return nt;
+  });
+}
+
+// ── BCL (Liga mistrů FIBA) ──────────────────────────────────
+
+export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { project: Project; assets: Asset[] } {
+  const pid = "p-bcl";
+  const A = (id: string, name: string, kind: Asset["kind"], dataUrl: string, w?: number, h?: number): Asset => ({ id, projectId: pid, name, kind, dataUrl, w, h, createdAt });
+  const assets: Asset[] = [
+    A("p-bcl-bg0", "Pozadí BCL", "background", BCL_BG, 1080, 1350),
+    A("p-bcl-league", "BCL (bílé)", "logo", BCL_LOGO_WHITE, BCL_LOGO_SIZE[0], BCL_LOGO_SIZE[1]),
+    A("p-bcl-league-color", "BCL (barevné)", "logo", BCL_LOGO, BCL_LOGO_SIZE[0], BCL_LOGO_SIZE[1]),
+    A("p-bcl-team-0-logo", "Slavia Praha logo", "team", BCL_SLAVIA),
+    A("p-bcl-team-0-logo-w", "Slavia Praha logo bílé", "team", BCL_SLAVIA_W),
+    A("p-bcl-team-1-logo", "BK Kvis Pardubice logo", "team", BCL_KVIS),
+    A("p-bcl-team-1-logo-w", "BK Kvis Pardubice logo bílé", "team", BCL_KVIS_W),
+  ];
+  const teams: Team[] = [
+    { id: "p-bcl-team-0", name: "Slavia Praha", short: "SLA", aliases: ["Slavia", "SK Slavia Praha", "Slavia Praha ERA NBK", "SKS"], color: "#E3001B", color2: "#FFFFFF", logo: "p-bcl-team-0-logo", logoWhite: "p-bcl-team-0-logo-w" },
+    { id: "p-bcl-team-1", name: "BK Kvis Pardubice", short: "PAR", aliases: ["Pardubice", "Kvis Pardubice", "BK Pardubice"], color: "#E30613", color2: "#1D1D1B", logo: "p-bcl-team-1-logo", logoWhite: "p-bcl-team-1-logo-w" },
+  ];
+  const project: Project = {
+    id: pid,
+    name: "BCL",
+    parentName: "Obasketu.cz",
+    brand: {
+      ...nblBrand,
+      colors: { primary: "#22B8C4", secondary: "#0A1E4A", accent: "#FF4800", dark: "#020D24", light: "#FFFFFF", text: "#FFFFFF" },
+      logo: "p-bcl-logo",
+      logoAlt: undefined,
+      partnerLogo: "p-bcl-league",
+      backgrounds: ["p-bcl-bg0"],
+      elements: [],
+      channels: nblBrand.channels ?? defaultChannels(),
+    },
+    teams,
+    createdAt,
+  };
+  return { project, assets };
+}
+
+function bclTemplates(): Template[] {
+  const list = buildTemplates("p-bcl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /-(result|bcl-program)$/.test(t.id));
+  return list.map((t) => {
+    if (t.id.endsWith("-result")) t.sampleData = { ...t.sampleData, home_team: "BK Kvis Pardubice", away_team: "Reggiana", home_score: 84, away_score: 79, mvp: "Martin Peterka (19 PTS, 6 REB)" };
+    t.rev = SEED_VERSION;
+    t.baseHash = designHash(t);
+    return t;
   });
 }

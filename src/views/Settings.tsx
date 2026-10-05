@@ -7,7 +7,7 @@ import { downloadBlob, slug } from "@/lib/export";
 import { can, ROLE_LABEL } from "@/lib/permissions";
 import { navigate } from "@/lib/router";
 import { TARGET } from "@/lib/runtime";
-import { deleteProject, exportProject, importProject, remove, uid, updateSettings, upsert, useApp, useCurrentProject, useCurrentUser } from "@/lib/store";
+import { deleteProject, exportAll, exportProject, importBackup, remove, uid, updateSettings, upsert, useApp, useCurrentProject, useCurrentUser } from "@/lib/store";
 import type { Project, Role, User } from "@/lib/types";
 import { disableSync, enableSync, syncNow, syncServerInfo, useSyncStatus } from "@/lib/sync";
 import { HAS_SERVER } from "@/lib/runtime";
@@ -65,8 +65,8 @@ export function ProjectsPage() {
                 accept="application/json,.json"
                 onFile={async (f) => {
                   try {
-                    await importProject(JSON.parse(await f[0].text()));
-                    toast("Projekt obnoven ze zálohy");
+                    const n = await importBackup(JSON.parse(await f[0].text()));
+                    toast(n > 1 ? `Obnoveno ${n} projektů ze zálohy` : "Projekt obnoven ze zálohy");
                   } catch (e) {
                     toast((e as Error).message, "bad");
                   }
@@ -74,6 +74,16 @@ export function ProjectsPage() {
               >
                 Obnovit zálohu
               </FileButton>
+              <Button
+                icon="download"
+                onClick={async () => {
+                  const json = JSON.stringify(exportAll());
+                  await downloadBlob(new Blob([json], { type: "application/json" }), `presetka-zaloha-vse-${new Date().toISOString().slice(0, 10)}.json`);
+                  toast("Záloha všech projektů stažena");
+                }}
+              >
+                Záloha všech projektů
+              </Button>
               <Button variant="primary" icon="plus" onClick={() => setOpen(true)}>
                 Nový projekt
               </Button>
@@ -119,7 +129,7 @@ export function ProjectsPage() {
                           await downloadBlob(new Blob([json], { type: "application/json" }), `presetka-${slug(p.name)}-zaloha.json`);
                         }}
                       >
-                        Záloha
+                        Záloha jen tohoto
                       </Button>
                     )}
                     {manage && projects.length > 1 && (
