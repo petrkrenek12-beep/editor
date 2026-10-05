@@ -252,6 +252,8 @@ export interface ImageValue {
   fy?: number;
   /** Vyříznutá verze stejné fotky (bez pozadí) pro vrstvu v popředí */
   cut?: string;
+  /** Úpravy fotky a nasvícení (expozice, kontrast, rim light…) */
+  adj?: import("./adjust").PhotoAdjust;
 }
 
 export type DataValue = string | number | ImageValue | Record<string, unknown>[] | null | undefined;

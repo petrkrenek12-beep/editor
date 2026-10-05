@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { AdjustPanel } from "./AdjustPanel";
 import { browserRemover, removeBgRemover } from "@/lib/bg-removal";
 import { parseCsv, parseResultLines, parseScheduleLines, toRows } from "@/lib/data-import";
 import { asImageValue, clamp } from "@/lib/graphic";
@@ -199,6 +200,7 @@ export async function saveImageAsset(file: File | Blob, name: string, kind: Asse
 
 function ImageField({ id, value, onChange, disabled, assets, project, cutout }: { id: string; value: ImageValue | null; onChange: (v: ImageValue | null) => void; disabled?: boolean; assets: Record<string, string>; project: Project; cutout?: boolean }) {
   const [lib, setLib] = useState(false);
+  const [adjOpen, setAdjOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const settings = useApp((s) => s.settings);
   const url = value?.asset ? assets[value.asset] ?? (/^(data:|https?:)/.test(value.asset) ? value.asset : undefined) : undefined;
@@ -296,6 +298,11 @@ function ImageField({ id, value, onChange, disabled, assets, project, cutout }: 
                 Pozadí
               </Button>
             )}
+            {value && (
+              <Button size="sm" icon="wand" variant={adjOpen || value.adj ? "primary" : "secondary"} onClick={() => setAdjOpen((o) => !o)} disabled={disabled} title="Expozice, kontrast, barvy, nasvícení">
+                Upravit
+              </Button>
+            )}
             {value && <IconButton icon="trash" label="Odebrat fotku" onClick={() => onChange(null)} disabled={disabled} />}
           </div>
           {busy ? (
@@ -321,6 +328,14 @@ function ImageField({ id, value, onChange, disabled, assets, project, cutout }: 
           )}
         </div>
       </div>
+      {adjOpen && value && (
+        <AdjustPanel
+          value={value.adj}
+          brand={project.brand}
+          cutout={!!url && (/^data:image\/(png|webp)/.test(url) || !!value.cut)}
+          onChange={(adj) => onChange({ ...value, adj })}
+        />
+      )}
       <AssetLibrary open={lib} onClose={() => setLib(false)} project={project} onPick={(a) => onChange({ asset: a, zoom: 1, fx: 0.5, fy: 0.3 })} />
     </div>
   );

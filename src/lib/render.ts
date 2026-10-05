@@ -6,6 +6,7 @@ import { resolveColor, readableOn } from "./color";
 import { fontStack, loadFonts, registerCustomFont, registerFamilies } from "./fonts";
 import { FORMATS } from "./formats";
 import { loadImage } from "./images";
+import { adjustedImage, hasAdjust } from "./adjust";
 import { constrain, autoAnchorX, layoutGrid, layoutList, resolveElement } from "./layout";
 import { evalCondition, findTeam, getValue, interpolate, isEmptyValue, normalize, type RenderContext } from "./template-string";
 import type {
@@ -780,7 +781,9 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   applyShadow(ctx, el, s, env, rc);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  const source = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale, el.lumaKey);
+  let source = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale, el.lumaKey);
+  if (hasAdjust(ref.value?.adj) && typeof document !== "undefined")
+    source = adjustedImage(source, img.naturalWidth, img.naturalHeight, ref.value!.adj!, `${ref.url?.length}:${ref.url?.slice(-48)}:`);
   // záře kolem loga (jako Outer Glow v Affinity): ze šablony, nebo zaškrtnutím u týmu
   const teamKey = /^team:\{\{([^}|]+)/.exec(el.src.trim())?.[1]?.trim();
   const glow = el.glow ?? (teamKey && (rc.row ? rc.row[`${teamKey}__glow`] : rc.data[`${teamKey}__glow`]) ? { color: "#FFFFFF", radius: 1, intensity: 0.5 } : undefined);
