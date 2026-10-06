@@ -217,6 +217,15 @@ export function initStore() {
         await a.put("projects", z.project);
         projects = [...projects, z.project];
       }
+      // v21: BCL má vlastní výsledkovou šablonu – původní (neupravenou) z NBL odebrat
+      {
+        const oldRes = templates.find((t) => t.id === "p-bcl-result");
+        if (oldRes?.builtIn) {
+          await a.remove("templates", oldRes.id);
+          templates = templates.filter((t) => t.id !== oldRes.id);
+          settings = { ...(settings ?? state.settings), tombstones: { ...(settings?.tombstones ?? {}), "templates:p-bcl-result": Date.now() } };
+        }
+      }
       for (const pid of ["p-nbl", "p-repre", "p-zbl", "p-bcl"]) {
         if (!projects.some((p) => p.id === pid)) continue;
         for (const nt of builtInTemplates(pid)) {

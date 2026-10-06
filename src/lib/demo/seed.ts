@@ -11,7 +11,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 20;
+export const SEED_VERSION = 21;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -109,7 +109,7 @@ export function bgAsset(): Asset {
 export function builtInTemplates(projectId: string): Template[] {
   if (projectId === "p-zbl") return zblTemplates();
   if (projectId === "p-bcl") return bclTemplates();
-  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !t.id.endsWith("-bcl-program"));
+  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result)$/.test(t.id));
   for (const t of list) {
     t.rev = SEED_VERSION;
     t.baseHash = designHash(t);
@@ -412,9 +412,8 @@ export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { projec
 }
 
 function bclTemplates(): Template[] {
-  const list = buildTemplates("p-bcl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /-(result|bcl-program)$/.test(t.id));
+  const list = buildTemplates("p-bcl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /-(bcl-result|bcl-program)$/.test(t.id));
   return list.map((t) => {
-    if (t.id.endsWith("-result")) t.sampleData = { ...t.sampleData, home_team: "BK Kvis Pardubice", away_team: "Reggiana", home_score: 84, away_score: 79, mvp: "Martin Peterka (19 PTS, 6 REB)" };
     t.rev = SEED_VERSION;
     t.baseHash = designHash(t);
     return t;
