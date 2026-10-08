@@ -1169,8 +1169,8 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       },
       elements: [
         img("photo", "Fotka", [0, 0, 1080, 1350], "{{photo}}", { fit: "cover", zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "placeholder" }),
-        rect("shade", "Přechod dole", [0, 0, 1080, 1350], lin(90, [0, "@dark/0"], [0.45, "@dark/0"], [0.66, "@dark/80"], [1, "@dark"]), { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
-        rect("glow", "Tyrkysová záře", [0, 1050, 1080, 300], lin(90, [0, "@primary/0"], [1, "@primary/35"]), { anchorX: "stretch", anchorY: "bottom" }),
+        rect("shade", "Přechod dole", [0, 0, 1080, 1350], lin(90, [0, "@dark/0"], [0.4, "@dark/0"], [0.58, "@dark/75"], [0.8, "@dark"], [1, "@dark"]), { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        rect("glow", "Tyrkysová záře", [0, 1080, 1080, 270], lin(90, [0, "@primary/0"], [1, "@primary/30"]), { anchorX: "stretch", anchorY: "bottom" }),
         rect("round-bg", "Kolo – plocha", [34, 34, 62, 210], "@dark/85", { radius: 10, showIf: "round", anchorY: "top" }),
         text("round", "Kolo", [34, 34, 62, 210], "{{round}}", { font: "Saira Condensed", weight: 800, size: 36, uppercase: true, vertical: true, align: "center", color: "@primary", letterSpacing: 0.06, showIf: "round", anchorY: "top" }),
         text("credit", "Foto credit", [520, 30, 530, 40], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 26, align: "right", showIf: "photo_credit", anchorX: "right", anchorY: "top", shadow: { color: "rgba(0,0,0,0.5)", blur: 8, x: 0, y: 2 } }),

@@ -247,7 +247,10 @@ export interface FieldDef {
 /** Hodnota obrázkového pole: odkaz na asset + ořez */
 export interface ImageValue {
   asset: string; // asset id nebo data:/http URL
-  zoom?: number; // 1 = cover
+  zoom?: number; // 1 = cover, < 1 = zmenšená fotka (zbytek vyplní rozmazané pozadí)
+  /** volný posun středu fotky vůči středu rámu (v podílech šířky/výšky rámu) */
+  px?: number;
+  py?: number;
   fx?: number; // 0..1 střed ořezu
   fy?: number;
   /** Vyříznutá verze stejné fotky (bez pozadí) pro vrstvu v popředí */

@@ -312,7 +312,7 @@ function ImageField({ id, value, onChange, disabled, assets, project, cutout }: 
               <span className="w-10 text-[11px] font-semibold uppercase text-mute">Zoom</span>
               <input
                 type="range"
-                min={1}
+                min={0.3}
                 max={3}
                 step={0.01}
                 value={value.zoom ?? 1}
@@ -321,7 +321,7 @@ function ImageField({ id, value, onChange, disabled, assets, project, cutout }: 
                 className="h-1 flex-1 accent-[#2A4BFF]"
                 aria-label="Přiblížení fotky"
               />
-              <IconButton icon="refresh" label="Obnovit ořez" onClick={() => onChange({ ...value, zoom: 1, fx: 0.5, fy: 0.3 })} disabled={disabled} />
+              <IconButton icon="refresh" label="Obnovit ořez" onClick={() => onChange({ ...value, zoom: 1, fx: 0.5, fy: 0.3, px: undefined, py: undefined })} disabled={disabled} />
             </div>
           ) : (
             <p className="text-[12px] text-mute">Ořez upravíte tažením fotky v náhledu.</p>

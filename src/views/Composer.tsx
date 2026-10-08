@@ -61,6 +61,7 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
   const role = user.role;
   const brandLocks = project.brand.locks;
 
+  const allAssets = useApp((s) => s.assets);
   const imageEls = useMemo(() => new Set((template?.elements ?? []).filter((e) => imageFieldOf(e) && e.type === "image" && (e.fit ?? "cover") === "cover").map((e) => e.id)), [template]);
   const containEls = useMemo(() => new Set((template?.elements ?? []).filter((e) => imageFieldOf(e) && e.type === "image" && e.fit === "contain").map((e) => e.id)), [template]);
 
@@ -77,8 +78,16 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
           // vyříznutý hráč: posun v rámu
           return { ...v, fx: clamp((v.fx ?? 0.5) + dx / frame.w, 0, 1), fy: clamp((v.fy ?? 0.5) + dy / frame.h, 0, 1) };
         }
-        const k = 1 / (Math.max(frame.w, frame.h) * 0.6 * (v.zoom ?? 1));
-        return { ...v, fx: clamp((v.fx ?? 0.5) - dx * k, 0, 1), fy: clamp((v.fy ?? 0.3) - dy * k, 0, 1) };
+        // fotka přes plochu: volný posun všemi směry (i u zmenšené fotky)
+        const meta = allAssets.find((x) => x.id === v.asset);
+        const iw = meta?.w || frame.w;
+        const ih = meta?.h || frame.h;
+        const kk = Math.max(frame.w / iw, frame.h / ih) * Math.max(0.2, v.zoom ?? 1);
+        const dw = iw * kk;
+        const dh = ih * kk;
+        const px0 = v.px ?? ((dw - frame.w) * (0.5 - (v.fx ?? 0.5))) / frame.w;
+        const py0 = v.py ?? ((dh - frame.h) * (0.5 - (v.fy ?? 0.3))) / frame.h;
+        return { ...v, px: clamp(px0 + dx / frame.w, -1.2, 1.2), py: clamp(py0 + dy / frame.h, -1.2, 1.2) };
       };
       setData((d) => {
         const p = template?.paginate;
@@ -96,7 +105,7 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
         return nv ? { ...d, [key]: nv } : d;
       });
     },
-    [template, containEls, page],
+    [template, containEls, page, allAssets],
   );
 
   if (!template || !tpl || !env) {

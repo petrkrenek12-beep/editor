@@ -742,6 +742,7 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   const iw = crop.w;
   const ih = crop.h;
   let mirrorX: number | null = null;
+  let gapFill = false;
   let dw: number;
   let dh: number;
   let dx: number;
@@ -764,13 +765,20 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     const pi = (env.page ?? 1) - 1;
     const span = Math.max(1, el.panorama?.span ?? 1);
     const F = el.panorama ? { x: frame.x - (pi % span) * frame.w, y: frame.y, w: frame.w * span, h: frame.h } : frame;
-    const k = Math.max(F.w / iw, F.h / ih) * Math.max(1, ref.value?.zoom ?? 1);
+    const k = Math.max(F.w / iw, F.h / ih) * Math.max(0.2, ref.value?.zoom ?? 1);
     dw = iw * k;
     dh = ih * k;
-    const fx = ref.value?.fx ?? 0.5;
-    const fy = ref.value?.fy ?? (el.valign === "top" ? 0 : el.valign === "bottom" ? 1 : 0.5);
-    dx = F.x - (dw - F.w) * fx;
-    dy = F.y - (dh - F.h) * fy;
+    if (ref.value && (ref.value.px !== undefined || ref.value.py !== undefined)) {
+      // volný posun (i nahoru/dolů a u zmenšené fotky)
+      dx = F.x + (F.w - dw) / 2 + (ref.value.px ?? 0) * F.w;
+      dy = F.y + (F.h - dh) / 2 + (ref.value.py ?? 0) * F.h;
+    } else {
+      const fx = ref.value?.fx ?? 0.5;
+      const fy = ref.value?.fy ?? (el.valign === "top" ? 0 : el.valign === "bottom" ? 1 : 0.5);
+      dx = F.x - (dw - F.w) * fx;
+      dy = F.y - (dh - F.h) * fy;
+    }
+    gapFill = !el.useCutout && !!ref.value && (dx > F.x + 0.5 || dy > F.y + 0.5 || dx + dw < F.x + F.w - 0.5 || dy + dh < F.y + F.h - 0.5);
     if (el.panorama?.mirror && Math.floor(pi / span) % 2 === 1) mirrorX = F.x + F.w / 2;
   }
   ctx.save();
@@ -784,6 +792,18 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   let source = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale, el.lumaKey);
   if (hasAdjust(ref.value?.adj) && typeof document !== "undefined")
     source = adjustedImage(source, img.naturalWidth, img.naturalHeight, ref.value!.adj!, `${ref.url?.length}:${ref.url?.slice(-48)}:`);
+  if (gapFill) {
+    // zmenšená / posunutá fotka: volné místo vyplní rozmazaná a ztmavená kopie
+    const kk = Math.max(frame.w / iw, frame.h / ih) * 1.15;
+    const bw = iw * kk;
+    const bh = ih * kk;
+    ctx.save();
+    ctx.shadowColor = "transparent";
+    ctx.filter = `blur(${Math.round(28 * s)}px) brightness(0.55) saturate(0.9)`;
+    ctx.drawImage(source, frame.x + (frame.w - bw) / 2, frame.y + (frame.h - bh) / 2, bw, bh);
+    ctx.filter = "none";
+    ctx.restore();
+  }
   // záře kolem loga (jako Outer Glow v Affinity): ze šablony, nebo zaškrtnutím u týmu
   const teamKey = /^team:\{\{([^}|]+)/.exec(el.src.trim())?.[1]?.trim();
   const glow = el.glow ?? (teamKey && (rc.row ? rc.row[`${teamKey}__glow`] : rc.data[`${teamKey}__glow`]) ? { color: "#FFFFFF", radius: 1, intensity: 0.5 } : undefined);
