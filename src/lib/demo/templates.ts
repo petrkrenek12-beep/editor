@@ -1269,7 +1269,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           text("day", "Den", [198, 14, 234, 24], "{{date|day}}", { font: "body", weight: 600, size: 21, align: "center", letterSpacing: 0.3, opacity: 0.75 }),
           text("time", "Čas", [198, 36, 234, 54], "{{time}}", { font: "Mazzard H", weight: 900, size: 52, align: "center", hideIf: "tv" }),
           text("time-tv", "Čas (s TV)", [198, 34, 234, 46], "{{time}}", { font: "Mazzard H", weight: 900, size: 46, align: "center", showIf: "tv" }),
-          img("tv", "Logo TV", [250, 80, 130, 18], "channel:{{tv}}", { fit: "contain", showIf: "tv", fallback: "none" }),
+          img("tv", "Logo TV", [240, 78, 150, 22], "channel:{{tv}}", { fit: "contain", showIf: "tv", fallback: "none" }),
           logo("al-logo", "Logo H", [458, 12, 150, 84], "away", { logoVariant: "white", equalize: 0.64 }),
         ], { distribute: false, center: true }),
         rect("foot-line", "Linka dole", [340, 1170, 400, 1.5], "rgba(255,255,255,0.2)", { anchorY: "bottom" }),

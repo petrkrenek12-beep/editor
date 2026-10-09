@@ -783,7 +783,7 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   }
   const fit = el.fit ?? "cover";
   // loga týmů: ořez průhledných okrajů + stejná optická velikost
-  const eq = el.equalize ?? (el.src.trim().startsWith("team:") ? 0.6 : false);
+  const eq = el.equalize ?? (el.src.trim().startsWith("team:") ? 0.6 : el.src.trim().startsWith("channel:") ? 0.5 : false);
   const crop = eq !== false && fit === "contain" ? trimBox(img) : { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
   const iw = crop.w;
   const ih = crop.h;
