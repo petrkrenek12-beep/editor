@@ -11,7 +11,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 26;
+export const SEED_VERSION = 27;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";

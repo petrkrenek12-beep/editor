@@ -144,6 +144,10 @@ export interface TextElement extends BaseElement {
   strokeText?: { color: ColorRef; width: number };
   /** Obrázek před textem (např. hvězda): src jako u obrázku, scale = výška vůči písmu, gap = mezera v em */
   icon?: { src: string; scale?: number; gap?: number };
+  /** Extra mezera mezi slovy (v em) */
+  wordSpacing?: number;
+  /** Přechodová výplň textu (např. kovový nadpis) – má přednost před color */
+  fill?: Fill;
   /** Váha písma pro [zvýrazněná] slova (např. příjmení tučně) */
   highlightWeight?: number;
   /** Běžící pás: text se opakuje přes celou šířku (střídavě tučně / tence) */

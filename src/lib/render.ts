@@ -431,7 +431,7 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
     ctx.font = fontAt(size);
     const ls = lsEm * size;
     const iconW = iconImg ? size * (el.icon?.scale ?? 1) * (iconImg.naturalWidth / iconImg.naturalHeight) + size * (el.icon?.gap ?? 0.2) : 0;
-    const spaceW = ctx.measureText(" ").width + ls;
+    const spaceW = ctx.measureText(" ").width + ls + (el.wordSpacing ?? 0) * size;
     const words: Word[] = tokens.map((t) => {
       if (t.icon) return { ...t, w: iconW };
       if (t.text === "\n") return { ...t, w: 0 };
@@ -527,7 +527,7 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
 
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
-  const color = resolveColor(el.color, env.brand, rc);
+  const color: string | CanvasGradient = el.fill ? makeFill(ctx, el.fill, { x: 0, y: top, w: box.w, h: blockH }, env, rc) : resolveColor(el.color, env.brand, rc);
   const hl = el.highlight ? resolveColor(el.highlight, env.brand, rc) : color;
   lines.forEach((line, i) => {
     const lw = lineWidth(line, spaceW);
