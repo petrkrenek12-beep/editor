@@ -1437,8 +1437,8 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           ...streaks("h", H),
           ...streaks("a", A),
           // nevyříznuté fotky – každá vyplní svou půlku
-          img("pl-full", "Fotka vlevo (nevyříznutá)", [0, 0, 540, 1350], "{{photo_left}}", { fit: "cover", valign: "top", onlyUncut: true, showIf: "photo_left", fallback: "none", anchorY: "stretch" }),
-          img("pr-full", "Fotka vpravo (nevyříznutá)", [540, 0, 540, 1350], "{{photo_right}}", { fit: "cover", valign: "top", onlyUncut: true, showIf: "photo_right", fallback: "none", anchorX: "right", anchorY: "stretch" }),
+          img("pl-full", "Fotka vlevo (nevyříznutá)", [0, 0, 540, 1350], "{{photo_left}}", { fit: "cover", valign: "top", onlyUncut: true, feather: 0.14, showIf: "photo_left", fallback: "none", anchorY: "stretch" }),
+          img("pr-full", "Fotka vpravo (nevyříznutá)", [540, 0, 540, 1350], "{{photo_right}}", { fit: "cover", valign: "top", onlyUncut: true, feather: 0.14, showIf: "photo_right", fallback: "none", anchorX: "right", anchorY: "stretch" }),
           // spára se září
           path("seam-glow", "Spára – záře", [0, 0, 1080, 1350], "M51 0 L49 100", { stroke: "@accent", strokeWidth: 14, opacity: 0.55, blend: "screen", shadow: { color: "@accent", blur: 50, x: 0, y: 0 }, anchorX: "stretch", anchorY: "stretch" }),
           path("seam", "Spára", [0, 0, 1080, 1350], "M51 0 L49 100", { stroke: "#FFFFFF", strokeWidth: 3, shadow: { color: "#FFFFFF", blur: 18, x: 0, y: 0 }, anchorX: "stretch", anchorY: "stretch" }),

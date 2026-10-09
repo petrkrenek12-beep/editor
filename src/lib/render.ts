@@ -862,7 +862,7 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
       dx = F.x - (dw - F.w) * fx;
       dy = F.y - (dh - F.h) * fy;
     }
-    gapFill = !el.useCutout && !!ref.value && (dx > F.x + 0.5 || dy > F.y + 0.5 || dx + dw < F.x + F.w - 0.5 || dy + dh < F.y + F.h - 0.5);
+    gapFill = !el.useCutout && !el.feather && !!ref.value && (dx > F.x + 0.5 || dy > F.y + 0.5 || dx + dw < F.x + F.w - 0.5 || dy + dh < F.y + F.h - 0.5);
     if (el.panorama?.mirror && Math.floor(pi / span) % 2 === 1) mirrorX = F.x + F.w / 2;
   }
   ctx.save();
@@ -908,7 +908,35 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     ctx.translate(mirrorX * 2, 0);
     ctx.scale(-1, 1);
   }
-  ctx.drawImage(source, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
+  // měkké okraje: zmenšená/posunutá fotka se rozplyne do pozadí (jen okraje uvnitř rámu)
+  const fe = el.feather && typeof document !== "undefined" ? { l: dx > frame.x + 0.5, r: dx + dw < frame.x + frame.w - 0.5, t: dy > frame.y + 0.5, b: dy + dh < frame.y + frame.h - 0.5 } : null;
+  if (fe && (fe.l || fe.r || fe.t || fe.b)) {
+    const W = Math.max(1, Math.round(dw));
+    const Hh = Math.max(1, Math.round(dh));
+    const tmp = document.createElement("canvas");
+    tmp.width = W;
+    tmp.height = Hh;
+    const t = tmp.getContext("2d")!;
+    t.imageSmoothingQuality = "high";
+    t.drawImage(source, crop.x, crop.y, crop.w, crop.h, 0, 0, W, Hh);
+    t.globalCompositeOperation = "destination-in";
+    const f = Math.min(0.45, el.feather!);
+    const gx = t.createLinearGradient(0, 0, W, 0);
+    gx.addColorStop(0, fe.l ? "rgba(0,0,0,0)" : "#000");
+    gx.addColorStop(f, "#000");
+    gx.addColorStop(1 - f, "#000");
+    gx.addColorStop(1, fe.r ? "rgba(0,0,0,0)" : "#000");
+    t.fillStyle = gx;
+    t.fillRect(0, 0, W, Hh);
+    const gy = t.createLinearGradient(0, 0, 0, Hh);
+    gy.addColorStop(0, fe.t ? "rgba(0,0,0,0)" : "#000");
+    gy.addColorStop(f, "#000");
+    gy.addColorStop(1 - f, "#000");
+    gy.addColorStop(1, fe.b ? "rgba(0,0,0,0)" : "#000");
+    t.fillStyle = gy;
+    t.fillRect(0, 0, W, Hh);
+    ctx.drawImage(tmp, dx, dy, dw, dh);
+  } else ctx.drawImage(source, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
   ctx.restore();
 }
 
@@ -1069,6 +1097,11 @@ function drawElement(
     ctx.restore();
   } else paint(ctx);
   ctx.restore();
+  // obrázek z pole, který se nevykreslil (např. vyříznutá verze chybí), nesmí chytat kliknutí
+  if (hits && el.type === "image" && /^\{\{/.test(el.src.trim())) {
+    const r = resolveImage(el, env, rc);
+    if (!r.url || !images.get(r.url)) return;
+  }
   if (hits) hits.push({ id: el.id, frame, rotation: el.rotation });
 }
 

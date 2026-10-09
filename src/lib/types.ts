@@ -195,6 +195,8 @@ export interface ImageElement extends BaseElement {
   preferCutout?: boolean;
   /** Vykreslí se jen když fotka NEMÁ vyříznutou verzi (náhradní rozložení pro nevyříznutou fotku) */
   onlyUncut?: boolean;
+  /** Měkké okraje zmenšené fotky (podíl velikosti, např. 0.12) místo rozmazané výplně */
+  feather?: number;
   /** Vlastní obrázek, který má přednost (např. "{{from_logo}}" – logo zahraničního týmu) */
   override?: string;
   /** Panorama přes více slidů carouselu: obrázek se roztáhne přes `span` slidů, každá další skupina se zrcadlí */
