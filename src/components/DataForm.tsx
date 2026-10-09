@@ -38,7 +38,7 @@ export function DataForm({
   const cutKeys = new Set<string>();
   const scan = (els: Template["elements"]) =>
     els.forEach((e) => {
-      if (e.type === "image" && e.useCutout) {
+      if (e.type === "image" && (e.useCutout || e.preferCutout)) {
         const m = /^\{\{([^}|]+)/.exec(e.src.trim());
         if (m) cutKeys.add(m[1].trim());
       }

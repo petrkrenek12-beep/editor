@@ -1353,13 +1353,127 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         rect("mvp-bg", "Hráč zápasu – sklo", [80, 1106, 920, 100], lin(0, [0, "rgba(255,255,255,0.10)"], [1, "rgba(255,255,255,0.04)"]), { radius: 50, stroke: "rgba(255,255,255,0.16)", strokeWidth: 1.5, showIf: "mvp_name", anchorY: "bottom" }),
         text("mvp-label", "Hráč zápasu – popisek", [140, 1118, 400, 24], "Hráč zápasu", { font: "body", weight: 700, size: 17, uppercase: true, color: "@accent", letterSpacing: 0.3, showIf: "mvp_name", anchorY: "bottom" }),
         text("mvp", "Hráč zápasu", [140, 1140, 420, 52], "{{mvp_name}}", { font: "Mazzard H", weight: 900, size: 40, uppercase: true, showIf: "mvp_name", anchorY: "bottom" }),
-        rect("mvp-div", "Hráč zápasu – čára", [578, 1126, 1.5, 60], "rgba(255,255,255,0.2)", { showIf: "mvp_name", anchorY: "bottom" }),
-        ...[0, 1, 2].flatMap((i): TemplateElement[] => [
-          text(`s${i + 1}`, `Stat ${i + 1}`, [596 + i * 132, 1114, 124, 54], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 46, align: "center", showIf: `s${i + 1}_value`, anchorY: "bottom" }),
-          text(`s${i + 1}l`, `Stat ${i + 1} popisek`, [596 + i * 132, 1166, 124, 26], `{{s${i + 1}_label}}`, { font: "body", weight: 700, size: 18, uppercase: true, align: "center", color: "@accent", letterSpacing: 0.25, showIf: `s${i + 1}_value`, anchorY: "bottom" }),
-        ]),
+        rect("mvp-div", "Hráč zápasu – čára", [578, 1126, 1.5, 60], "rgba(255,255,255,0.2)", { showIf: "s1_value", anchorY: "bottom" }),
+        // statistiky: rozložení podle počtu vyplněných (3 / 2 / 1) – vždy rovnoměrně přes celý pravý díl pruhu
+        ...[3, 2, 1].flatMap((n): TemplateElement[] =>
+          Array.from({ length: n }, (_, i): TemplateElement[] => {
+            const w = 396 / n;
+            const x = 596 + i * w + 4;
+            const sfx = n === 3 ? "" : `-${n}`;
+            const cond = { showIf: `s${n}_value`, ...(n < 3 ? { hideIf: `s${n + 1}_value` } : {}) };
+            return [
+              text(`s${i + 1}${sfx}`, `Stat ${i + 1}${n < 3 ? ` (${n} staty)` : ""}`, [x, 1114, w - 8, 54], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 46, align: "center", ...cond, anchorY: "bottom" }),
+              text(`s${i + 1}l${sfx}`, `Stat ${i + 1} popisek${n < 3 ? ` (${n} staty)` : ""}`, [x, 1166, w - 8, 26], `{{s${i + 1}_label}}`, { font: "body", weight: 700, size: 18, uppercase: true, align: "center", color: "@accent", letterSpacing: 0.25, ...cond, anchorY: "bottom" }),
+            ];
+          }).flat(),
+        ),
         img("foot-logos", "Loga dole (liga | oBasketu)", [240, 1232, 600, 74], "brand:partner", { row: { srcs: ["brand:partner", "brand:logo"], gap: 30, sep: { color: "rgba(255,255,255,0.5)", width: 1.5, height: 0.95 }, maxW: 0.42 }, fallback: "none", anchorY: "bottom" }),
       ],
+    },
+    // 26 ── ŠLÁGR KOLA – PREMIUM (split v barvách týmů, světelné efekty, dvě hlavy, velké zkratky)
+    {
+      id: "derby-premium",
+      name: "Šlágr kola – Premium",
+      category: "Zápas",
+      description: "Plakát ve stylu Euroligy/NBA: plocha rozdělená v barvách týmů se zářící spárou a odleskem, světelné pruhy, velká loga v pozadí, dva hráči, velké kovové zkratky týmů, čas v rámečku, loga a TV. Nevyříznuté fotky se rozdělí na půlky, vyříznutí hráči stojí na barevném pozadí.",
+      background: "@dark",
+      finish: { grain: 12, vignette: 40 },
+      fields: [
+        { key: "kicker", label: "Soutěž", type: "text", placeholder: "Maxa NBL" },
+        f.round,
+        f.home,
+        f.away,
+        f.date,
+        f.time,
+        { key: "tv", label: "Kde sledovat (TV)", type: "channel" },
+        { key: "tv_label", label: "Text u TV", type: "text", placeholder: "Živě na" },
+        { key: "name_left", label: "Jméno hráče vlevo (svisle)", type: "text", placeholder: "Peterka" },
+        { key: "name_right", label: "Jméno hráče vpravo (svisle)", type: "text", placeholder: "Kříž" },
+        { key: "photo_left", label: "Hráč domácích (vlevo)", type: "image", help: "Vyříznutý (Pozadí) stojí na barvě týmu, nevyříznutá fotka vyplní levou půlku." },
+        { key: "photo_right", label: "Hráč hostů (vpravo)", type: "image", help: "Vyříznutý (Pozadí) stojí na barvě týmu, nevyříznutá fotka vyplní pravou půlku." },
+        { key: "home_logo", label: "Logo domácích (vlastní)", type: "image" },
+        { key: "away_logo", label: "Logo hostů (vlastní)", type: "image" },
+      ],
+      sampleData: {
+        kicker: "Maxa NBL",
+        round: "6. kolo",
+        home_team: "BK Kvis Pardubice",
+        away_team: "Slavia Praha",
+        date: "2026-10-10",
+        time: "18:00",
+        tv: "",
+        tv_label: "Živě na",
+        name_left: "",
+        name_right: "",
+        photo_left: { asset: a.player, cut: a.player },
+        photo_right: { asset: a.player, cut: a.player },
+      },
+      elements: (() => {
+        const H = "@team:{{home_team}}";
+        const A = "@team:{{away_team}}";
+        // deterministické „náhodné“ světelné pruhy
+        let seed = 7;
+        const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+        const streaks = (side: "h" | "a", c: string): TemplateElement[] =>
+          Array.from({ length: 16 }, (_, i) => {
+            const x = side === "h" ? 30 + rnd() * 470 : 580 + rnd() * 470;
+            const h = 380 + rnd() * 560;
+            const y = -40 + rnd() * 380;
+            const w = 2 + Math.round(rnd() * 4);
+            const col = rnd() < 0.3 ? "#FFFFFF" : c;
+            const op = 0.25 + rnd() * 0.5;
+            return rect(`st-${side}${i}`, `Světelný pruh ${side === "h" ? "vlevo" : "vpravo"} ${i + 1}`, [Math.round(x), Math.round(y), w, Math.round(h)], col === "#FFFFFF" ? lin(90, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.9)"], [1, "rgba(255,255,255,0)"]) : lin(90, [0, `${col}/0`], [0.5, `${col}/90`], [1, `${col}/0`]), { opacity: +op.toFixed(2), blend: "screen", radius: 2 });
+          });
+        const metal = lin(90, [0, "#FFFFFF"], [0.55, "#ECE9F2"], [1, "#A9A2B8"]);
+        const corner = (id: string, x: number, y: number, d: string): TemplateElement => path(id, "Rámeček času", [x, y, 26, 26], d, { stroke: "#FFFFFF", strokeWidth: 2.5, opacity: 0.85, anchorY: "bottom" });
+        return [
+          // pozadí: dvě půlky v barvách týmů + textura z brand kitu
+          path("half-h", "Půlka domácích", [0, 0, 1080, 1350], "M0 0 L51 0 L49 100 L0 100 Z", { fill: lin(90, [0, `${H}/95`], [0.5, `${H}/60`], [1, `${H}/10`]), anchorX: "stretch", anchorY: "stretch" }),
+          path("half-a", "Půlka hostů", [0, 0, 1080, 1350], "M51 0 L100 0 L100 100 L49 100 Z", { fill: lin(90, [0, `${A}/95`], [0.5, `${A}/60`], [1, `${A}/10`]), anchorX: "stretch", anchorY: "stretch" }),
+          img("tex", "Textura (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", blend: "soft-light", opacity: 0.6, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+          rect("depth", "Hloubka", [0, 0, 1080, 1350], { type: "radial", stops: [[0, "rgba(0,0,0,0)"], [0.5, "rgba(0,0,0,0.15)"], [1, "rgba(0,0,0,0.55)"]] }, { anchorX: "stretch", anchorY: "stretch" }),
+          logo("wm-h", "Velké logo domácích v pozadí", [-300, 140, 860, 860], "home_team", { override: "{{home_logo}}", logoVariant: "white", opacity: 0.09, rotation: -12, blend: "screen" }),
+          logo("wm-a", "Velké logo hostů v pozadí", [520, 140, 860, 860], "away_team", { override: "{{away_logo}}", logoVariant: "white", opacity: 0.09, rotation: 12, blend: "screen", anchorX: "right" }),
+          ...streaks("h", H),
+          ...streaks("a", A),
+          // nevyříznuté fotky – každá vyplní svou půlku
+          img("pl-full", "Fotka vlevo (nevyříznutá)", [0, 0, 540, 1350], "{{photo_left}}", { fit: "cover", valign: "top", onlyUncut: true, showIf: "photo_left", fallback: "none", anchorY: "stretch" }),
+          img("pr-full", "Fotka vpravo (nevyříznutá)", [540, 0, 540, 1350], "{{photo_right}}", { fit: "cover", valign: "top", onlyUncut: true, showIf: "photo_right", fallback: "none", anchorX: "right", anchorY: "stretch" }),
+          // spára se září
+          path("seam-glow", "Spára – záře", [0, 0, 1080, 1350], "M51 0 L49 100", { stroke: "@accent", strokeWidth: 14, opacity: 0.55, blend: "screen", shadow: { color: "@accent", blur: 50, x: 0, y: 0 }, anchorX: "stretch", anchorY: "stretch" }),
+          path("seam", "Spára", [0, 0, 1080, 1350], "M51 0 L49 100", { stroke: "#FFFFFF", strokeWidth: 3, shadow: { color: "#FFFFFF", blur: 18, x: 0, y: 0 }, anchorX: "stretch", anchorY: "stretch" }),
+          // vyříznutí hráči s barevným obrysovým světlem
+          img("pl", "Hráč vlevo (vyříznutý)", [-90, 110, 700, 960], "{{photo_left}}", { fit: "contain", valign: "bottom", useCutout: true, showIf: "photo_left", fallback: "none", anchorX: "left", shadow: { color: `${H}/90`, blur: 46, x: -6, y: 0 } }),
+          img("pr", "Hráč vpravo (vyříznutý)", [470, 110, 700, 960], "{{photo_right}}", { fit: "contain", valign: "bottom", useCutout: true, showIf: "photo_right", fallback: "none", anchorX: "right", shadow: { color: `${A}/90`, blur: 46, x: 6, y: 0 } }),
+          // odlesk nahoře na spáře
+          rect("flare", "Odlesk", [411, -40, 300, 300], { type: "radial", stops: [[0, "rgba(255,255,255,0.95)"], [0.12, "rgba(255,255,255,0.55)"], [0.35, "@accent/30"], [0.69, "@accent/0"], [1, "@accent/0"]] }, { blend: "screen", anchorY: "top" }),
+          rect("flare-h", "Odlesk – vodorovný paprsek", [171, 108, 780, 4], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.95)"], [1, "rgba(255,255,255,0)"]), { blend: "screen", shadow: { color: "#FFFFFF", blur: 14, x: 0, y: 0 }, anchorY: "top" }),
+          rect("shade", "Přechod dole", [0, 0, 1080, 1350], lin(90, [0, "@dark/35"], [0.1, "@dark/0"], [0.5, "@dark/0"], [0.66, "@dark/80"], [0.78, "@dark/97"], [1, "@dark"]), { anchorX: "stretch", anchorY: "stretch" }),
+          // hlavička
+          img("league", "Logo ligy", [44, 40, 190, 70], "brand:partner", { fit: "contain", align: "left", fallback: "none", anchorX: "left", anchorY: "top", shadow: { color: "rgba(0,0,0,0.45)", blur: 14, x: 0, y: 3 } }),
+          brandLogo([876, 40, 160, 70], { align: "right", anchorX: "right", anchorY: "top" }),
+          text("kicker", "Soutěž a kolo", [300, 150, 480, 30], "{{@join:  ·  |kicker|round}}", { font: "body", weight: 700, size: 21, uppercase: true, align: "center", letterSpacing: 0.34, opacity: 0.9, shadow: { color: "rgba(0,0,0,0.6)", blur: 10, x: 0, y: 2 }, anchorY: "top" }),
+          // svislá jména u okrajů
+          text("name-l", "Jméno vlevo", [30, 260, 40, 520], "{{name_left}}", { font: "body", weight: 700, size: 26, uppercase: true, vertical: true, align: "center", letterSpacing: 0.42, opacity: 0.85, showIf: "name_left", anchorX: "left" }),
+          text("name-r", "Jméno vpravo", [1010, 260, 40, 520], "{{name_right}}", { font: "body", weight: 700, size: 26, uppercase: true, vertical: true, align: "center", letterSpacing: 0.42, opacity: 0.85, showIf: "name_right", anchorX: "right" }),
+          // velké zkratky
+          text("code-h", "Zkratka domácích", [40, 836, 455, 230], "{{home_team|short}}", { fitWith: "{{away_team|short}}", font: "Saira Condensed", weight: 800, size: 250, uppercase: true, align: "right", letterSpacing: -0.01, fill: metal, shadow: { color: "rgba(0,0,0,0.55)", blur: 30, x: 0, y: 10 }, anchorY: "bottom" }),
+          text("vs", "VS", [496, 930, 88, 70], "vs", { font: "Saira Condensed", weight: 800, italic: true, size: 62, align: "center", valign: "middle", color: "@accent", shadow: { color: "rgba(0,0,0,0.5)", blur: 14, x: 0, y: 4 }, anchorY: "bottom" }),
+          text("code-a", "Zkratka hostů", [585, 836, 455, 230], "{{away_team|short}}", { fitWith: "{{home_team|short}}", font: "Saira Condensed", weight: 800, size: 250, uppercase: true, align: "left", letterSpacing: -0.01, fill: metal, shadow: { color: "rgba(0,0,0,0.55)", blur: 30, x: 0, y: 10 }, anchorY: "bottom" }),
+          // loga a čas v rámečku
+          logo("home-logo", "Logo domácí", [70, 1078, 220, 140], "home_team", { override: "{{home_logo}}", equalize: 0.6, shadow: { color: "rgba(0,0,0,0.5)", blur: 20, x: 0, y: 6 }, anchorY: "bottom" }),
+          logo("away-logo", "Logo hosté", [790, 1078, 220, 140], "away_team", { override: "{{away_logo}}", equalize: 0.6, shadow: { color: "rgba(0,0,0,0.5)", blur: 20, x: 0, y: 6 }, anchorY: "bottom" }),
+          corner("b-tl", 340, 1080, "M0 100 L0 0 L100 0"),
+          corner("b-tr", 714, 1080, "M0 0 L100 0 L100 100"),
+          corner("b-bl", 340, 1190, "M0 0 L0 100 L100 100"),
+          corner("b-br", 714, 1190, "M100 0 L100 100 L0 100"),
+          text("time", "Čas", [356, 1088, 368, 78], "{{time}}", { font: "Mazzard H", weight: 900, size: 74, align: "center", fill: metal, anchorY: "bottom" }),
+          text("date", "Den a datum", [356, 1166, 368, 36], "{{date|day}}  {{date|date:long}}", { font: "Saira Condensed", weight: 600, size: 32, uppercase: true, align: "center", letterSpacing: 0.08, opacity: 0.85, anchorY: "bottom" }),
+          // kde sledovat
+          text("tv-label", "Text u TV", [240, 1250, 280, 50], "{{tv_label|default:Živě na}}", { font: "body", weight: 700, size: 22, uppercase: true, align: "right", valign: "middle", letterSpacing: 0.3, opacity: 0.7, showIf: "tv", anchorY: "bottom" }),
+          img("tv-logo", "Logo TV", [540, 1250, 260, 50], "channel:{{tv}}", { fit: "contain", align: "left", showIf: "tv", fallback: "none", anchorY: "bottom" }),
+        ];
+      })(),
     },
   ];
 

@@ -103,6 +103,8 @@ function resolveImage(el: ImageElement, env: RenderEnv, ctx: RenderContext): Img
     if (v && typeof v === "object" && !Array.isArray(v) && "asset" in v) {
       const iv = v as ImageValue;
       if (el.useCutout) return iv.cut ? { value: iv, url: assetUrl(env, iv.cut) } : {};
+      if (el.onlyUncut && iv.cut) return {};
+      if (el.preferCutout && iv.cut) return { value: iv, url: assetUrl(env, iv.cut) };
       return { value: iv, url: assetUrl(env, iv.asset) };
     }
     if (el.useCutout) return {};

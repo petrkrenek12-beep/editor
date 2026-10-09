@@ -11,7 +11,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 30;
+export const SEED_VERSION = 33;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -109,7 +109,7 @@ export function bgAsset(): Asset {
 export function builtInTemplates(projectId: string): Template[] {
   if (projectId === "p-zbl") return zblTemplates();
   if (projectId === "p-bcl") return bclTemplates();
-  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result)$/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && t.id.endsWith("-result-premium")));
+  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result)$/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && /-(result|derby)-premium$/.test(t.id)));
   for (const t of list) {
     t.rev = SEED_VERSION;
     t.baseHash = designHash(t);
@@ -251,7 +251,7 @@ export function newerDesign(t: Template): Template | undefined {
 
 // ── ŽBL (ženská liga) ───────────────────────────────────────
 
-export const ZBL_IDS = ["result-premium", "program-premium", "result", "results-panorama", "results-round", "program", "standings", "player-stats", "transfer", "breaking"];
+export const ZBL_IDS = ["derby-premium", "result-premium", "program-premium", "result", "results-panorama", "results-round", "program", "standings", "player-stats", "transfer", "breaking"];
 
 /** Projekt ŽBL: zelené pozadí, logo Chance ŽBL, týmy s barevnými i bílými logy. Brand (logo, fonty) převezme z NBL. */
 export function zblProject(nblBrand: BrandKit, createdAt = Date.now()): { project: Project; assets: Asset[] } {
@@ -327,6 +327,7 @@ function zblTemplates(): Template[] {
     if (id === "results-round") d.games = games.map((g) => ({ home: g[0], away: g[1], home_score: g[2], away_score: g[3], detail: g[4] }));
     if (id === "program") Object.assign(d, { dates: "4.10.", round: "2. kolo" });
     if (id === "result-premium") Object.assign(d, { kicker: "Chance ŽBL", round: "2. kolo", home_team: T[2], away_team: T[8], home_score: 78, away_score: 71, home_record: "2-0", away_record: "1-1", detail: "20:17 · 18:19 · 22:15 · 18:20", mvp_name: "Tereza Nováková", s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "24", s3_label: "EFF" });
+    if (id === "derby-premium") Object.assign(d, { kicker: "Chance ŽBL", round: "2. kolo", home_team: T[2], away_team: T[8], date: "2026-10-11", time: "17:00" });
     if (id === "program-premium") Object.assign(d, { kicker: "Chance ŽBL", dates: "4. 10.", round: "2. kolo", games: games.map((g, i) => ({ home: g[1], away: g[0], date: "2026-10-04", time: i < 2 ? "17:00" : "18:00", tv: "" })) });
     if (id === "standings") d.round_label = "Po 1. kole";
     if (id === "results-round") d.round = "1. kolo";

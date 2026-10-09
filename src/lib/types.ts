@@ -191,6 +191,10 @@ export interface ImageElement extends BaseElement {
   repeat?: { gap?: number; offset?: number };
   /** Použít vyříznutou verzi fotky (ImageValue.cut) – hráč před pásem */
   useCutout?: boolean;
+  /** Použije vyříznutou verzi, pokud existuje, jinak původní obrázek */
+  preferCutout?: boolean;
+  /** Vykreslí se jen když fotka NEMÁ vyříznutou verzi (náhradní rozložení pro nevyříznutou fotku) */
+  onlyUncut?: boolean;
   /** Vlastní obrázek, který má přednost (např. "{{from_logo}}" – logo zahraničního týmu) */
   override?: string;
   /** Panorama přes více slidů carouselu: obrázek se roztáhne přes `span` slidů, každá další skupina se zrcadlí */

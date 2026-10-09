@@ -152,12 +152,14 @@ Pravidla:
 - Týmy piš přesně jedním z těchto názvů, pokud odpovídá (ignoruj sponzory, např. "Slavia Praha ERA NBK" = "Slavia Praha"): ${teams.map((x) => [x.name, ...x.aliases].join(" / ")).join("; ")}. Když tým v seznamu není, napiš název ze screenshotu.
 - Datum (typ date) opiš PŘESNĚ jako DEN.MĚSÍC. v českém pořadí – nejdřív den, potom měsíc (např. "11.10." = 11. října). Nikdy neprohazuj den a měsíc a nepiš rok.
 - Čas ve formátu HH:MM. Skóre jako čísla.
+- VÝSLEDEK: když je na některém obrázku zápas ještě rozehraný (např. „Period 4 01:01“, běžící čas) a na jiném je „Konec“ / „Final“, ber skóre i čtvrtiny z KONEČNÉHO.
+- ČTVRTINY (pole "detail" nebo pole s „čtvrtiny“ v názvu): skóre každé čtvrtiny ve tvaru domácí:hosté oddělené " · ", např. "30:12 · 23:11 · 22:16 · 29:11" (prodloužení přidej na konec). Na Livesportu je blok „Skóre“ se dvěma řádky (domácí nahoře, hosté dole): první číslo je celkové skóre, další sloupce jsou čtvrtiny – spáruj vždy čísla ze stejného sloupce. Na FIBA LiveStats je malá tabulka CHO/SLO se čtvrtinami a celkem na konci.
 - Kolo piš např. "4. kolo". Termín (dates) krátce, např. "30.9." nebo "30.9. - 1.10.".
 - HRÁČ ZÁPASU – pokud má šablona pole "mvp" nebo "mvp_name", NEVYPLŇUJ je textem, ale přidej klíč "_mvp". Postup:
   1. Najdi na obrázcích tabulku statistik hráčů (Livesport/Flashscore záložka „Statistiky hráčů“ nebo „Sestavy“, FIBA LiveStats, box score ligy). Sloupce bývají: B / PTS / BOD (body), DOS / REB / D (doskoky), AS / AST / A (asistence), ZIS / STL (zisky), BL / BLK (bloky), EFF / VAL / PIR / HOD (hodnocení).
   2. Tabulka bývá rozdělená po týmech (dva bloky nebo přepínač s názvy/logy týmů). Urči, který blok patří VÍTĚZNÉMU týmu (podle skóre zápasu). Když není jasné, vezmi hráče s nejvyšší hodnotou EFF/VAL/PIR v celém zápase.
   3. Z vítězného týmu vyber hráče s nejvyšším EFF/VAL/PIR; když tento sloupec není, hráče s nejvíce body.
-  4. Výsledek: "_mvp": {"name": jméno přesně jak je na obrázku (i zkrácené „Segu R.“), "team": jeho tým, "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo} – vynech jen čísla, která na obrázku nejsou.
+  4. Výsledek: "_mvp": {"name": CELÉ jméno ve tvaru „Křestní Příjmení“ – když je kdekoli na obrázcích celé křestní jméno (vyskakovací karta hráče, profil, „Nejlepší hráči“), použij ho; prostřední jména vynech („Karoline Elizabeth Striplin“ → „Karoline Striplin“). Jen když celé jméno nikde není, napiš zkratku ve tvaru „K. Striplin“ (ne „Striplin K.“), "team": jeho tým, "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo} – vynech jen čísla, která na obrázku nejsou.
   5. Livesport často ukazuje i blok „Nejlepší hráči“ / „Top hráči“ u přehledu zápasu – i ten použij.
   Když na žádném obrázku statistiky hráčů nejsou, "_mvp" vůbec nepřidávej (nevymýšlej).
 - Když má seznam zápasů sloupec "mvp", napiš do něj nejlepšího hráče vítězného týmu ve tvaru "Jméno Příjmení (21 PTS, 8 AST)" – body vždy, REB a AST jen když jich má aspoň 5.
@@ -221,9 +223,20 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
     else if (f.type === "number") out[f.key] = v === "" || v === null ? "" : Number(v);
     else out[f.key] = String(v ?? "");
   }
+  // čtvrtiny: sjednotit formát na "30:12 · 23:11 · …"
+  for (const f of t.fields) {
+    if (f.type !== "text" || typeof out[f.key] !== "string") continue;
+    if (!(f.key === "detail" || /čtvrtin|quarters/i.test(f.label))) continue;
+    const pairs = [...String(out[f.key]).matchAll(/(\d{1,3})\s*[-:–—]\s*(\d{1,3})/g)].map((x) => `${x[1]}:${x[2]}`);
+    if (pairs.length >= 2) out[f.key] = pairs.join(" · ");
+  }
   // hráč zápasu: vždy body; doskoky a asistence od 5, jinak doplnit EFF/zisky/bloky
   const m = raw._mvp as { name?: string; pts?: number; reb?: number; ast?: number; stl?: number; blk?: number; eff?: number } | undefined;
   if (m?.name) {
+    // "Striplin K." → "K. Striplin"
+    const nm = String(m.name).trim().replace(/\s+/g, " ");
+    const rev = /^(.+?)\s+([A-ZÁ-Ž]\.)$/u.exec(nm);
+    m.name = rev ? `${rev[2]} ${rev[1]}` : nm;
     const num = (v: unknown) => (v === undefined || v === null || v === "" || isNaN(Number(v)) ? undefined : Number(v));
     const pts = num(m.pts) ?? 0;
     const stats: [number, string][] = [[pts, "PTS"]];
