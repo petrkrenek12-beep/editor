@@ -217,6 +217,11 @@ export function initStore() {
         await a.put("projects", z.project);
         projects = [...projects, z.project];
       }
+      // v26: šablona „Program kola – Hero“ zrušena (neupravené kopie odebrat)
+      for (const t of templates.filter((x) => /-program-hero$/.test(x.id) && x.builtIn)) {
+        await a.remove("templates", t.id);
+        templates = templates.filter((x) => x.id !== t.id);
+      }
       // v21: BCL má vlastní výsledkovou šablonu – původní (neupravenou) z NBL odebrat
       {
         const oldRes = templates.find((t) => t.id === "p-bcl-result");

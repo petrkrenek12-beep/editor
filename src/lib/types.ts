@@ -179,6 +179,8 @@ export interface ImageElement extends BaseElement {
   equalize?: number | false;
   /** Černá → průhledná (jen světlé čáry zůstanou). Číslo = kontrast (1 = měkce, 3 = jen ostré čáry) */
   lumaKey?: number;
+  /** Řada log (např. liga | oBasketu) vycentrovaná jako celek, mezi logy oddělovač */
+  row?: { srcs: string[]; gap?: number; sep?: { color: string; width: number; height?: number }; maxW?: number };
   /** Opakovat obrázek vodorovně přes celý rámeček (pás s logy) */
   repeat?: { gap?: number; offset?: number };
   /** Použít vyříznutou verzi fotky (ImageValue.cut) – hráč před pásem */
@@ -201,6 +203,8 @@ export interface ListElement extends BaseElement {
   maxRows?: number;
   /** Řádky se rozloží rovnoměrně do výšky rámu (true) nebo se skládají od shora */
   distribute?: boolean;
+  /** Bez rozprostření: blok řádků svisle na střed rámu */
+  center?: boolean;
   /** Když se řádky nevejdou, zmenší se (nikdy nepřetečou) */
   children: TemplateElement[];
   /** Jeden obrázek přes všechny řádky (každý řádek ukáže svůj výřez) */

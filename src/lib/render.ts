@@ -151,6 +151,10 @@ function collect(env: RenderEnv) {
   const visit = (el: TemplateElement, ctx: RenderContext) => {
     if (!isVisible(el, env, ctx)) return;
     if (el.type === "image") {
+      for (const src of el.row?.srcs ?? []) {
+        const u = resolveImage({ ...el, row: undefined, src } as ImageElement, env, ctx).url;
+        if (u) urls.add(u);
+      }
       const r = resolveImage(el, env, ctx);
       if (r.url) urls.add(r.url);
       if (r.team || el.fallback === "monogram") fonts.add(`400 60px ${fontStack(env.brand.fonts.display.family)}`);
@@ -692,7 +696,49 @@ function drawPlaceholder(ctx: CanvasRenderingContext2D, f: Frame, label: string)
   ctx.restore();
 }
 
+/** Řada log vycentrovaná jako skupina (logo | oddělovač | logo). */
+function drawLogoRow(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, images: Images) {
+  const R = el.row!;
+  const items: { img: HTMLImageElement; crop: { x: number; y: number; w: number; h: number }; w: number; h: number }[] = [];
+  for (const src of R.srcs) {
+    const u = resolveImage({ ...el, row: undefined, src } as ImageElement, env, rc).url;
+    const img = u ? images.get(u) : null;
+    if (!img) continue;
+    const crop = trimBox(img);
+    let h = frame.h;
+    let w = (h * crop.w) / crop.h;
+    const maxW = (R.maxW ?? 0.42) * frame.w;
+    if (w > maxW) {
+      w = maxW;
+      h = (w * crop.h) / crop.w;
+    }
+    items.push({ img, crop, w, h });
+  }
+  if (!items.length) return;
+  const gap = (R.gap ?? 24) * s;
+  const sepW = R.sep ? R.sep.width * s : 0;
+  const total = items.reduce((a, it) => a + it.w, 0) + (items.length - 1) * (gap * 2 + sepW);
+  let x = frame.x + (frame.w - total) / 2;
+  ctx.save();
+  ctx.imageSmoothingQuality = "high";
+  items.forEach((it, i) => {
+    if (i > 0) {
+      x += gap;
+      if (R.sep) {
+        const sh = (R.sep.height ?? 1) * frame.h;
+        ctx.fillStyle = resolveColor(R.sep.color, env.brand, rc);
+        ctx.fillRect(x, frame.y + (frame.h - sh) / 2, sepW, sh);
+      }
+      x += sepW + gap;
+    }
+    ctx.drawImage(it.img, it.crop.x, it.crop.y, it.crop.w, it.crop.h, x, frame.y + (frame.h - it.h) / 2, it.w, it.h);
+    x += it.w;
+  });
+  ctx.restore();
+}
+
 function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, images: Images) {
+  if (el.row) return drawLogoRow(ctx, el, frame, s, env, rc, images);
   const ref = resolveImage(el, env, rc);
   const img = ref.url ? images.get(ref.url) : null;
   if (!img) {
@@ -922,7 +968,7 @@ function drawElement(
         const rows = listRows(el, env);
         const { rows: rf, k: rk } = el.grid
           ? layoutGrid(frame, el.grid.cols, el.grid.colWidth, el.rowHeight, el.grid.colGap ?? el.gap, el.gap, rows.length)
-          : layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true);
+          : layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true, el.center);
         // společné pozadí: jeden obrázek přes celý blok, každý řádek ukáže svůj výřez
         const rbUrl = el.rowsBg?.src ? resolveImage({ id: "rb", name: "rb", type: "image", frame: el.frame, src: el.rowsBg.src } as ImageElement, env, rc).url : undefined;
         const rbImg = rbUrl ? images.get(rbUrl) : null;

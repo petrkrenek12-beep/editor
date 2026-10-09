@@ -130,6 +130,7 @@ export function layoutList(
   gap: number,
   count: number,
   distribute: boolean,
+  center = false,
 ): { rows: Frame[]; k: number } {
   if (count <= 0) return { rows: [], k: 1 };
   let k = frame.w / baseW;
@@ -151,7 +152,7 @@ export function layoutList(
     g += extra;
     total = count * rh + (count - 1) * g;
     y0 = frame.y + (frame.h - total) / 2;
-  } else if (distribute) {
+  } else if (distribute || center) {
     y0 = frame.y + (frame.h - total) / 2;
   }
   const rows: Frame[] = [];
