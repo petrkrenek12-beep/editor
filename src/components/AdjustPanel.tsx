@@ -67,6 +67,14 @@ export function AdjustPanel({ value, onChange, brand, cutout }: { value: PhotoAd
           ))}
         </div>
       </div>
+      <div className="space-y-1.5 border-t border-line pt-2">
+        <div className="text-[11px] font-bold uppercase tracking-wide text-mute">Sladit s pozadím (Match Color)</div>
+        <Range label="Síla" min={0} v={a.match?.amount ?? 0} on={(n) => commit({ ...a, match: { lum: a.match?.lum ?? 55, color: a.match?.color ?? 60, amount: n } })} />
+        <div className="grid grid-cols-2 gap-x-3">
+          <Range label="Jas" min={0} v={a.match?.lum ?? 55} on={(n) => commit({ ...a, match: { amount: a.match?.amount || 50, color: a.match?.color ?? 60, lum: n } })} />
+          <Range label="Barva" min={0} v={a.match?.color ?? 60} on={(n) => commit({ ...a, match: { amount: a.match?.amount || 50, lum: a.match?.lum ?? 55, color: n } })} />
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         {SLIDERS.map((s) => (
           <Range key={s.k} label={s.label} v={a[s.k] ?? 0} min={s.min} bar={s.bar} on={(n) => commit({ ...a, [s.k]: n })} />

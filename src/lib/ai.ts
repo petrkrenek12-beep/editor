@@ -153,7 +153,13 @@ Pravidla:
 - Datum (typ date) opiš PŘESNĚ jako DEN.MĚSÍC. v českém pořadí – nejdřív den, potom měsíc (např. "11.10." = 11. října). Nikdy neprohazuj den a měsíc a nepiš rok.
 - Čas ve formátu HH:MM. Skóre jako čísla.
 - Kolo piš např. "4. kolo". Termín (dates) krátce, např. "30.9." nebo "30.9. - 1.10.".
-- Hráč zápasu: když jsou na obrázku statistiky hráčů a šablona má pole "mvp", NEVYPLŇUJ "mvp" textem, ale přidej klíč "_mvp" = {"name": jméno tak, jak je na screenshotu, "pts": body (sloupec B/PTS), "reb": doskoky (DOS/REB), "ast": asistence (A/AST)} pro hráče s nejvíce body z VÍTĚZNÉHO týmu.
+- HRÁČ ZÁPASU – pokud má šablona pole "mvp" nebo "mvp_name", NEVYPLŇUJ je textem, ale přidej klíč "_mvp". Postup:
+  1. Najdi na obrázcích tabulku statistik hráčů (Livesport/Flashscore záložka „Statistiky hráčů“ nebo „Sestavy“, FIBA LiveStats, box score ligy). Sloupce bývají: B / PTS / BOD (body), DOS / REB / D (doskoky), AS / AST / A (asistence), ZIS / STL (zisky), BL / BLK (bloky), EFF / VAL / PIR / HOD (hodnocení).
+  2. Tabulka bývá rozdělená po týmech (dva bloky nebo přepínač s názvy/logy týmů). Urči, který blok patří VÍTĚZNÉMU týmu (podle skóre zápasu). Když není jasné, vezmi hráče s nejvyšší hodnotou EFF/VAL/PIR v celém zápase.
+  3. Z vítězného týmu vyber hráče s nejvyšším EFF/VAL/PIR; když tento sloupec není, hráče s nejvíce body.
+  4. Výsledek: "_mvp": {"name": jméno přesně jak je na obrázku (i zkrácené „Segu R.“), "team": jeho tým, "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo} – vynech jen čísla, která na obrázku nejsou.
+  5. Livesport často ukazuje i blok „Nejlepší hráči“ / „Top hráči“ u přehledu zápasu – i ten použij.
+  Když na žádném obrázku statistiky hráčů nejsou, "_mvp" vůbec nepřidávej (nevymýšlej).
 - Když má seznam zápasů sloupec "mvp", napiš do něj nejlepšího hráče vítězného týmu ve tvaru "Jméno Příjmení (21 PTS, 8 AST)" – body vždy, REB a AST jen když jich má aspoň 5.
 - Seznamy (např. zápasy) vyplň ve stejném pořadí jako na screenshotu, všechny řádky.
 - Pole, která ze screenshotu nejdou zjistit, VYNECH (nevymýšlej).
@@ -161,9 +167,11 @@ Pravidla:
 Odpověz POUZE JSON objektem s klíči polí, např. {"home_team":"…","home_score":96}.`;
 }
 
-export async function extractFromScreenshot(image: Blob, t: Template, teams: Team[]): Promise<DataRecord> {
-  const small = await shrinkImage(image);
-  const prompt = buildScreenshotPrompt(t, teams);
+export async function extractFromScreenshot(image: Blob | Blob[], t: Template, teams: Team[]): Promise<DataRecord> {
+  const list = (Array.isArray(image) ? image : [image]).slice(-3);
+  const smalls = await Promise.all(list.map((b) => shrinkImage(b)));
+  const small = smalls[0];
+  const prompt = (list.length > 1 ? `Máš ${list.length} obrázky ze stejného zápasu/kola (např. výsledek + statistiky hráčů) – kombinuj údaje ze všech.\n` : "") + buildScreenshotPrompt(t, teams);
   let text: string;
   if (TARGET === "artifact") {
     const s = await artifactSample();
@@ -171,7 +179,7 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
     const lim = await (s as unknown as { limits?: () => Promise<{ images?: unknown }> }).limits?.().catch(() => null);
     if (lim && !lim.images) throw new Error("Tady nejde AI poslat obrázek. Použijte nasazenou verzi na Vercelu.");
     try {
-      text = (await s(prompt, { images: [small], modelTier: "default" } as object)).text;
+      text = (await s(prompt, { images: smalls, modelTier: "default" } as object)).text;
     } catch (e) {
       const code = (e as { code?: string }).code;
       if (code === "not_granted") throw new Error("Použití AI nebylo povoleno.");
@@ -181,7 +189,7 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
     const r = await fetch("/api/ai", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt, images: [{ mediaType: "image/jpeg", data: await blobToBase64(small) }] }),
+      body: JSON.stringify({ prompt, images: await Promise.all(smalls.map(async (b) => ({ mediaType: "image/jpeg", data: await blobToBase64(b) }))) }),
     });
     if (!r.ok) throw new Error((await r.text()) || "AI se nepodařilo zavolat.");
     text = (await r.json()).text;
@@ -213,13 +221,30 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
     else if (f.type === "number") out[f.key] = v === "" || v === null ? "" : Number(v);
     else out[f.key] = String(v ?? "");
   }
-  // hráč zápasu: vždy body, doskoky a asistence jen když jich má aspoň 5
-  const m = raw._mvp as { name?: string; pts?: number; reb?: number; ast?: number } | undefined;
-  if (m?.name && t.fields.some((f) => f.key === "mvp")) {
-    const parts = [`${Number(m.pts) || 0} PTS`];
-    if (Number(m.reb) >= 5) parts.push(`${Number(m.reb)} REB`);
-    if (Number(m.ast) >= 5) parts.push(`${Number(m.ast)} AST`);
-    out.mvp = `${m.name} (${parts.join(", ")})`;
+  // hráč zápasu: vždy body; doskoky a asistence od 5, jinak doplnit EFF/zisky/bloky
+  const m = raw._mvp as { name?: string; pts?: number; reb?: number; ast?: number; stl?: number; blk?: number; eff?: number } | undefined;
+  if (m?.name) {
+    const num = (v: unknown) => (v === undefined || v === null || v === "" || isNaN(Number(v)) ? undefined : Number(v));
+    const pts = num(m.pts) ?? 0;
+    const stats: [number, string][] = [[pts, "PTS"]];
+    const reb = num(m.reb), ast = num(m.ast), eff = num(m.eff), stl = num(m.stl), blk = num(m.blk);
+    if (reb !== undefined && reb >= 5) stats.push([reb, "REB"]);
+    if (ast !== undefined && ast >= 5) stats.push([ast, "AST"]);
+    if (t.fields.some((f) => f.key === "mvp")) out.mvp = `${m.name} (${stats.map(([v, l]) => `${v} ${l}`).join(", ")})`;
+    if (t.fields.some((f) => f.key === "mvp_name")) {
+      out.mvp_name = m.name;
+      // tři čísla do panelu: PTS + REB/AST (≥5) a doplnit EFF, zisky, bloky, případně nižší REB/AST
+      const pool: [number | undefined, string][] = [[eff, "EFF"], [stl !== undefined && stl >= 3 ? stl : undefined, "STL"], [blk !== undefined && blk >= 3 ? blk : undefined, "BLK"], [reb !== undefined && reb < 5 ? reb : undefined, "REB"], [ast !== undefined && ast < 5 ? ast : undefined, "AST"]];
+      for (const [v, l] of pool) if (stats.length < 3 && v !== undefined) stats.push([v, l]);
+      stats.slice(0, 3).forEach(([v, l], i) => {
+        out[`s${i + 1}_value`] = String(v);
+        out[`s${i + 1}_label`] = l;
+      });
+      for (let i = stats.length; i < 3; i++) {
+        out[`s${i + 1}_value`] = "";
+        out[`s${i + 1}_label`] = "";
+      }
+    }
   }
   if (!Object.keys(out).length) throw new Error("Ze screenshotu se nepodařilo nic vyčíst pro tuto šablonu.");
   return out;

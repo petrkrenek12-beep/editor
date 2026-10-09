@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, zblProject, bclProject } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, zblProject, bclProject, NBL_REMOVED } from "./demo/seed";
 import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
@@ -216,6 +216,12 @@ export function initStore() {
         (z.project as { _mod?: number })._mod = Date.now();
         await a.put("projects", z.project);
         projects = [...projects, z.project];
+      }
+      // v29: z NBL odebrané šablony (jen neupravené)
+      for (const t of templates.filter((x) => x.builtIn && x.id.startsWith("p-nbl-") && NBL_REMOVED.includes(x.id.slice(6)))) {
+        await a.remove("templates", t.id);
+        templates = templates.filter((x) => x.id !== t.id);
+        settings = { ...(settings ?? state.settings), tombstones: { ...(settings?.tombstones ?? state.settings.tombstones ?? {}), [`templates:${t.id}`]: Date.now() } };
       }
       // v26: šablona „Program kola – Hero“ zrušena (neupravené kopie odebrat)
       for (const t of templates.filter((x) => /-program-hero$/.test(x.id) && x.builtIn)) {

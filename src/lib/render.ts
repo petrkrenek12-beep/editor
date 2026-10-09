@@ -157,6 +157,10 @@ function collect(env: RenderEnv) {
       }
       const r = resolveImage(el, env, ctx);
       if (r.url) urls.add(r.url);
+      if (r.value?.adj?.match) {
+        const bu = assetUrl(env, env.brand.backgrounds[0]);
+        if (bu) urls.add(bu);
+      }
       if (r.team || el.fallback === "monogram") fonts.add(`400 60px ${fontStack(env.brand.fonts.display.family)}`);
     } else if (el.type === "text") {
       const iu = iconUrl(el, env, ctx);
@@ -696,6 +700,13 @@ function drawPlaceholder(ctx: CanvasRenderingContext2D, f: Frame, label: string)
   ctx.restore();
 }
 
+/** Referenční obrázek pro „Sladit s pozadím“ – první pozadí z brand kitu. */
+function matchRef(env: RenderEnv, images: Images) {
+  const u = assetUrl(env, env.brand.backgrounds[0]);
+  const img = u ? images.get(u) : null;
+  return img ? { img, w: img.naturalWidth, h: img.naturalHeight } : null;
+}
+
 /** Řada log vycentrovaná jako skupina (logo | oddělovač | logo). */
 function drawLogoRow(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame, s: number, env: RenderEnv, rc: RenderContext, images: Images) {
   const R = el.row!;
@@ -837,7 +848,7 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
   ctx.imageSmoothingQuality = "high";
   let source = processedImage(img, el.tint ? resolveColor(el.tint, env.brand, rc) : undefined, el.grayscale, el.lumaKey);
   if (hasAdjust(ref.value?.adj) && typeof document !== "undefined")
-    source = adjustedImage(source, img.naturalWidth, img.naturalHeight, ref.value!.adj!, `${ref.url?.length}:${ref.url?.slice(-48)}:`);
+    source = adjustedImage(source, img.naturalWidth, img.naturalHeight, ref.value!.adj!, `${ref.url?.length}:${ref.url?.slice(-48)}:`, matchRef(env, images));
   if (gapFill) {
     // zmenšená / posunutá fotka: volné místo vyplní rozmazaná a ztmavená kopie
     const kk = Math.max(frame.w / iw, frame.h / ih) * 1.15;

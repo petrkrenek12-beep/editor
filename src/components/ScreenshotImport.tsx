@@ -15,12 +15,15 @@ export function ScreenshotImport({ template, teams, onData, disabled }: { templa
   const [over, setOver] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
+  // více screenshotů ze stejného zápasu (výsledek + statistiky) – posílají se spolu
+  const stack = useRef<{ img: Blob; at: number }[]>([]);
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
     aiAvailability().then(setAvail);
   }, []);
 
-  const run = async (img: Blob) => {
+  const run = async (img: Blob, append = true) => {
     if (busyRef.current || disabled) return;
     if (avail && !avail.ok) {
       toast(avail.reason ?? "AI není dostupná.", "info");
@@ -33,8 +36,11 @@ export function ScreenshotImport({ template, teams, onData, disabled }: { templa
       if (old) URL.revokeObjectURL(old);
       return url;
     });
+    const now = Date.now();
+    stack.current = append ? [...stack.current.filter((x) => now - x.at < 5 * 60_000), { img, at: now }].slice(-3) : [{ img, at: now }];
+    setCount(stack.current.length);
     try {
-      const d = await extractFromScreenshot(img, template, teams);
+      const d = await extractFromScreenshot(stack.current.map((x) => x.img), template, teams);
       onData(d);
       const n = Object.keys(d).length;
       toast(`Vyplněno ze screenshotu: ${n} ${n === 1 ? "pole" : n < 5 ? "pole" : "polí"}. Zkontrolujte údaje.`);
@@ -72,8 +78,11 @@ export function ScreenshotImport({ template, teams, onData, disabled }: { templa
       onDrop={(e) => {
         e.preventDefault();
         setOver(false);
-        const f = Array.from(e.dataTransfer.files).find((x) => x.type.startsWith("image/"));
-        if (f) void run(f);
+        const fs = Array.from(e.dataTransfer.files).filter((x) => x.type.startsWith("image/"));
+        if (fs.length > 1) {
+          stack.current = fs.slice(0, -1).map((img) => ({ img, at: Date.now() }));
+        }
+        if (fs.length) void run(fs[fs.length - 1]);
       }}
       className={cx("rounded-lg border-2 border-dashed p-3 transition-colors", over ? "border-signal bg-signal-soft" : "border-line bg-paper")}
     >
@@ -81,10 +90,12 @@ export function ScreenshotImport({ template, teams, onData, disabled }: { templa
         ref={file}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void run(f);
+          const fs = Array.from(e.target.files ?? []);
+          if (fs.length > 1) stack.current = fs.slice(0, -1).map((img) => ({ img, at: Date.now() }));
+          if (fs.length) void run(fs[fs.length - 1]);
           e.target.value = "";
         }}
       />
@@ -95,8 +106,16 @@ export function ScreenshotImport({ template, teams, onData, disabled }: { templa
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold leading-tight">{busy ? "Čtu screenshot…" : "Vyplnit ze screenshotu"}</p>
           <p className="text-[12px] leading-snug text-mute">
-            {busy ? "AI přepisuje týmy, skóre a časy do šablony." : "Livesport, Flashscore, web ligy – vložte Ctrl+V, přetáhněte nebo vyberte fotku."}
+            {busy ? "AI přepisuje týmy, skóre a časy do šablony." : "Livesport, Flashscore, web ligy – vložte Ctrl+V, přetáhněte nebo vyberte fotku. Pro hráče zápasu přidejte i screenshot statistik hráčů."}
           </p>
+          {count > 0 && !busy && (
+            <p className="mt-0.5 text-[11px] text-mute">
+              Načteno {count} {count === 1 ? "screenshot" : "screenshoty"} – další (např. statistiky) se přidá k nim.{" "}
+              <button type="button" className="font-semibold text-signal" onClick={() => { stack.current = []; setCount(0); }}>
+                Začít znovu
+              </button>
+            </p>
+          )}
         </div>
         <Button size="sm" variant="primary" icon={busy ? undefined : "upload"} disabled={busy || disabled} onClick={() => file.current?.click()}>
           {busy ? <Spinner /> : "Fotka"}

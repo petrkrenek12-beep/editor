@@ -13,6 +13,10 @@ export interface PhotoAdjust {
   temperature?: number; // - modrá … + žlutá
   tint?: number; // - zelená … + purpurová
   clarity?: number; // 0..100 (lokální kontrast)
+  /** Sladění s pozadím (jako Match Color ve Photoshopu): statistický přenos barev a jasu
+   *  z pozadí grafiky na fotku v perceptuálním prostoru OkLab. amount = síla (0–100),
+   *  lum / color = podíl přenosu jasu / barvy (0–100). */
+  match?: { amount: number; lum?: number; color?: number };
   /** tónování stínů do barvy (např. tmavě modrá pozadí) */
   grade?: { color: string; amount: number };
   /** boční světlo – barevný přechod přes hráče */
@@ -37,8 +41,60 @@ function hex(c: string): [number, number, number] {
 
 const clamp = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: PhotoAdjust, key: string): HTMLCanvasElement {
-  const k = key + JSON.stringify(a);
+// ── OkLab (Björn Ottosson) ───────────────────────────────────
+const toLin = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+const toSrgb = (c: number) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(Math.max(0, c), 1 / 2.4) - 0.055);
+function rgbToOklab(r: number, g: number, b: number): [number, number, number] {
+  r = toLin(r);
+  g = toLin(g);
+  b = toLin(b);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+}
+function oklabToRgb(L: number, A: number, B: number): [number, number, number] {
+  const l = Math.pow(L + 0.3963377774 * A + 0.2158037573 * B, 3);
+  const m = Math.pow(L - 0.1055613458 * A - 0.0638541728 * B, 3);
+  const s = Math.pow(L - 0.0894841775 * A - 1.291485548 * B, 3);
+  return [toSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s), toSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s), toSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)];
+}
+
+type Stats = { mean: [number, number, number]; sd: [number, number, number] };
+const statsCache = new WeakMap<object, Stats>();
+/** Průměr a rozptyl v OkLab (jen neprůhledné pixely, zmenšený náhled). */
+function labStats(src: CanvasImageSource, w: number, h: number): Stats {
+  const hit = statsCache.get(src as object);
+  if (hit) return hit;
+  const k = Math.min(1, 160 / Math.max(w, h));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w * k));
+  c.height = Math.max(1, Math.round(h * k));
+  const x = c.getContext("2d", { willReadFrequently: true })!;
+  x.drawImage(src, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height).data;
+  const sum = [0, 0, 0];
+  const sq = [0, 0, 0];
+  let n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 128) continue;
+    const v = rgbToOklab(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
+    for (let j = 0; j < 3; j++) {
+      sum[j] += v[j];
+      sq[j] += v[j] * v[j];
+    }
+    n++;
+  }
+  n = Math.max(1, n);
+  const mean = sum.map((v) => v / n) as [number, number, number];
+  const sd = sq.map((v, j) => Math.sqrt(Math.max(1e-6, v / n - mean[j] * mean[j]))) as [number, number, number];
+  const st = { mean, sd };
+  statsCache.set(src as object, st);
+  return st;
+}
+
+export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: PhotoAdjust, key: string, ref?: { img: CanvasImageSource; w: number; h: number } | null): HTMLCanvasElement {
+  const k = key + JSON.stringify(a) + (ref ? ":ref" : "");
   const hit = cache.get(k);
   if (hit) return hit;
   const c = document.createElement("canvas");
@@ -46,6 +102,40 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
   c.height = h;
   const x = c.getContext("2d", { willReadFrequently: true })!;
   x.drawImage(src, 0, 0, w, h);
+
+  // 0) sladění s pozadím (Match Color) v OkLab
+  if (a.match && a.match.amount > 0 && ref) {
+    const S = labStats(src, w, h);
+    const R = labStats(ref.img, ref.w, ref.h);
+    const amt = a.match.amount / 100;
+    const kl = (a.match.lum ?? 60) / 100;
+    const kc = (a.match.color ?? 70) / 100;
+    const ratio = (j: number) => Math.min(1.6, Math.max(0.55, R.sd[j] / S.sd[j]));
+    const id = x.getImageData(0, 0, w, h);
+    const d0 = id.data;
+    for (let i = 0; i < d0.length; i += 4) {
+      if (d0[i + 3] === 0) continue;
+      const r0 = d0[i] / 255,
+        g0 = d0[i + 1] / 255,
+        b0 = d0[i + 2] / 255;
+      const v = rgbToOklab(r0, g0, b0);
+      // pleť (teplé tóny) dostane jen část barevného přenosu
+      const skin = r0 > g0 && g0 > b0 && r0 - b0 > 0.08 ? 0.35 : 1;
+      const t = [
+        (v[0] - S.mean[0]) * ratio(0) + R.mean[0],
+        (v[1] - S.mean[1]) * ratio(1) + R.mean[1],
+        (v[2] - S.mean[2]) * ratio(2) + R.mean[2],
+      ];
+      const L = v[0] + (t[0] - v[0]) * amt * kl;
+      const A = v[1] + (t[1] - v[1]) * amt * kc * skin;
+      const B = v[2] + (t[2] - v[2]) * amt * kc * skin;
+      const o = oklabToRgb(L, A, B);
+      d0[i] = clamp(o[0]) * 255;
+      d0[i + 1] = clamp(o[1]) * 255;
+      d0[i + 2] = clamp(o[2]) * 255;
+    }
+    x.putImageData(id, 0, 0);
+  }
 
   // 1) tónové úpravy po pixelech
   const ex = Math.pow(2, (a.exposure ?? 0) / 60);
@@ -221,12 +311,12 @@ export function adjustPresets(raw: { primary: string; accent: string; dark: stri
     {
       id: "studio",
       label: "Do barev grafiky",
-      adj: { exposure: -8, contrast: 16, shadows: -10, highlights: -18, saturation: -18, temperature: -6, clarity: 20, grade: { color: colors.secondary, amount: 35 }, light: { color: colors.primary, amount: 22, side: "both" }, rim: { color: colors.primary, amount: 35, width: 18, side: "both" } },
+      adj: { match: { amount: 55, lum: 55, color: 60 }, contrast: 12, highlights: -12, clarity: 18, grade: { color: colors.secondary, amount: 20 }, light: { color: colors.primary, amount: 16, side: "both" }, rim: { color: colors.primary, amount: 30, width: 16, side: "both" } },
     },
     {
       id: "dramatic",
       label: "Dramatické",
-      adj: { exposure: -16, contrast: 26, shadows: -22, highlights: -18, saturation: -28, temperature: -4, clarity: 32, grade: { color: colors.secondary, amount: 45 }, light: { color: colors.primary, amount: 28, side: "both" }, rim: { color: colors.primary, amount: 50, width: 20, side: "both" } },
+      adj: { match: { amount: 75, lum: 75, color: 70 }, exposure: -8, contrast: 24, shadows: -16, highlights: -14, saturation: -12, clarity: 30, grade: { color: colors.secondary, amount: 30 }, light: { color: colors.primary, amount: 22, side: "both" }, rim: { color: colors.primary, amount: 45, width: 18, side: "both" } },
     },
     {
       id: "warm",
