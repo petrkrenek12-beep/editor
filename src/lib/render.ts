@@ -1002,8 +1002,65 @@ export function renderSync(ctx: CanvasRenderingContext2D, env: RenderEnv, images
     const r = resolveElement(el, env.template, env.format);
     drawElement(ctx, el, r.frame, r.s, env, rc, images, hits);
   }
+  drawFinish(ctx, env, fmt.w, fmt.h, scale);
   ctx.restore();
   return hits;
+}
+
+function finishValue(env: RenderEnv, key: "grain" | "vignette"): number {
+  const v = env.data[`__${key}`];
+  if (v !== undefined && v !== null && v !== "") return Number(v) || 0;
+  return env.template.finish?.[key] ?? 0;
+}
+
+// dlaždice šumu (jednou vygenerovaná, opakovaná přes plochu)
+let grainTile: HTMLCanvasElement | null = null;
+function getGrainTile() {
+  if (grainTile) return grainTile;
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const x = c.getContext("2d")!;
+  const d = x.createImageData(256, 256);
+  let seed = 1234567;
+  for (let i = 0; i < d.data.length; i += 4) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const v = 128 + ((seed >> 8) % 256) - 128;
+    d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
+    d.data[i + 3] = 255;
+  }
+  x.putImageData(d, 0, 0);
+  grainTile = c;
+  return c;
+}
+
+/** Viněta (ztmavení okrajů) a filmové zrno – sjednotí fotku, logo i text. */
+function drawFinish(ctx: CanvasRenderingContext2D, env: RenderEnv, w: number, h: number, scale: number) {
+  if (typeof document === "undefined") return;
+  const vig = finishValue(env, "vignette");
+  const grain = finishValue(env, "grain");
+  if (vig > 0) {
+    const g = ctx.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.35, w / 2, h * 0.5, Math.hypot(w, h) * 0.62);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, `rgba(0,0,0,${Math.min(0.85, vig / 100)})`);
+    ctx.save();
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+  if (grain > 0) {
+    const tile = getGrainTile();
+    ctx.save();
+    ctx.globalCompositeOperation = "overlay";
+    ctx.globalAlpha = Math.min(1, grain / 100) * 0.55;
+    // zrno ve skutečných pixelech exportu (neroztahuje se se scale)
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const pat = ctx.createPattern(tile, "repeat");
+    if (pat) {
+      ctx.fillStyle = pat;
+      ctx.fillRect(0, 0, w * scale, h * scale);
+    }
+    ctx.restore();
+  }
 }
 
 export async function renderToCanvas(env: RenderEnv, scale = 1, canvas?: HTMLCanvasElement) {

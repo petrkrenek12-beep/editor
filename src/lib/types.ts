@@ -275,6 +275,8 @@ export interface Template {
   fields: FieldDef[];
   sampleData: DataRecord;
   /** Carousel: rozdělí seznam na více slidů */
+  /** Dokončení grafiky: zrno (grain) a viněta 0–100. Lze přepsat u grafiky (data.__grain / __vignette). */
+  finish?: { grain?: number; vignette?: number };
   paginate?: { field: string; perPage: number; /** každý slide = jeden řádek; jeho sloupce jsou dostupné jako {{klíč}} v celé šabloně */ rowAsData?: boolean };
   createdAt: number;
   updatedAt: number;

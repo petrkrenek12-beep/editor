@@ -137,6 +137,7 @@ interface TDef {
   sampleData: DataRecord;
   elements: TemplateElement[];
   paginate?: Template["paginate"];
+  finish?: Template["finish"];
 }
 
 /** Svislé kotvení skupin prvků – co drží pohromadě při změně formátu (Story ↔ čtverec). */
@@ -154,6 +155,7 @@ const ANCHORS: Record<string, Record<string, AnchorY>> = {
   "results-carousel": { games: "stretch" },
   program: { games: "stretch" },
   "results-round": { games: "stretch" },
+  "program-premium": { games: "stretch" },
   streak: { kicker: "center", "kicker-own": "center", record: "center", games: "center" },
   quote: { mark: "bottom", marks: "bottom", quote: "bottom", "quote-c": "bottom", "name-box": "bottom", "speaker-logo": "bottom", name: "bottom" },
 };
@@ -1197,6 +1199,76 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         brandLogo([600, 1224, 120, 92], { align: "left", anchorY: "bottom" }),
       ],
     },
+    // 23 ── PROGRAM KOLA – PREMIUM (klidné tmavé karty, velký čas, hráči nasvícení, zrno a viněta)
+    {
+      id: "program-premium",
+      name: "Program kola – Premium",
+      category: "Soutěž",
+      description: "Prémiový program: velký nadpis, jednolité tmavé karty s velkým časem, hráči po stranách, rohové závorky, zrno a viněta.",
+      background: "@dark",
+      finish: { grain: 38, vignette: 50 },
+      fields: [
+        { key: "kicker", label: "Nadtitulek", type: "text", placeholder: "Maxa NBL" },
+        { key: "title", label: "Nadpis", type: "text" },
+        { key: "dates", label: "Termín", type: "text", placeholder: "3.–4. 10." },
+        f.round,
+        {
+          key: "games",
+          label: "Zápasy",
+          type: "list",
+          columns: [
+            { key: "home", label: "Domácí", type: "team" },
+            { key: "away", label: "Hosté", type: "team" },
+            { key: "date", label: "Datum", type: "date" },
+            { key: "time", label: "Čas", type: "text" },
+            { key: "tv", label: "TV", type: "channel" },
+          ],
+        },
+        { key: "photo_left", label: "Hráč vlevo (vyříznutý)", type: "image", help: "Tip: Upravit → „Do barev grafiky“ – hráč bude nasvícený do barev pozadí." },
+        { key: "photo_right", label: "Hráč vpravo (vyříznutý)", type: "image" },
+      ],
+      sampleData: {
+        kicker: "Maxa NBL",
+        title: "Program",
+        dates: "3.–4. 10.",
+        round: "5. kolo",
+        games: PROGRAM_3_KOLO.map((g, i) => ({ home: g.home, away: g.away, date: i < 4 ? "2026-10-03" : "2026-10-04", time: ["17:30", "17:30", "18:00", "18:00", "17:00", "18:00"][i], tv: i === 5 ? "Prima Sport" : "" })),
+        photo_left: { asset: a.player },
+        photo_right: { asset: a.player },
+      },
+      elements: [
+        img("bg", "Pozadí (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", zone: "bg", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+        rect("bg-dim", "Ztmavení pozadí", [0, 0, 1080, 1350], "@dark/45", { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        img("pl", "Hráč vlevo", [-210, 250, 640, 1100], "{{photo_left}}", { fit: "contain", align: "left", valign: "bottom", anchorX: "left", anchorY: "bottom", showIf: "photo_left", hideIn: ["x"] }),
+        img("pr", "Hráč vpravo", [650, 250, 640, 1100], "{{photo_right}}", { fit: "contain", align: "right", valign: "bottom", anchorX: "right", anchorY: "bottom", showIf: "photo_right", hideIn: ["x"] }),
+        rect("wash", "Barevné sjednocení", [0, 0, 1080, 1350], lin(90, [0, "@primary/0"], [0.6, "@primary/25"], [1, "@accent/30"]), { zone: "bg", anchorX: "stretch", anchorY: "stretch", blend: "soft-light" }),
+        rect("center-dim", "Ztmavení středu", [150, 0, 780, 1350], lin(0, [0, "@dark/0"], [0.18, "@dark/55"], [0.82, "@dark/55"], [1, "@dark/0"]), { anchorY: "stretch", hideIn: ["x"] }),
+        rect("bottom-dim", "Ztmavení dole", [0, 1000, 1080, 350], lin(90, [0, "@dark/0"], [1, "@dark/95"]), { anchorX: "stretch", anchorY: "bottom" }),
+        path("c-tl", "Roh vlevo nahoře", [36, 36, 64, 64], "M0 100 L0 0 L100 0", { stroke: "#FFFFFF", strokeWidth: 3, opacity: 0.7, anchorX: "left", anchorY: "top" }),
+        path("c-tr", "Roh vpravo nahoře", [980, 36, 64, 64], "M0 0 L100 0 L100 100", { stroke: "#FFFFFF", strokeWidth: 3, opacity: 0.7, anchorX: "right", anchorY: "top" }),
+        path("c-bl", "Roh vlevo dole", [36, 1250, 64, 64], "M0 0 L0 100 L100 100", { stroke: "#FFFFFF", strokeWidth: 3, opacity: 0.7, anchorX: "left", anchorY: "bottom" }),
+        path("c-br", "Roh vpravo dole", [980, 1250, 64, 64], "M100 0 L100 100 L0 100", { stroke: "#FFFFFF", strokeWidth: 3, opacity: 0.7, anchorX: "right", anchorY: "bottom" }),
+        text("kicker", "Nadtitulek", [190, 66, 700, 40], "{{kicker}}  ·  {{round}}", { font: "body", weight: 600, size: 26, uppercase: true, align: "center", letterSpacing: 0.32, opacity: 0.85 }),
+        text("title", "Nadpis", [90, 104, 900, 190], "{{title}}", { font: "Mazzard H", weight: 900, size: 196, uppercase: true, align: "center", letterSpacing: -0.02, shadow: { color: "rgba(0,0,0,0.5)", blur: 30, x: 0, y: 10 } }),
+        text("dates", "Termín", [240, 296, 600, 50], "{{dates}}", { font: "body", weight: 600, size: 40, uppercase: true, align: "center", color: "@accent", letterSpacing: 0.18 }),
+        list("games", "Zápasy", [160, 382, 760, 760], "games", 112, 14, [
+          rect("card", "Karta", [0, 0, 760, 112], "rgba(8,5,16,0.82)", { radius: 16, stroke: "rgba(255,255,255,0.10)", strokeWidth: 1.5, shadow: { color: "rgba(0,0,0,0.5)", blur: 30, x: 0, y: 10 } }),
+          rect("bar", "Proužek", [0, 22, 5, 68], "@accent", { radius: 2 }),
+          logo("hl", "Logo D", [34, 14, 130, 84], "home", { logoVariant: "white", equalize: 0.62 }),
+          rect("sep-l", "Linka vlevo", [200, 30, 1.5, 52], "rgba(255,255,255,0.14)"),
+          text("day", "Den", [220, 14, 320, 26], "{{date|day}}", { font: "body", weight: 600, size: 22, align: "center", letterSpacing: 0.3, opacity: 0.7 }),
+          text("time", "Čas", [220, 38, 320, 54], "{{time}}", { font: "Mazzard H", weight: 900, size: 56, align: "center", hideIf: "tv" }),
+          text("time-tv", "Čas (s TV)", [220, 38, 320, 48], "{{time}}", { font: "Mazzard H", weight: 900, size: 50, align: "center", showIf: "tv" }),
+          img("tv", "Logo TV", [310, 88, 140, 20], "channel:{{tv}}", { fit: "contain", showIf: "tv", fallback: "none" }),
+          rect("sep-r", "Linka vpravo", [558, 30, 1.5, 52], "rgba(255,255,255,0.14)"),
+          logo("al", "Logo H", [596, 14, 130, 84], "away", { logoVariant: "white", equalize: 0.62 }),
+        ], { distribute: false }),
+        rect("foot-line", "Linka dole", [340, 1188, 400, 1.5], "rgba(255,255,255,0.25)", { anchorY: "bottom" }),
+        img("partner", "Liga / partner", [330, 1208, 200, 74], "brand:partner", { fit: "contain", align: "right", fallback: "none", anchorY: "bottom" }),
+        rect("foot-sep", "Dělicí čára", [552, 1210, 1.5, 70], "rgba(255,255,255,0.4)", { anchorY: "bottom" }),
+        brandLogo([574, 1206, 120, 78], { align: "left", anchorY: "bottom" }),
+      ],
+    },
   ];
 
   for (const d of defs) {
@@ -1217,6 +1289,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
     fields: d.fields,
     sampleData: d.sampleData,
     paginate: d.paginate,
+    finish: d.finish,
     createdAt: now,
     updatedAt: now,
     builtIn: true,

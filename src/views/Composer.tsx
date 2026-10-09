@@ -272,6 +272,26 @@ export function Composer({ templateId, graphicId }: { templateId: string; graphi
           Ukázková data
         </Button>
       </div>
+      <div className="rounded-xl border border-line bg-panel px-3 py-2">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-[13px] font-semibold">Dokončení</span>
+          <span className="text-[11px] text-mute">zrno a viněta sjednotí fotku s grafikou</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {(["grain", "vignette"] as const).map((k) => {
+            const v = data[`__${k}`] !== undefined && data[`__${k}`] !== "" ? Number(data[`__${k}`]) : template.finish?.[k] ?? 0;
+            return (
+              <label key={k} className="block">
+                <div className="flex justify-between text-[11px]">
+                  <span className="font-semibold">{k === "grain" ? "Zrno" : "Viněta"}</span>
+                  <span className="tabular-nums text-mute">{v}</span>
+                </div>
+                <input type="range" min={0} max={100} value={v} disabled={role === "viewer"} onChange={(e) => setData((d) => ({ ...d, [`__${k}`]: Number(e.target.value) }))} className="h-1.5 w-full accent-[#2A4BFF]" aria-label={k === "grain" ? "Zrno" : "Viněta"} />
+              </label>
+            );
+          })}
+        </div>
+      </div>
       {usesTeamLogos(template.elements) && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-panel px-3 py-2">
           <span className="text-[13px] font-semibold">Loga týmů</span>
