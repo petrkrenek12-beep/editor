@@ -409,12 +409,14 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
   const availH = Math.max(4, box.h - padY * 2);
   const maxLines = el.maxLines ?? 3;
 
-  const runs = parseRuns(content, !!el.highlight);
-  const tokens: { text: string; hl: boolean; space: boolean; icon?: boolean }[] = [];
   // ikona před textem (např. vlastní hvězda u hráče zápasu)
   const iUrl = iconUrl(el, env, rc);
   const iconImg = iUrl ? images?.get(iUrl) ?? null : null;
-  if (iconImg) tokens.push({ text: "\u2022", hl: false, space: false, icon: true });
+  type Tok = { text: string; hl: boolean; space: boolean; icon?: boolean };
+  const tokenize = (str: string, withIcon: boolean): Tok[] => {
+  const runs = parseRuns(str, !!el.highlight);
+  const tokens: Tok[] = [];
+  if (iconImg && withIcon) tokens.push({ text: "\u2022", hl: false, space: false, icon: true });
   let pendingSpace = false;
   for (const r of runs) {
     const parts = r.text.split(/(\s+)/);
@@ -429,14 +431,17 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
       pendingSpace = false;
     }
   }
+  return tokens;
+  };
+  const tokens = tokenize(content, true);
 
   const fontAt = (size: number, hl = false) => `${style}${hl && el.highlightWeight ? el.highlightWeight : weight} ${size}px ${fontStack(family)}`;
-  const layoutAt = (size: number) => {
+  const layoutAt = (size: number, toks: Tok[] = tokens) => {
     ctx.font = fontAt(size);
     const ls = lsEm * size;
     const iconW = iconImg ? size * (el.icon?.scale ?? 1) * (iconImg.naturalWidth / iconImg.naturalHeight) + size * (el.icon?.gap ?? 0.2) : 0;
     const spaceW = ctx.measureText(" ").width + ls + (el.wordSpacing ?? 0) * size;
-    const words: Word[] = tokens.map((t) => {
+    const words: Word[] = toks.map((t) => {
       if (t.icon) return { ...t, w: iconW };
       if (t.text === "\n") return { ...t, w: 0 };
       ctx.font = fontAt(size, t.hl);
@@ -468,6 +473,26 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement, frame: Frame, 
       } else hi = mid;
     }
     best = layoutAt(size);
+  }
+  // sdílená velikost: zmenší se i podle jiného textu (např. obě skóre stejně velká)
+  if (el.fitWith) {
+    let other = interpolate(el.fitWith, rc);
+    if (el.uppercase) other = other.toLocaleUpperCase("cs-CZ");
+    const ot = other.trim() ? tokenize(other, false) : [];
+    if (ot.length && !layoutAt(size, ot).fits) {
+      let lo = minSize;
+      let hi = size;
+      let os = minSize;
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) / 2;
+        if (layoutAt(mid, ot).fits) {
+          lo = mid;
+          os = mid;
+        } else hi = mid;
+      }
+      size = Math.min(size, os);
+      best = layoutAt(size);
+    }
   }
   let { lines } = best;
   const { lh, spaceW, ls } = best;

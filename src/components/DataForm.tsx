@@ -45,19 +45,30 @@ export function DataForm({
       if (e.type === "list") scan(e.children);
     });
   scan(template.elements);
+  // krátká pole (skóre, bilance, statistiky…) dáme po dvou vedle sebe
+  const SHORT = /(^|_)(record|value|label|score|round|time|kicker|pct|num|number|jersey|age|height|pos|rank|season|minute|min|pts|reb|ast)$/;
+  const halfRaw = template.fields.map((f) => f.half ?? (f.type === "number" || f.type === "channel" || (f.type === "select" && (f.options ?? []).every((o) => o.length <= 14)) || (f.type === "text" && SHORT.test(f.key))));
+  const half = [...halfRaw];
+  for (let i = 0; i < half.length; ) {
+    if (!half[i]) { i++; continue; }
+    let j = i;
+    while (j < half.length && halfRaw[j]) j++;
+    if ((j - i) % 2 === 1) half[j - 1] = false; // lichý zbytek přes celou šířku
+    i = j;
+  }
   return (
-    <div className={cx("flex flex-col", compact ? "gap-3" : "gap-4")}>
-      <datalist id="team-list">
+    <div className={cx("grid grid-cols-2", compact ? "gap-x-2 gap-y-3" : "gap-x-3 gap-y-4")}>
+      <datalist id="team-list" className="hidden">
         {project.teams.map((t) => (
           <option key={t.id} value={t.name} />
         ))}
       </datalist>
-      {template.fields.map((f) => {
+      {template.fields.map((f, fi) => {
         const ro = readOnlyField?.(f) ?? false;
         const id = `fld-${f.key}`;
         const v = data[f.key];
         return (
-          <div key={f.key}>
+          <div key={f.key} className={cx("min-w-0", half[fi] ? "col-span-1" : "col-span-2")}>
             <Label htmlFor={id} hint={ro ? "zamčeno" : f.help}>
               {f.label}
             </Label>

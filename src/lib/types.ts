@@ -146,6 +146,8 @@ export interface TextElement extends BaseElement {
   icon?: { src: string; scale?: number; gap?: number };
   /** Extra mezera mezi slovy (v em) */
   wordSpacing?: number;
+  /** Velikost se přizpůsobí i tomuto textu (stejný rámeček) – např. obě skóre stejně velká */
+  fitWith?: string;
   /** Přechodová výplň textu (např. kovový nadpis) – má přednost před color */
   fill?: Fill;
   /** Váha písma pro [zvýrazněná] slova (např. příjmení tučně) */
@@ -250,6 +252,8 @@ export interface FieldDef {
   /** pro type = list */
   columns?: FieldDef[];
   help?: string;
+  /** poloviční šířka ve formuláři (jinak se odhadne podle typu / klíče) */
+  half?: boolean;
 }
 
 /** Hodnota obrázkového pole: odkaz na asset + ořez */
