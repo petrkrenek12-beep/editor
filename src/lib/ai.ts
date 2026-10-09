@@ -141,8 +141,7 @@ function describeFields(t: Template) {
     .join("\n");
 }
 
-export function buildScreenshotPrompt(t: Template, teams: Team[], today = new Date()) {
-  const y = today.getFullYear();
+export function buildScreenshotPrompt(t: Template, teams: Team[], _today = new Date()) {
   return `Na obrázku je screenshot sportovních výsledků nebo programu (typicky Livesport / Flashscore, basketbal).
 Úkol: vyčti z něj data a vyplň pole grafické šablony „${t.name}“ (${t.description ?? ""}).
 
@@ -151,7 +150,7 @@ ${describeFields(t)}
 
 Pravidla:
 - Týmy piš přesně jedním z těchto názvů, pokud odpovídá (ignoruj sponzory, např. "Slavia Praha ERA NBK" = "Slavia Praha"): ${teams.map((x) => [x.name, ...x.aliases].join(" / ")).join("; ")}. Když tým v seznamu není, napiš název ze screenshotu.
-- Datum (typ date) ve formátu RRRR-MM-DD; chybí-li rok, použij ${y} (dnes je ${today.toISOString().slice(0, 10)}).
+- Datum (typ date) opiš PŘESNĚ jako DEN.MĚSÍC. v českém pořadí – nejdřív den, potom měsíc (např. "11.10." = 11. října). Nikdy neprohazuj den a měsíc a nepiš rok.
 - Čas ve formátu HH:MM. Skóre jako čísla.
 - Kolo piš např. "4. kolo". Termín (dates) krátce, např. "30.9." nebo "30.9. - 1.10.".
 - Hráč zápasu: když jsou na obrázku statistiky hráčů a šablona má pole "mvp", NEVYPLŇUJ "mvp" textem, ale přidej klíč "_mvp" = {"name": jméno tak, jak je na screenshotu, "pts": body (sloupec B/PTS), "reb": doskoky (DOS/REB), "ast": asistence (A/AST)} pro hráče s nejvíce body z VÍTĚZNÉHO týmu.
@@ -190,6 +189,7 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
   const raw = extractJson(text) as Record<string, unknown>;
   // úklid: čísla, týmy na přesné názvy z projektu, jen známá pole
   const out: DataRecord = {};
+  const dateOf = (v: unknown) => toIsoDate(String(v ?? ""));
   const teamName = (v: unknown) => {
     const s = String(v ?? "").trim();
     return findTeam(teams, s)?.name ?? s;
@@ -204,11 +204,12 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
         const r1: Record<string, unknown> = {};
         for (const c of f.columns ?? []) {
           if (!(c.key in r0) || c.type === "channel" || c.type === "image") continue;
-          r1[c.key] = c.type === "team" ? teamName(r0[c.key]) : c.type === "number" && r0[c.key] !== "" ? Number(r0[c.key]) : String(r0[c.key] ?? "");
+          r1[c.key] = c.type === "team" ? teamName(r0[c.key]) : c.type === "date" ? dateOf(r0[c.key]) : c.type === "number" && r0[c.key] !== "" ? Number(r0[c.key]) : String(r0[c.key] ?? "");
         }
         return r1;
       }) as DataRecord[string];
     } else if (f.type === "team") out[f.key] = teamName(v);
+    else if (f.type === "date") out[f.key] = dateOf(v);
     else if (f.type === "number") out[f.key] = v === "" || v === null ? "" : Number(v);
     else out[f.key] = String(v ?? "");
   }
@@ -222,4 +223,22 @@ export async function extractFromScreenshot(image: Blob, t: Template, teams: Tea
   }
   if (!Object.keys(out).length) throw new Error("Ze screenshotu se nepodařilo nic vyčíst pro tuto šablonu.");
   return out;
+}
+
+/** "11.10." / "11. 10. 2026" / "2026-10-11" → "2026-10-11" (den vždy první). Bez roku: nejbližší budoucí/nedávné datum. */
+export function toIsoDate(raw: string, today = new Date()): string {
+  const s = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = /(\d{1,2})\s*[./]\s*(\d{1,2})\s*[./]?\s*(\d{4})?/.exec(s);
+  if (!m) return s;
+  const d = +m[1];
+  const mo = +m[2];
+  let y = m[3] ? +m[3] : today.getFullYear();
+  if (!m[3]) {
+    const cand = new Date(y, mo - 1, d);
+    const diff = (cand.getTime() - today.getTime()) / 86400000;
+    if (diff < -180) y += 1;
+    else if (diff > 180) y -= 1;
+  }
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }

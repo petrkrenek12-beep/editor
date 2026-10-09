@@ -148,7 +148,8 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
     x.globalCompositeOperation = "soft-light";
     x.fillStyle = gr;
     x.fillRect(0, 0, w, h);
-    x.globalAlpha = Math.min(1, L.amount / 140);
+    // jen velmi jemné „přisvětlení“ – světlo má barvit, ne svítit
+    x.globalAlpha = Math.min(1, L.amount / 900);
     x.globalCompositeOperation = "screen";
     x.fillRect(0, 0, w, h);
     x.restore();
@@ -157,7 +158,7 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
   // 4) rim light – světlá hrana postavy z jedné / obou stran
   if (a.rim && a.rim.amount > 0) {
     const R = a.rim;
-    const px = Math.max(2, (R.width / 100) * w * 0.06);
+    const px = Math.max(1.5, (R.width / 100) * w * 0.035);
     const edge = document.createElement("canvas");
     edge.width = w;
     edge.height = h;
@@ -182,7 +183,7 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
     x.filter = `blur(${Math.max(1, px * 0.6)}px)`;
     x.drawImage(edge, 0, 0);
     x.filter = "none";
-    x.globalAlpha = Math.min(1, R.amount / 160);
+    x.globalAlpha = Math.min(1, R.amount / 400);
     x.drawImage(edge, 0, 0);
     x.restore();
   }
@@ -205,12 +206,12 @@ export function adjustPresets(colors: { primary: string; accent: string; dark: s
     {
       id: "studio",
       label: "Do barev grafiky",
-      adj: { exposure: -4, contrast: 14, shadows: -6, highlights: -14, saturation: -15, temperature: -12, clarity: 30, grade: { color: colors.secondary, amount: 60 }, light: { color: colors.primary, amount: 38, side: "both" }, rim: { color: colors.primary, amount: 75, width: 30, side: "both" } },
+      adj: { exposure: -10, contrast: 18, shadows: -12, highlights: -22, saturation: -28, temperature: -8, clarity: 22, grade: { color: colors.secondary, amount: 50 }, light: { color: colors.primary, amount: 30, side: "both" }, rim: { color: colors.primary, amount: 40, width: 20, side: "both" } },
     },
     {
       id: "dramatic",
       label: "Dramatické",
-      adj: { exposure: -10, contrast: 26, shadows: -18, highlights: -10, saturation: -25, temperature: -8, clarity: 45, grade: { color: colors.secondary, amount: 62 }, light: { color: colors.primary, amount: 36, side: "both" }, rim: { color: colors.primary, amount: 90, width: 35, side: "both" } },
+      adj: { exposure: -18, contrast: 28, shadows: -24, highlights: -20, saturation: -35, temperature: -6, clarity: 35, grade: { color: colors.secondary, amount: 60 }, light: { color: colors.primary, amount: 35, side: "both" }, rim: { color: colors.primary, amount: 55, width: 22, side: "both" } },
     },
     {
       id: "warm",
