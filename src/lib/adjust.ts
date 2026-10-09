@@ -90,9 +90,10 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
       b += tn * 0.035;
     }
     if (g) {
-      // stíny do odstínu barvy se zachováním jasu (cinematic grade)
+      // jen hluboké stíny do odstínu barvy; pleť (r > g > b) skoro netknutá
       const lc = clamp(0.299 * r + 0.587 * gg + 0.114 * b);
-      const wgt = g.k * Math.pow(1 - lc, 1.5);
+      const skin = r > gg && gg > b && r - b > 0.08 ? 0.25 : 1;
+      const wgt = g.k * Math.pow(1 - lc, 2.2) * skin;
       const gl = Math.max(0.02, 0.299 * g.c[0] + 0.587 * g.c[1] + 0.114 * g.c[2]);
       const f = lc / gl;
       r = r * (1 - wgt) + clamp(g.c[0] * f) * wgt;
@@ -199,19 +200,33 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
   return c;
 }
 
-/** Předvolby – barvy se berou z brand kitu. */
-export function adjustPresets(colors: { primary: string; accent: string; dark: string; secondary: string }): { id: string; label: string; adj: PhotoAdjust }[] {
+/** Smíchání dvou barev (#rrggbb), t = podíl druhé barvy. */
+export function mixColor(a: string, b: string, t: number): string {
+  const A = hex(a);
+  const B = hex(b);
+  const c = A.map((v, i) => Math.round((v * (1 - t) + B[i] * t) * 255));
+  return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
+/** Předvolby – barvy se berou z brand kitu, ale zjemněné, aby nebarvily pleť (např. zelená ŽBL). */
+export function adjustPresets(raw: { primary: string; accent: string; dark: string; secondary: string }): { id: string; label: string; adj: PhotoAdjust }[] {
+  const colors = {
+    primary: mixColor(raw.primary, "#FFFFFF", 0.45),
+    accent: mixColor(raw.accent, "#FFFFFF", 0.35),
+    secondary: mixColor(raw.secondary, "#202020", 0.55),
+    dark: raw.dark,
+  };
   return [
     { id: "none", label: "Původní", adj: {} },
     {
       id: "studio",
       label: "Do barev grafiky",
-      adj: { exposure: -10, contrast: 18, shadows: -12, highlights: -22, saturation: -28, temperature: -8, clarity: 22, grade: { color: colors.secondary, amount: 50 }, light: { color: colors.primary, amount: 30, side: "both" }, rim: { color: colors.primary, amount: 40, width: 20, side: "both" } },
+      adj: { exposure: -8, contrast: 16, shadows: -10, highlights: -18, saturation: -18, temperature: -6, clarity: 20, grade: { color: colors.secondary, amount: 35 }, light: { color: colors.primary, amount: 22, side: "both" }, rim: { color: colors.primary, amount: 35, width: 18, side: "both" } },
     },
     {
       id: "dramatic",
       label: "Dramatické",
-      adj: { exposure: -18, contrast: 28, shadows: -24, highlights: -20, saturation: -35, temperature: -6, clarity: 35, grade: { color: colors.secondary, amount: 60 }, light: { color: colors.primary, amount: 35, side: "both" }, rim: { color: colors.primary, amount: 55, width: 22, side: "both" } },
+      adj: { exposure: -16, contrast: 26, shadows: -22, highlights: -18, saturation: -28, temperature: -4, clarity: 32, grade: { color: colors.secondary, amount: 45 }, light: { color: colors.primary, amount: 28, side: "both" }, rim: { color: colors.primary, amount: 50, width: 20, side: "both" } },
     },
     {
       id: "warm",
