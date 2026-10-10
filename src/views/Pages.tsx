@@ -113,11 +113,27 @@ function GraphicCard({ g }: { g: Graphic }) {
   );
 }
 
-export function TemplateCard({ t, project, assets, onClick, footer, fav, onFav }: { t: Template; project: Project; assets: Record<string, string>; onClick: () => void; footer?: React.ReactNode; fav?: boolean; onFav?: () => void }) {
+export function TemplateCard({ t, project, assets, onClick, footer, fav, onFav, hidden, onHide }: { t: Template; project: Project; assets: Record<string, string>; onClick: () => void; footer?: React.ReactNode; fav?: boolean; onFav?: () => void; hidden?: boolean; onHide?: () => void }) {
   const env: RenderEnv = useMemo(() => ({ template: t, data: t.sampleData, format: t.baseFormat, brand: project.brand, teams: project.teams, assets, page: 1, pages: 2 }), [t, project, assets]);
   const key = `${t.id}:${t.updatedAt}:${JSON.stringify(project.brand).length}:${project.brand.colors.primary}${project.brand.colors.accent}${project.brand.fonts.display.family}${project.brand.logo}`;
   return (
-    <div className="group relative overflow-hidden rounded-lg border border-line bg-white transition-colors hover:border-ink">
+    <div className={cx("group relative overflow-hidden rounded-lg border border-line bg-white transition-colors hover:border-ink", hidden && "opacity-50")}>
+      {onHide && (
+        <button
+          type="button"
+          onClick={onHide}
+          title={hidden ? "Znovu zobrazit" : "Dočasně skrýt"}
+          aria-label={hidden ? "Znovu zobrazit" : "Dočasně skrýt"}
+          className={cx(
+            "absolute left-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white shadow transition-opacity",
+            hidden ? "opacity-100" : "opacity-80 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100",
+          )}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d={hidden ? "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" : "M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3 3.8M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.4-1M9.9 9.9a3 3 0 0 0 4.2 4.2"} />
+          </svg>
+        </button>
+      )}
       {onFav && (
         <button
           type="button"
@@ -155,7 +171,11 @@ export function TemplatePicker() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Vše");
   const cats = ["Vše", ...Array.from(new Set(templates.map((t) => t.category)))];
-  const list = templates.filter((t) => (cat === "Vše" || t.category === cat) && (!q || (t.name + " " + t.description).toLowerCase().includes(q.toLowerCase())));
+  const hiddenIds = project.hiddenTemplates ?? [];
+  const [showHidden, setShowHidden] = useState(false);
+  const hiddenCount = templates.filter((t) => hiddenIds.includes(t.id)).length;
+  const list = templates.filter((t) => (showHidden || !hiddenIds.includes(t.id)) && (cat === "Vše" || t.category === cat) && (!q || (t.name + " " + t.description).toLowerCase().includes(q.toLowerCase())));
+  const toggleHidden = (id: string) => upsert("projects", { ...project, hiddenTemplates: hiddenIds.includes(id) ? hiddenIds.filter((x) => x !== id) : [...hiddenIds, id] });
   const favIds = project.favorites ?? [];
   const favs = favIds.map((id) => list.find((t) => t.id === id)).filter(Boolean) as Template[];
   const rest = list.filter((t) => !favIds.includes(t.id));
@@ -164,7 +184,7 @@ export function TemplatePicker() {
   const grid = (items: Template[]) => (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {items.map((t) => (
-        <TemplateCard key={t.id} t={t} project={project} assets={assets} fav={favIds.includes(t.id)} onFav={() => toggleFav(t.id)} onClick={() => navigate(`/create/${t.id}`)} />
+        <TemplateCard key={t.id} t={t} project={project} assets={assets} fav={favIds.includes(t.id)} onFav={() => toggleFav(t.id)} hidden={hiddenIds.includes(t.id)} onHide={() => toggleHidden(t.id)} onClick={() => navigate(`/create/${t.id}`)} />
       ))}
     </div>
   );
@@ -180,6 +200,11 @@ export function TemplatePicker() {
             </button>
           ))}
         </div>
+        {hiddenCount > 0 && (
+          <button type="button" onClick={() => setShowHidden((v) => !v)} className="ml-auto rounded-full border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-mute hover:text-ink">
+            {showHidden ? "Schovat skryté" : `Zobrazit skryté (${hiddenCount})`}
+          </button>
+        )}
       </div>
       {list.length ? (
         <>
@@ -190,7 +215,7 @@ export function TemplatePicker() {
               <h2 className="mb-2 mt-7 font-cond text-[13px] font-bold uppercase tracking-[0.1em] text-mute">Ostatní šablony</h2>
             </>
           )}
-          {favs.length === 0 && <p className="mb-3 text-[12px] text-mute">Tip: hvězdičkou ☆ na náhledu si šablonu přidáte do oblíbených – budou nahoře.</p>}
+          {favs.length === 0 && <p className="mb-3 text-[12px] text-mute">Tip: hvězdičkou ☆ si šablonu přidáte do oblíbených (budou nahoře), přeškrtnutým okem ji dočasně skryjete.</p>}
           {grid(rest)}
         </>
       ) : (
@@ -210,6 +235,10 @@ export function TemplatesPage() {
   const { confirm, node } = useConfirm();
   const admin = can(user.role, "template.edit");
   const [psdOpen, setPsdOpen] = useState(false);
+  const hiddenIds = project.hiddenTemplates ?? [];
+  const [showHidden, setShowHidden] = useState(false);
+  const hiddenCount = templates.filter((t) => hiddenIds.includes(t.id)).length;
+  const toggleHidden = (id: string) => upsert("projects", { ...project, hiddenTemplates: hiddenIds.includes(id) ? hiddenIds.filter((x) => x !== id) : [...hiddenIds, id] });
 
   const create = async () => {
     const t = blankTemplate(project.id, uid("t-"));
@@ -258,13 +287,22 @@ export function TemplatesPage() {
         }
       />
       {!admin && <p className="mb-4 rounded-md border border-line bg-white px-3 py-2 text-sm text-mute">Šablony upravuje administrátor. Vy je můžete používat pro tvorbu grafik.</p>}
+      {hiddenCount > 0 && (
+        <div className="mb-3 flex justify-end">
+          <button type="button" onClick={() => setShowHidden((v) => !v)} className="rounded-full border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-mute hover:text-ink">
+            {showHidden ? "Schovat skryté" : `Zobrazit skryté (${hiddenCount})`}
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {templates.map((t) => (
+        {templates.filter((t) => showHidden || !hiddenIds.includes(t.id)).map((t) => (
           <TemplateCard
             key={t.id}
             t={t}
             project={project}
             assets={assets}
+            hidden={hiddenIds.includes(t.id)}
+            onHide={() => toggleHidden(t.id)}
             onClick={() => navigate(admin ? `/templates/${t.id}` : `/create/${t.id}`)}
             footer={
               <>

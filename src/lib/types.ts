@@ -197,6 +197,11 @@ export interface ImageElement extends BaseElement {
   onlyUncut?: boolean;
   /** Měkké okraje zmenšené fotky (podíl velikosti, např. 0.12) místo rozmazané výplně */
   feather?: number;
+  /** Rozmazání (px) – např. matný skleněný pruh přes fotku */
+  blur?: number;
+  blurDim?: number;
+  /** Vykreslit jen tuto část rámu (podíly 0..1) */
+  clip?: { x: number; y: number; w: number; h: number };
   /** Vlastní obrázek, který má přednost (např. "{{from_logo}}" – logo zahraničního týmu) */
   override?: string;
   /** Panorama přes více slidů carouselu: obrázek se roztáhne přes `span` slidů, každá další skupina se zrcadlí */
@@ -367,6 +372,8 @@ export interface Project {
   teams: Team[];
   /** oblíbené šablony (id) – v pořadí, jak byly označeny */
   favorites?: string[];
+  /** dočasně skryté šablony (v nabídce Vytvořit grafiku i Moje šablony) */
+  hiddenTemplates?: string[];
   createdAt: number;
 }
 

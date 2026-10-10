@@ -1481,6 +1481,166 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         ];
       })(),
     },
+    // 27 ── HRÁČ ZÁPASU – DETAIL (portrét zblízka, čísla pod sebou vpravo; podle Euroligy „Rivalry“, v barvách brand kitu)
+    {
+      id: "mvp-closeup",
+      name: "Hráč zápasu – Detail",
+      category: "Hráči",
+      description: "Detailní fotka hráče vlevo, vpravo se plynule ztrácí do barvy brand kitu. Logo ligy, loga obou týmů, velká kovová čísla pod sebou, jméno a soupeř dole, světelné oblouky a rohové závorky.",
+      background: "@dark",
+      finish: { grain: 10, vignette: 30 },
+      fields: [
+        { key: "first_name", label: "Jméno", type: "text" },
+        { key: "last_name", label: "Příjmení", type: "text" },
+        { key: "team", label: "Tým hráče", type: "team" },
+        { key: "opponent", label: "Soupeř", type: "team" },
+        { key: "s1_value", label: "Stat 1 – číslo", type: "text" },
+        { key: "s1_label", label: "Stat 1 – popisek", type: "text" },
+        { key: "s2_value", label: "Stat 2 – číslo", type: "text" },
+        { key: "s2_label", label: "Stat 2 – popisek", type: "text" },
+        { key: "s3_value", label: "Stat 3 – číslo", type: "text" },
+        { key: "s3_label", label: "Stat 3 – popisek", type: "text" },
+        { key: "photo", label: "Fotka (detail, hráč vlevo)", type: "image" },
+        f.credit,
+        { key: "team_logo", label: "Logo týmu (vlastní)", type: "image" },
+        { key: "opponent_logo", label: "Logo soupeře (vlastní)", type: "image" },
+      ],
+      sampleData: {
+        first_name: "Martin",
+        last_name: "Peterka",
+        team: "BK Kvis Pardubice",
+        opponent: "Slavia Praha",
+        s1_value: "24",
+        s1_label: "PTS",
+        s2_value: "27",
+        s2_label: "EFF",
+        s3_value: "9",
+        s3_label: "REB",
+        photo: PHOTO(a.arena),
+        photo_credit: "",
+      },
+      elements: (() => {
+        const metal = lin(90, [0, "#FFFFFF"], [0.5, "#F3F1F7"], [1, "#B9B3C8"]);
+        const stats = [3, 2].flatMap((n): TemplateElement[] =>
+          Array.from({ length: n }, (_, i): TemplateElement[] => {
+            const step = 228;
+            const y = 410 + ((3 - n) * step) / 2 + i * step;
+            const cond = { showIf: `s${n}_value`, ...(n < 3 ? { hideIf: "s3_value" } : {}) };
+            const sfx = n < 3 ? "-2" : "";
+            const nm = (x: string) => `${x}${n < 3 ? " (2 staty)" : ""}`;
+            return [
+              text(`v${i + 1}${sfx}`, nm(`Stat ${i + 1}`), [700, y, 370, 214], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 212, minSize: 80, valign: "bottom", letterSpacing: -0.045, fill: metal, shadow: { color: "rgba(0,0,0,0.35)", blur: 26, x: 0, y: 8 }, anchorX: "right", ...cond }),
+              text(`l${i + 1}${sfx}`, nm(`Stat ${i + 1} popisek`), [710, y + 214, 340, 40], `{{s${i + 1}_label}}`, { font: "Mazzard H", weight: 900, size: 30, uppercase: true, letterSpacing: 0.01, anchorX: "right", ...cond }),
+            ];
+          }).flat(),
+        );
+        const corner = (id: string, x: number, y: number, d: string, ax: "left" | "right", ay: "top" | "bottom"): TemplateElement => path(id, "Rohová závorka", [x, y, 34, 34], d, { stroke: "#FFFFFF", strokeWidth: 3, opacity: 0.9, anchorX: ax, anchorY: ay });
+        return [
+          img("photo", "Fotka", [0, 0, 1080, 1350], "{{photo}}", { fit: "cover", zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "placeholder" }),
+          // fotka se vpravo ztrácí do barvy brand kitu
+          rect("fade-r", "Přechod doprava do barvy", [0, 0, 1080, 1350], lin(0, [0, "@secondary/0"], [0.42, "@secondary/0"], [0.62, "@secondary/80"], [0.76, "@secondary/97"], [1, "@secondary"]), { anchorX: "stretch", anchorY: "stretch" }),
+          rect("fade-b", "Ztmavení dole", [0, 0, 1080, 1350], lin(90, [0, "@dark/30"], [0.12, "@dark/0"], [0.72, "@dark/0"], [1, "@dark/85"]), { anchorX: "stretch", anchorY: "stretch" }),
+          rect("glow", "Záře vpravo", [520, 520, 1000, 1000], { type: "radial", stops: [[0, "@primary/55"], [0.4, "@primary/18"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "right" }),
+          // světlo reflektoru nahoře
+          rect("spot", "Světlo reflektoru", [450, -10, 240, 240], { type: "radial", stops: [[0, "rgba(255,255,255,0.7)"], [0.25, "rgba(255,255,255,0.35)"], [0.6, "rgba(255,255,255,0)"], [1, "rgba(255,255,255,0)"]] }, { blend: "screen", anchorY: "top" }),
+          // světelné oblouky vpravo
+          path("arc1", "Světelný oblouk 1", [600, 0, 480, 1350], "M100 2 C 40 20, 10 50, 98 100", { stroke: "@primary", strokeWidth: 10, opacity: 0.55, blend: "screen", shadow: { color: "@primary", blur: 40, x: 0, y: 0 }, anchorX: "right", anchorY: "stretch" }),
+          path("arc2", "Světelný oblouk 2", [600, 0, 480, 1350], "M100 8 C 55 26, 30 55, 100 92", { stroke: "#FFFFFF", strokeWidth: 3, opacity: 0.55, blend: "screen", shadow: { color: "@primary", blur: 22, x: 0, y: 0 }, anchorX: "right", anchorY: "stretch" }),
+          path("arc3", "Světelný oblouk 3", [700, 700, 380, 650], "M100 0 C 70 40, 75 80, 100 100", { stroke: "@primary", strokeWidth: 26, opacity: 0.4, blend: "screen", shadow: { color: "#FFFFFF", blur: 30, x: 0, y: 0 }, anchorX: "right", anchorY: "bottom" }),
+          corner("c1", 30, 18, "M0 100 L0 0 L100 0", "left", "top"),
+          corner("c2", 1016, 18, "M0 0 L100 0 L100 100", "right", "top"),
+          corner("c3", 30, 1298, "M0 0 L0 100 L100 100", "left", "bottom"),
+          corner("c4", 1016, 1298, "M100 0 L100 100 L0 100", "right", "bottom"),
+          img("league", "Logo ligy", [700, 96, 260, 140], "brand:partner", { fit: "contain", fallback: "none", anchorX: "right", anchorY: "top" }),
+          logo("team-logo", "Logo týmu", [700, 286, 116, 96], "team", { override: "{{team_logo}}", logoVariant: "white", equalize: 0.7, anchorX: "right", anchorY: "top" }),
+          rect("logos-div", "Dělicí čára log", [839, 286, 1.5, 96], "rgba(255,255,255,0.55)", { anchorX: "right", anchorY: "top" }),
+          logo("opp-logo", "Logo soupeře", [862, 286, 116, 96], "opponent", { override: "{{opponent_logo}}", logoVariant: "white", equalize: 0.7, anchorX: "right", anchorY: "top" }),
+          ...stats,
+          text("name", "Jméno a příjmení", [64, 1084, 640, 60], "{{first_name}} {{last_name}}", { font: "Mazzard H", weight: 900, size: 54, minSize: 30, uppercase: true, letterSpacing: -0.005, shadow: { color: "rgba(0,0,0,0.45)", blur: 14, x: 0, y: 3 }, anchorY: "bottom" }),
+          text("vs", "Soupeř", [66, 1146, 640, 34], "vs {{opponent}}", { font: "Mazzard H", weight: 300, size: 26, uppercase: true, letterSpacing: 0.02, opacity: 0.85, showIf: "opponent", anchorY: "bottom" }),
+          text("credit", "Foto credit", [66, 1196, 640, 24], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 17, opacity: 0.5, showIf: "photo_credit", anchorY: "bottom" }),
+          brandLogo([760, 1236, 220, 64], { align: "right", anchorX: "right", anchorY: "bottom" }),
+        ];
+      })(),
+    },
+    // 28 ── HRÁČ ZÁPASU – CELÁ POSTAVA (akční fotka, diagonální plocha, obří tenké jméno, čísla v řadě se štítky; podle BCL, v barvách brand kitu)
+    {
+      id: "mvp-body",
+      name: "Hráč zápasu – Celá postava",
+      category: "Hráči",
+      description: "Akční fotka přes celou plochu, diagonální plocha v barvě brand kitu, logo týmu v šikmém pruhu vpravo nahoře, obří tenké jméno na dva řádky a tři čísla v řadě se štítky.",
+      background: "@dark",
+      finish: { grain: 10, vignette: 28 },
+      fields: [
+        { key: "first_name", label: "Jméno", type: "text" },
+        { key: "last_name", label: "Příjmení", type: "text" },
+        { key: "team", label: "Tým hráče", type: "team" },
+        { key: "opponent", label: "Soupeř", type: "team" },
+        { key: "s1_value", label: "Stat 1 – číslo", type: "text" },
+        { key: "s1_label", label: "Stat 1 – popisek", type: "text" },
+        { key: "s2_value", label: "Stat 2 – číslo", type: "text" },
+        { key: "s2_label", label: "Stat 2 – popisek", type: "text" },
+        { key: "s3_value", label: "Stat 3 – číslo", type: "text" },
+        { key: "s3_label", label: "Stat 3 – popisek", type: "text" },
+        { key: "photo", label: "Fotka (celá postava)", type: "image" },
+        f.credit,
+        { key: "team_logo", label: "Logo týmu (vlastní)", type: "image" },
+      ],
+      sampleData: {
+        first_name: "Martin",
+        last_name: "Peterka",
+        team: "BK Kvis Pardubice",
+        opponent: "Slavia Praha",
+        s1_value: "24",
+        s1_label: "PTS",
+        s2_value: "6",
+        s2_label: "AST",
+        s3_value: "26",
+        s3_label: "EFF",
+        photo: PHOTO(a.arena),
+        photo_credit: "",
+      },
+      elements: (() => {
+        const stats = [3, 2].flatMap((n): TemplateElement[] =>
+          Array.from({ length: n }, (_, i): TemplateElement[] => {
+            const w = n === 3 ? 214 : 280;
+            const x0 = 540 - (w * n) / 2;
+            const x = x0 + i * w;
+            const cond = { showIf: `s${n}_value`, ...(n < 3 ? { hideIf: "s3_value" } : {}) };
+            const sfx = n < 3 ? "-2" : "";
+            const nm = (t: string) => `${t}${n < 3 ? " (2 staty)" : ""}`;
+            const out: TemplateElement[] = [
+              text(`v${i + 1}${sfx}`, nm(`Stat ${i + 1}`), [x, 986, w, 126], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 128, minSize: 60, align: "center", valign: "bottom", letterSpacing: -0.02, shadow: { color: "rgba(0,0,0,0.35)", blur: 18, x: 0, y: 6 }, anchorY: "bottom", ...cond }),
+              rect(`p${i + 1}${sfx}`, nm(`Štítek ${i + 1}`), [x + w / 2 - 60, 1126, 120, 42], "@dark/85", { radius: 21, stroke: "rgba(255,255,255,0.9)", strokeWidth: 2, anchorY: "bottom", ...cond }),
+              text(`l${i + 1}${sfx}`, nm(`Štítek ${i + 1} – text`), [x + w / 2 - 60, 1126, 120, 42], `{{s${i + 1}_label}}`, { font: "Mazzard H", weight: 900, size: 24, uppercase: true, align: "center", valign: "middle", letterSpacing: 0.02, anchorY: "bottom", ...cond }),
+            ];
+            if (i > 0) out.push(rect(`d${i + 1}${sfx}`, nm(`Oddělovač ${i}`), [x - 1, 1018, 1.5, 72], "rgba(255,255,255,0.6)", { anchorY: "bottom", ...cond }));
+            return out;
+          }).flat(),
+        );
+        return [
+          img("photo", "Fotka", [0, 0, 1080, 1350], "{{photo}}", { fit: "cover", zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "placeholder" }),
+          // spodní tmavá plocha
+          rect("fade-b", "Ztmavení dole", [0, 0, 1080, 1350], lin(90, [0, "@dark/0"], [0.55, "@dark/0"], [0.74, "@secondary/70"], [0.88, "@secondary/95"], [1, "@dark"]), { anchorX: "stretch", anchorY: "stretch" }),
+          // diagonální plocha v barvě brand kitu
+          path("tri", "Diagonální plocha", [0, 0, 1080, 1350], "M0 81 L60 49 L71 84 L0 100 Z", { fill: lin(0, [0, "@primary/95"], [1, "@primary/75"]), anchorX: "stretch", anchorY: "stretch" }),
+          path("tri-hl", "Diagonální plocha – světlo", [0, 0, 1080, 1350], "M0 81 L60 49 L62 55 L0 86 Z", { fill: "rgba(255,255,255,0.10)", anchorX: "stretch", anchorY: "stretch" }),
+          // šikmá linka přes celou výšku
+          path("line", "Šikmá linka", [0, 0, 1080, 1350], "M79 0 L90 100", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.85, anchorX: "stretch", anchorY: "stretch" }),
+          // šikmý pruh s logem týmu vpravo nahoře
+          path("crest-bg", "Pruh s logem – plocha", [0, 0, 1080, 1350], "M80.4 0 L100 0 L100 33 L83.4 27.6 Z", { fill: "@secondary", shadow: { color: "rgba(0,0,0,0.35)", blur: 24, x: 0, y: 6 }, anchorX: "stretch", anchorY: "stretch" }),
+          path("crest-edge", "Pruh s logem – hrana", [0, 0, 1080, 1350], "M80.4 0 L83.4 27.6 L100 33", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.9, anchorX: "stretch", anchorY: "stretch" }),
+          logo("crest", "Logo týmu", [900, 60, 160, 250], "team", { override: "{{team_logo}}", logoVariant: "white", equalize: 0.75, opacity: 0.95, anchorX: "right", anchorY: "top" }),
+          // obří tenké jméno
+          text("first", "Jméno", [96, 700, 900, 170], "{{first_name}}", { font: "Mazzard H", weight: 300, size: 190, minSize: 80, uppercase: true, letterSpacing: -0.02, color: "#F4F3F7", shadow: { color: "rgba(0,0,0,0.35)", blur: 20, x: 0, y: 6 }, anchorY: "bottom" }),
+          text("last", "Příjmení", [420, 834, 640, 170], "{{last_name}}", { font: "Mazzard H", weight: 300, size: 190, minSize: 70, uppercase: true, letterSpacing: -0.02, color: "#F4F3F7", shadow: { color: "rgba(0,0,0,0.35)", blur: 20, x: 0, y: 6 }, anchorY: "bottom" }),
+          ...stats,
+          text("vs", "Soupeř", [60, 1216, 640, 32], "vs {{opponent}}", { font: "Mazzard H", weight: 300, size: 24, uppercase: true, letterSpacing: 0.04, opacity: 0.8, showIf: "opponent", anchorY: "bottom" }),
+          text("credit", "Foto credit", [60, 1260, 600, 24], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 17, opacity: 0.5, showIf: "photo_credit", anchorY: "bottom" }),
+          img("foot-logos", "Loga dole (liga | oBasketu)", [720, 1246, 320, 56], "brand:partner", { row: { srcs: ["brand:partner", "brand:logo"], gap: 20, sep: { color: "rgba(255,255,255,0.5)", width: 1.5, height: 0.9 }, maxW: 0.44 }, fallback: "none", anchorX: "right", anchorY: "bottom" }),
+        ];
+      })(),
+    },
   ];
 
   for (const d of defs) {

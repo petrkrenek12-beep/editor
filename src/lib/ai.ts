@@ -155,11 +155,11 @@ Pravidla:
 - VÝSLEDEK: když je na některém obrázku zápas ještě rozehraný (např. „Period 4 01:01“, běžící čas) a na jiném je „Konec“ / „Final“, ber skóre i čtvrtiny z KONEČNÉHO.
 - ČTVRTINY (pole "detail" nebo pole s „čtvrtiny“ v názvu): skóre každé čtvrtiny ve tvaru domácí:hosté oddělené " · ", např. "30:12 · 23:11 · 22:16 · 29:11" (prodloužení přidej na konec). Na Livesportu je blok „Skóre“ se dvěma řádky (domácí nahoře, hosté dole): první číslo je celkové skóre, další sloupce jsou čtvrtiny – spáruj vždy čísla ze stejného sloupce. Na FIBA LiveStats je malá tabulka CHO/SLO se čtvrtinami a celkem na konci.
 - Kolo piš např. "4. kolo". Termín (dates) krátce, např. "30.9." nebo "30.9. - 1.10.".
-- HRÁČ ZÁPASU – pokud má šablona pole "mvp" nebo "mvp_name", NEVYPLŇUJ je textem, ale přidej klíč "_mvp". Postup:
+- HRÁČ ZÁPASU – pokud má šablona pole "mvp", "mvp_name" nebo "last_name", NEVYPLŇUJ je textem, ale přidej klíč "_mvp". Postup:
   1. Najdi na obrázcích tabulku statistik hráčů (Livesport/Flashscore záložka „Statistiky hráčů“ nebo „Sestavy“, FIBA LiveStats, box score ligy). Sloupce bývají: B / PTS / BOD (body), DOS / REB / D (doskoky), AS / AST / A (asistence), ZIS / STL (zisky), BL / BLK (bloky), EFF / VAL / PIR / HOD (hodnocení).
   2. Tabulka bývá rozdělená po týmech (dva bloky nebo přepínač s názvy/logy týmů). Urči, který blok patří VÍTĚZNÉMU týmu (podle skóre zápasu). Když není jasné, vezmi hráče s nejvyšší hodnotou EFF/VAL/PIR v celém zápase.
   3. Z vítězného týmu vyber hráče s nejvyšším EFF/VAL/PIR; když tento sloupec není, hráče s nejvíce body.
-  4. Výsledek: "_mvp": {"name": CELÉ jméno ve tvaru „Křestní Příjmení“ – když je kdekoli na obrázcích celé křestní jméno (vyskakovací karta hráče, profil, „Nejlepší hráči“), použij ho; prostřední jména vynech („Karoline Elizabeth Striplin“ → „Karoline Striplin“). Jen když celé jméno nikde není, napiš zkratku ve tvaru „K. Striplin“ (ne „Striplin K.“), "team": jeho tým, "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo} – vynech jen čísla, která na obrázku nejsou.
+  4. Výsledek: "_mvp": {"name": CELÉ jméno ve tvaru „Křestní Příjmení“ – když je kdekoli na obrázcích celé křestní jméno (vyskakovací karta hráče, profil, „Nejlepší hráči“), použij ho; prostřední jména vynech („Karoline Elizabeth Striplin“ → „Karoline Striplin“). Jen když celé jméno nikde není, napiš zkratku ve tvaru „K. Striplin“ (ne „Striplin K.“), "team": jeho tým, "opponent": soupeř jeho týmu, "score": výsledek z pohledu jeho týmu („88:81“), "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo} – vynech jen čísla, která na obrázku nejsou.
   5. Livesport často ukazuje i blok „Nejlepší hráči“ / „Top hráči“ u přehledu zápasu – i ten použij.
   Když na žádném obrázku statistiky hráčů nejsou, "_mvp" vůbec nepřidávej (nevymýšlej).
 - Když má seznam zápasů sloupec "mvp", napiš do něj nejlepšího hráče vítězného týmu ve tvaru "Jméno Příjmení (21 PTS, 8 AST)" – body vždy, REB a AST jen když jich má aspoň 5.
@@ -231,7 +231,7 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
     if (pairs.length >= 2) out[f.key] = pairs.join(" · ");
   }
   // hráč zápasu: vždy body; doskoky a asistence od 5, jinak doplnit EFF/zisky/bloky
-  const m = raw._mvp as { name?: string; pts?: number; reb?: number; ast?: number; stl?: number; blk?: number; eff?: number } | undefined;
+  const m = raw._mvp as { name?: string; team?: string; opponent?: string; score?: string; pts?: number; reb?: number; ast?: number; stl?: number; blk?: number; eff?: number } | undefined;
   if (m?.name) {
     // "Striplin K." → "K. Striplin"
     const nm = String(m.name).trim().replace(/\s+/g, " ");
@@ -244,8 +244,17 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
     if (reb !== undefined && reb >= 5) stats.push([reb, "REB"]);
     if (ast !== undefined && ast >= 5) stats.push([ast, "AST"]);
     if (t.fields.some((f) => f.key === "mvp")) out.mvp = `${m.name} (${stats.map(([v, l]) => `${v} ${l}`).join(", ")})`;
-    if (t.fields.some((f) => f.key === "mvp_name")) {
-      out.mvp_name = m.name;
+    const has = (k: string) => t.fields.some((f) => f.key === k);
+    if (has("last_name")) {
+      const parts = m.name.split(" ");
+      out.last_name = parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
+      out.first_name = parts.length > 1 ? parts[0] : "";
+      if (has("team") && m.team) out.team = teamName(m.team);
+      if (has("opponent") && m.opponent) out.opponent = teamName(m.opponent);
+      if (has("result") && m.score) out.result = String(m.score).replace(/\s*[-–]\s*/, ":");
+    }
+    if (has("mvp_name") || has("last_name")) {
+      if (has("mvp_name")) out.mvp_name = m.name;
       // tři čísla do panelu: PTS + REB/AST (≥5) a doplnit EFF, zisky, bloky, případně nižší REB/AST
       const pool: [number | undefined, string][] = [[eff, "EFF"], [stl !== undefined && stl >= 3 ? stl : undefined, "STL"], [blk !== undefined && blk >= 3 ? blk : undefined, "BLK"], [reb !== undefined && reb < 5 ? reb : undefined, "REB"], [ast !== undefined && ast < 5 ? ast : undefined, "AST"]];
       for (const [v, l] of pool) if (stats.length < 3 && v !== undefined) stats.push([v, l]);

@@ -870,6 +870,12 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     roundRectPath(ctx, frame, (el.radius ?? 0) * s);
     ctx.clip();
   }
+  if (el.clip) {
+    // vykreslit jen část (např. rozmazaný pruh vpravo přesně nad stejnou fotkou)
+    ctx.beginPath();
+    ctx.rect(frame.x + el.clip.x * frame.w, frame.y + el.clip.y * frame.h, el.clip.w * frame.w, el.clip.h * frame.h);
+    ctx.clip();
+  }
   applyShadow(ctx, el, s, env, rc);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
@@ -936,7 +942,11 @@ function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement, frame: Frame
     t.fillStyle = gy;
     t.fillRect(0, 0, W, Hh);
     ctx.drawImage(tmp, dx, dy, dw, dh);
-  } else ctx.drawImage(source, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
+  } else {
+    if (el.blur) ctx.filter = `blur(${Math.round(el.blur * s)}px)${el.blurDim ? ` brightness(${el.blurDim})` : ""}`;
+    ctx.drawImage(source, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
+    ctx.filter = "none";
+  }
   ctx.restore();
 }
 

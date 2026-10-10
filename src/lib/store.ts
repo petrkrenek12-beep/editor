@@ -218,13 +218,14 @@ export function initStore() {
         projects = [...projects, z.project];
       }
       // v29: z NBL odebrané šablony (jen neupravené)
-      for (const t of templates.filter((x) => x.builtIn && x.id.startsWith("p-nbl-") && NBL_REMOVED.includes(x.id.slice(6)))) {
+      // v36: uživatel chce pryč i upravené kopie (stejné id) – mazat bez ohledu na úpravy
+      for (const t of templates.filter((x) => x.id.startsWith("p-nbl-") && NBL_REMOVED.includes(x.id.slice(6)))) {
         await a.remove("templates", t.id);
         templates = templates.filter((x) => x.id !== t.id);
         settings = { ...(settings ?? state.settings), tombstones: { ...(settings?.tombstones ?? state.settings.tombstones ?? {}), [`templates:${t.id}`]: Date.now() } };
       }
       // v26: šablona „Program kola – Hero“ zrušena (neupravené kopie odebrat)
-      for (const t of templates.filter((x) => /-program-hero$/.test(x.id) && x.builtIn)) {
+      for (const t of templates.filter((x) => /-(program-hero|mvp-premium)$/.test(x.id) && x.builtIn)) {
         await a.remove("templates", t.id);
         templates = templates.filter((x) => x.id !== t.id);
       }

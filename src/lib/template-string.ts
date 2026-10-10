@@ -50,6 +50,12 @@ export function getValue(ctx: RenderContext, key: string): DataValue {
   if (k === "even") return (ctx.rowIndex ?? 0) % 2 === 1 ? "1" : "";
   if (ctx.row && k in ctx.row) return ctx.row[k] as DataValue;
   if (k.startsWith("row.") && ctx.row) return ctx.row[k.slice(4)] as DataValue;
+  if (!(k in ctx.data) && k.includes(".")) {
+    // vlastnost obrázku, např. „photo.cut“ = má vyříznutou verzi
+    const i = k.indexOf(".");
+    const base = getValue(ctx, k.slice(0, i));
+    if (base && typeof base === "object" && !Array.isArray(base)) return (base as unknown as Record<string, DataValue>)[k.slice(i + 1)];
+  }
   return ctx.data[k];
 }
 
