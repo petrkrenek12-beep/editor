@@ -1288,6 +1288,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         { key: "kicker", label: "Soutěž", type: "text", placeholder: "Maxa NBL" },
         f.round,
         { key: "status", label: "Štítek nad skóre", type: "text", placeholder: "Konec / Po prodloužení" },
+        { key: "team_names", label: "Názvy týmů pod logy", type: "select", options: ["Zobrazit", "Skrýt"] },
         f.home,
         f.away,
         f.hs,
@@ -1337,22 +1338,21 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         path("c-tr", "Roh vpravo nahoře", [988, 40, 52, 52], "M0 0 L100 0 L100 100", { stroke: "#FFFFFF", strokeWidth: 2.5, opacity: 0.6, anchorX: "right", anchorY: "top" }),
         text("top", "Soutěž a kolo", [112, 50, 600, 34], "{{kicker}}  ·  {{round}}", { font: "body", weight: 600, size: 22, uppercase: true, letterSpacing: 0.32, anchorX: "left", anchorY: "top", shadow: { color: "rgba(0,0,0,0.6)", blur: 10, x: 0, y: 2 } }),
         text("credit", "Foto credit", [560, 50, 410, 34], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 22, align: "right", showIf: "photo_credit", anchorX: "right", anchorY: "top", shadow: { color: "rgba(0,0,0,0.6)", blur: 10, x: 0, y: 2 } }),
-        rect("st-l", "Štítek – linka vlevo", [330, 806, 120, 1.5], "@accent", { anchorY: "bottom" }),
-        rect("st-r", "Štítek – linka vpravo", [630, 806, 120, 1.5], "@accent", { anchorY: "bottom" }),
-        text("status", "Štítek", [450, 788, 180, 38], "{{status}}", { font: "body", weight: 700, size: 26, uppercase: true, align: "center", color: "@accent", letterSpacing: 0.34, anchorY: "bottom" }),
+        text("status", "Štítek", [340, 842, 400, 36], "{{status}}", { font: "body", weight: 800, size: 20, uppercase: true, align: "center", valign: "middle", letterSpacing: 0.3, pill: { fill: "@accent", padX: 16, padY: 6, radius: 4 }, showIf: "status", shadow: { color: "rgba(0,0,0,0.35)", blur: 12, x: 0, y: 4 }, anchorY: "bottom" }),
         logo("home-logo", "Logo domácí", [60, 850, 230, 170], "home_team", { override: "{{home_logo}}", logoVariant: "white", equalize: 0.6, anchorY: "bottom", dim: { when: "home_score < away_score", opacity: 0.55 } }),
-        text("home-name", "Název domácí", [40, 1028, 270, 30], "{{home_team|upper}}", { font: "body", weight: 700, size: 20, align: "center", letterSpacing: 0.12, opacity: 0.85, anchorY: "bottom" }),
-        text("home-rec", "Bilance domácí", [125, 1060, 100, 28], "{{home_record}}", { font: "body", weight: 600, size: 20, align: "center", letterSpacing: 0.1, opacity: 0.55, showIf: "home_record", anchorY: "bottom" }),
+        text("home-name", "Název domácí", [40, 1028, 270, 30], "{{home_team|upper}}", { font: "body", weight: 700, size: 20, align: "center", letterSpacing: 0.12, opacity: 0.85, hideIf: "team_names == Skrýt", anchorY: "bottom" }),
+        text("home-rec", "Bilance domácí", [125, 1060, 100, 28], "{{home_record}}", { font: "body", weight: 600, size: 20, align: "center", letterSpacing: 0.1, opacity: 0.55, showIf: "home_record", hideIf: "team_names == Skrýt", anchorY: "bottom" }),
+        text("home-rec-up", "Bilance domácí (bez názvu)", [125, 1030, 100, 28], "{{home_record}}", { font: "body", weight: 600, size: 22, align: "center", letterSpacing: 0.1, opacity: 0.7, showIf: "home_record && team_names == Skrýt", anchorY: "bottom" }),
         text("hs", "Skóre D", [300, 846, 222, 200], "{{home_score}}", { fitWith: "{{away_score}}", font: "Mazzard H", weight: 900, size: 200, align: "right", letterSpacing: -0.03, fill: lin(90, [0, "#FFFFFF"], [0.6, "#F2EFF6"], [1, "#BDB6CB"]), shadow: { color: "rgba(0,0,0,0.5)", blur: 30, x: 0, y: 10 }, dim: { when: "home_score < away_score", opacity: 0.35 }, anchorY: "bottom" }),
         rect("div", "Dělicí čára", [538.5, 880, 3, 140], "@accent", { anchorY: "bottom" }),
         text("as", "Skóre H", [558, 846, 222, 200], "{{away_score}}", { fitWith: "{{home_score}}", font: "Mazzard H", weight: 900, size: 200, align: "left", letterSpacing: -0.03, fill: lin(90, [0, "#FFFFFF"], [0.6, "#F2EFF6"], [1, "#BDB6CB"]), shadow: { color: "rgba(0,0,0,0.5)", blur: 30, x: 0, y: 10 }, dim: { when: "away_score < home_score", opacity: 0.35 }, anchorY: "bottom" }),
         logo("away-logo", "Logo hosté", [790, 850, 230, 170], "away_team", { override: "{{away_logo}}", logoVariant: "white", equalize: 0.6, anchorY: "bottom", dim: { when: "away_score < home_score", opacity: 0.55 } }),
-        text("away-name", "Název hosté", [770, 1028, 270, 30], "{{away_team|upper}}", { font: "body", weight: 700, size: 20, align: "center", letterSpacing: 0.12, opacity: 0.85, anchorY: "bottom" }),
-        text("away-rec", "Bilance hosté", [855, 1060, 100, 28], "{{away_record}}", { font: "body", weight: 600, size: 20, align: "center", letterSpacing: 0.1, opacity: 0.55, showIf: "away_record", anchorY: "bottom" }),
+        text("away-name", "Název hosté", [770, 1028, 270, 30], "{{away_team|upper}}", { font: "body", weight: 700, size: 20, align: "center", letterSpacing: 0.12, opacity: 0.85, hideIf: "team_names == Skrýt", anchorY: "bottom" }),
+        text("away-rec", "Bilance hosté", [855, 1060, 100, 28], "{{away_record}}", { font: "body", weight: 600, size: 20, align: "center", letterSpacing: 0.1, opacity: 0.55, showIf: "away_record", hideIf: "team_names == Skrýt", anchorY: "bottom" }),
+        text("away-rec-up", "Bilance hosté (bez názvu)", [855, 1030, 100, 28], "{{away_record}}", { font: "body", weight: 600, size: 22, align: "center", letterSpacing: 0.1, opacity: 0.7, showIf: "away_record && team_names == Skrýt", anchorY: "bottom" }),
         text("detail", "Čtvrtiny", [330, 1050, 420, 30], "{{detail}}", { font: "body", weight: 600, size: 21, align: "center", letterSpacing: 0.12, opacity: 0.6, showIf: "detail", anchorY: "bottom" }),
         rect("mvp-bg", "Hráč zápasu – sklo", [80, 1106, 920, 100], lin(0, [0, "rgba(255,255,255,0.10)"], [1, "rgba(255,255,255,0.04)"]), { radius: 50, stroke: "rgba(255,255,255,0.16)", strokeWidth: 1.5, showIf: "mvp_name", anchorY: "bottom" }),
-        text("mvp-label", "Hráč zápasu – popisek", [140, 1118, 400, 24], "Hráč zápasu", { font: "body", weight: 700, size: 17, uppercase: true, color: "@accent", letterSpacing: 0.3, showIf: "mvp_name", anchorY: "bottom" }),
-        text("mvp", "Hráč zápasu", [140, 1140, 420, 52], "{{mvp_name}}", { font: "Mazzard H", weight: 900, size: 40, uppercase: true, showIf: "mvp_name", anchorY: "bottom" }),
+        text("mvp", "Hráč zápasu", [140, 1128, 420, 56], "{{mvp_name}}", { font: "Mazzard H", weight: 900, size: 40, uppercase: true, showIf: "mvp_name", anchorY: "bottom" }),
         rect("mvp-div", "Hráč zápasu – čára", [578, 1126, 1.5, 60], "rgba(255,255,255,0.2)", { showIf: "s1_value", anchorY: "bottom" }),
         // statistiky: rozložení podle počtu vyplněných (3 / 2 / 1) – vždy rovnoměrně přes celý pravý díl pruhu
         ...[3, 2, 1].flatMap((n): TemplateElement[] =>
@@ -1642,6 +1642,40 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       })(),
     },
   ];
+
+  // 29 ── VÝSLEDKY – PREMIUM CAROUSEL (stejný design jako Výsledek zápasu – Premium, 1 zápas = 1 slide)
+  {
+    const base = defs.find((d) => d.id === "result-premium");
+    if (base) {
+      const globalKeys = ["kicker", "round", "status", "team_names"];
+      const rowFields = base.fields.filter((x) => !globalKeys.includes(x.key));
+      const sd = base.sampleData;
+      const row = Object.fromEntries(rowFields.map((x) => [x.key, sd[x.key]])) as typeof sd;
+      defs.push({
+        ...base,
+        id: "results-premium-carousel",
+        name: "Výsledky – Premium carousel",
+        description: "Stejný design jako Výsledek zápasu – Premium, ale pro více zápasů: každý zápas je jeden slide carouselu (vlastní fotka, skóre, čtvrtiny, hráč zápasu).",
+        paginate: { field: "games", perPage: 1, rowAsData: true },
+        fields: [
+          ...base.fields.filter((x) => globalKeys.includes(x.key)),
+          { key: "games", label: "Zápasy (1 zápas = 1 slide)", type: "list", help: "Každý řádek = jeden slide. Fotku přidáte kliknutím na políčko ve sloupci Fotka, výřez posunete tažením v náhledu.", columns: rowFields },
+        ],
+        sampleData: {
+          kicker: sd.kicker,
+          round: sd.round,
+          status: sd.status,
+          team_names: "Zobrazit",
+          games: [
+            row,
+            { ...row, home_team: RESULTS_2_KOLO[1].home, away_team: RESULTS_2_KOLO[1].away, home_score: RESULTS_2_KOLO[1].home_score, away_score: RESULTS_2_KOLO[1].away_score, home_record: "3-3", away_record: "4-2", detail: "18:20 · 21:19 · 20:24 · 20:21", mvp_name: "Kameron Taylor", s1_value: "22", s2_value: "7", s3_value: "25" },
+            { ...row, home_team: RESULTS_2_KOLO[2].home, away_team: RESULTS_2_KOLO[2].away, home_score: RESULTS_2_KOLO[2].home_score, away_score: RESULTS_2_KOLO[2].away_score, home_record: "6-0", away_record: "2-4", detail: "26:15 · 24:20 · 22:18 · 24:17", mvp_name: "Adam Kejval", s1_value: "18", s2_value: "11", s3_value: "26" },
+          ],
+        },
+        elements: JSON.parse(JSON.stringify(base.elements)),
+      });
+    }
+  }
 
   for (const d of defs) {
     const map = ANCHORS[d.id];
