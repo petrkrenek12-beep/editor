@@ -1,3 +1,4 @@
+import { TEX_SILK, TEX_SWIRL, TEX_HALFTONE } from "./textures";
 import type { Asset, BrandKit, Channel, Dataset, ImageElement, ListElement, Project, Team, Template, TemplateElement, TextElement } from "../types";
 import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./data";
 import { makeArena, makeBallPhoto, makePlayerCutout, makeWordmark } from "./procedural";
@@ -11,7 +12,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 40;
+export const SEED_VERSION = 44;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -71,6 +72,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
     rowsBgAsset(),
     barAsset(),
     linesAsset(),
+    ...textureAssets(),
     ...fontAssets(),
   );
 
@@ -109,7 +111,7 @@ export function bgAsset(): Asset {
 export function builtInTemplates(projectId: string): Template[] {
   if (projectId === "p-zbl") return zblTemplates();
   if (projectId === "p-bcl") return bclTemplates();
-  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result)$/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && (/-(result|derby)-premium$/.test(t.id) || /-results-premium-carousel$/.test(t.id) || /-mvp-(closeup|body)$/.test(t.id))));
+  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result)$/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && (/-(result|derby)-premium$/.test(t.id) || /-(results-premium-carousel|round-results-premium)$/.test(t.id) || /-mvp-(closeup|body)$/.test(t.id))));
   for (const t of list) {
     t.rev = SEED_VERSION;
     t.baseHash = designHash(t);
@@ -228,6 +230,15 @@ export function fontAssets(): Asset[] {
   return MAZZARD.map((f) => ({ id: "font-" + f.name.replace(/\.otf$/, "").toLowerCase(), projectId: SHARED, name: f.name, kind: "font" as const, dataUrl: f.dataUrl, createdAt: Date.now() }));
 }
 
+/** Textury pro prémiová pozadí (hedvábné světlo, oblouky, rastr) – sdílené */
+export function textureAssets(): Asset[] {
+  return [
+    { id: "tex-silk", projectId: SHARED, name: "Textura – hedvábné světlo (Screen)", kind: "element", dataUrl: TEX_SILK, w: 1080, h: 1350, createdAt: Date.now() },
+    { id: "tex-swirl", projectId: SHARED, name: "Textura – světelné oblouky (Screen)", kind: "element", dataUrl: TEX_SWIRL, w: 1080, h: 1350, createdAt: Date.now() },
+    { id: "tex-halftone", projectId: SHARED, name: "Textura – rastr teček", kind: "element", dataUrl: TEX_HALFTONE, w: 1080, h: 1350, createdAt: Date.now() },
+  ];
+}
+
 export function linesAsset(): Asset {
   return { id: "demo-lines", projectId: SHARED, name: "Čáry – míč (režim Screen)", kind: "element", dataUrl: LINES_JPG, w: 1536, h: 1024, createdAt: Date.now() };
 }
@@ -251,7 +262,7 @@ export function newerDesign(t: Template): Template | undefined {
 
 // ── ŽBL (ženská liga) ───────────────────────────────────────
 
-export const ZBL_IDS = ["results-premium-carousel", "mvp-closeup", "mvp-body", "derby-premium", "result-premium", "program-premium", "result", "results-panorama", "results-round", "program", "standings", "player-stats", "transfer", "breaking"];
+export const ZBL_IDS = ["round-results-premium", "results-premium-carousel", "mvp-closeup", "mvp-body", "derby-premium", "result-premium", "program-premium", "result", "results-panorama", "results-round", "program", "standings", "player-stats", "transfer", "breaking"];
 
 /** Projekt ŽBL: zelené pozadí, logo Chance ŽBL, týmy s barevnými i bílými logy. Brand (logo, fonty) převezme z NBL. */
 export function zblProject(nblBrand: BrandKit, createdAt = Date.now()): { project: Project; assets: Asset[] } {
@@ -327,6 +338,7 @@ function zblTemplates(): Template[] {
     if (id === "results-round") d.games = games.map((g) => ({ home: g[0], away: g[1], home_score: g[2], away_score: g[3], detail: g[4] }));
     if (id === "program") Object.assign(d, { dates: "4.10.", round: "2. kolo" });
     if (id === "result-premium") Object.assign(d, { kicker: "Chance ŽBL", round: "2. kolo", home_team: T[2], away_team: T[8], home_score: 78, away_score: 71, home_record: "2-0", away_record: "1-1", detail: "20:17 · 18:19 · 22:15 · 18:20", mvp_name: "Tereza Nováková", s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "24", s3_label: "EFF" });
+    if (id === "round-results-premium") Object.assign(d, { kicker: "Chance ŽBL", round: "1. kolo", dates: "27. 9.", games: games.map((g) => ({ home: g[0], away: g[1], home_score: g[2], away_score: g[3] })) });
     if (id === "results-premium-carousel") {
       Object.assign(d, { kicker: "Chance ŽBL", round: "2. kolo" });
       d.games = games.slice(0, 3).map((g, k) => ({ ...((d.games as Record<string, unknown>[])[0] ?? {}), home_team: g[0], away_team: g[1], home_score: g[2], away_score: g[3], detail: String(g[4]).replace(/ \| /g, " · "), home_record: "", away_record: "", mvp_name: mvps[k].split(" (")[0], s1_value: ["21", "18", "16"][k], s1_label: "PTS", s2_value: ["9", "6", "11"][k], s2_label: k === 1 ? "AST" : "REB", s3_value: ["24", "20", "22"][k], s3_label: "EFF" }));

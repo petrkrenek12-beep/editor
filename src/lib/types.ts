@@ -225,7 +225,7 @@ export interface ListElement extends BaseElement {
   /** Když se řádky nevejdou, zmenší se (nikdy nepřetečou) */
   children: TemplateElement[];
   /** Jeden obrázek přes všechny řádky (každý řádek ukáže svůj výřez) */
-  rowsBg?: { src: string; radius?: number; opacity?: number; /** plná barva pod obrázkem (jako černá vrstva v Affinity) */ backing?: string };
+  rowsBg?: { src: string; radius?: number; opacity?: number; /** plná barva pod obrázkem (jako černá vrstva v Affinity) */ backing?: string; /** obrázek zarovnaný na celou plochu grafiky (např. matné sklo z pozadí) */ canvas?: boolean; blur?: number; brightness?: number };
   /** Mřížka dlaždic místo řádků: `cols` na řádek, dlaždice colWidth × rowHeight, poslední řádek na střed */
   grid?: { cols: number; colWidth: number; colGap?: number };
 }

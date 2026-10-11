@@ -1051,7 +1051,8 @@ function drawElement(
         if (rbImg && rf.length) {
           const top = rf[0].y;
           const bottom = rf[rf.length - 1].y + rf[rf.length - 1].h;
-          const U = { x: frame.x, y: top, w: frame.w, h: bottom - top };
+          const fmt = FORMATS[env.format];
+          const U = el.rowsBg!.canvas ? { x: 0, y: 0, w: fmt.w, h: fmt.h } : { x: frame.x, y: top, w: frame.w, h: bottom - top };
           const kk = Math.max(U.w / rbImg.naturalWidth, U.h / rbImg.naturalHeight);
           const dw = rbImg.naturalWidth * kk;
           const dh = rbImg.naturalHeight * kk;
@@ -1064,7 +1065,9 @@ function drawElement(
               ctx.fillRect(r.x, r.y, r.w, r.h);
             }
             ctx.globalAlpha *= el.rowsBg!.opacity ?? 1;
+            if (el.rowsBg!.blur || el.rowsBg!.brightness) ctx.filter = `blur(${Math.round((el.rowsBg!.blur ?? 0) * s)}px) brightness(${el.rowsBg!.brightness ?? 1})`;
             ctx.drawImage(rbImg, U.x + (U.w - dw) / 2, U.y + (U.h - dh) / 2, dw, dh);
+            ctx.filter = "none";
             ctx.restore();
           }
         }

@@ -1643,6 +1643,81 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
     },
   ];
 
+  // 30 ── VÝSLEDKY KOLA – PREMIUM (pozadí z brand kitu + světelné efekty, hlavička jako Program – Premium, karty z matného skla)
+  {
+    const metal = lin(90, [0, "#FFFFFF"], [0.55, "#F1EEF6"], [1, "#B9B2C6"]);
+    const beam = (id: string, x: number, y: number, h: number, rot: number, op: number): TemplateElement =>
+      rect(id, "Světelný paprsek", [x, y, 70, h], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.55)"], [1, "rgba(255,255,255,0)"]), { rotation: rot, opacity: op, blend: "screen", fade: { angle: 90, from: 0, to: 0.35 } });
+    defs.push({
+      id: "round-results-premium",
+      name: "Výsledky kola – Premium",
+      category: "Soutěž",
+      description: "Pozadí z brand kitu se světelnými paprsky, barevnými záři a trojúhelníky v rozích, hlavička jako u Programu – Premium, karty z matného skla se září v barvách týmů a kovovým skóre.",
+      background: "@dark",
+      finish: { grain: 16, vignette: 42 },
+      fields: [
+        { key: "kicker", label: "Nadtitulek", type: "text", placeholder: "Maxa NBL" },
+        { key: "title", label: "Nadpis", type: "text", placeholder: "Výsledky" },
+        f.round,
+        { key: "dates", label: "Termín", type: "text", placeholder: "3.–4. 10." },
+        {
+          key: "games",
+          label: "Zápasy",
+          type: "list",
+          help: "2–6 zápasů. Loga bere z týmů, případně nahrajte vlastní do sloupce Logo D / Logo H.",
+          columns: [
+            { key: "home", label: "Domácí", type: "team" },
+            { key: "away", label: "Hosté", type: "team" },
+            { key: "home_score", label: "Skóre D", type: "number" },
+            { key: "away_score", label: "Skóre H", type: "number" },
+            { key: "home_logo", label: "Logo D (vlastní)", type: "image" },
+            { key: "away_logo", label: "Logo H (vlastní)", type: "image" },
+          ],
+        },
+        { key: "loser", label: "Skóre poraženého", type: "select", options: ["Ztlumit", "Nic"] },
+      ],
+      sampleData: { kicker: "Maxa NBL", title: "Výsledky", round: "2. kolo", dates: "27.–28. 9.", games: RESULTS_2_KOLO.slice(0, 6).map((g) => ({ home: g.home, away: g.away, home_score: g.home_score, away_score: g.away_score })), loser: "Ztlumit" },
+      elements: [
+        img("bg", "Pozadí (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", zone: "bg", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+        rect("bg-dim", "Ztmavení pozadí", [0, 0, 1080, 1350], "@dark/52", { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        // hedvábné světlo v barvě projektu + bílý lesk
+        img("silk", "Hedvábné světlo (barva projektu)", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 1.6, tint: "@primary", blend: "screen", opacity: 0.65, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("silk-hl", "Hedvábné světlo – lesk", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 4.5, blend: "screen", opacity: 0.22, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("swirl", "Světelné oblouky", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 1.4, tint: "@primary", blend: "screen", opacity: 0.45, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("swirl-hl", "Světelné oblouky – lesk", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 3, blend: "screen", opacity: 0.2, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("halftone", "Rastr teček", [0, 0, 1080, 1350], "asset:tex-halftone", { fit: "cover", lumaKey: 1, blend: "screen", opacity: 0.06, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        // barevné záře
+        rect("bloom-1", "Záře vlevo nahoře", [-520, -520, 1300, 1300], { type: "radial", stops: [[0, "@primary/60"], [0.35, "@primary/20"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "left", anchorY: "top" }),
+        rect("bloom-2", "Záře vpravo dole", [380, 640, 1240, 1240], { type: "radial", stops: [[0, "@primary/35"], [0.35, "@primary/10"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "right", anchorY: "bottom" }),
+        // ztmavení pod kartami (čitelnost)
+        rect("center-dim", "Ztmavení pod kartami", [-60, 260, 1200, 1060], { type: "radial", stops: [[0, "@dark/70"], [0.45, "@dark/45"], [0.69, "@dark/0"], [1, "@dark/0"]] }, {}),
+        // hlavička (stejná jako Program – Premium)
+        rect("k-line-l", "Linka vlevo", [318, 92, 86, 1.5], "rgba(255,255,255,0.45)"),
+        rect("k-line-r", "Linka vpravo", [676, 92, 86, 1.5], "rgba(255,255,255,0.45)"),
+        text("kicker", "Nadtitulek", [414, 74, 252, 38], "{{kicker}}", { font: "body", weight: 600, size: 24, uppercase: true, align: "center", letterSpacing: 0.34, opacity: 0.9 }),
+        text("title", "Nadpis", [80, 112, 920, 176], "{{title|default:Výsledky}}", { font: "Mazzard H", weight: 900, size: 172, minSize: 80, uppercase: true, align: "center", letterSpacing: -0.02, fill: metal, shadow: { color: "rgba(0,0,0,0.55)", blur: 34, x: 0, y: 12 } }),
+        path("i-tl", "Rámeček – roh 1", [318, 296, 22, 22], "M0 100 L0 0 L100 0", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7 }),
+        path("i-tr", "Rámeček – roh 2", [740, 296, 22, 22], "M0 0 L100 0 L100 100", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7 }),
+        path("i-bl", "Rámeček – roh 3", [318, 346, 22, 22], "M0 0 L0 100 L100 100", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7 }),
+        path("i-br", "Rámeček – roh 4", [740, 346, 22, 22], "M100 0 L100 100 L0 100", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7 }),
+        text("info", "Kolo a termín", [340, 298, 400, 68], "[{{round}}] | {{dates}}", { font: "Saira Condensed", weight: 700, size: 40, uppercase: true, align: "center", letterSpacing: 0.06, wordSpacing: 0.18, highlight: "@accent", highlightWeight: 800 }),
+        // karty z matného skla
+        list("games", "Zápasy", [200, 400, 680, 790], "games", 118, 18, [
+          rect("card", "Karta – sklo", [0, 0, 680, 118], lin(90, [0, "rgba(255,255,255,0.16)"], [1, "rgba(255,255,255,0.05)"]), { radius: 24, stroke: "rgba(255,255,255,0.28)", strokeWidth: 1.5 }),
+          rect("hg", "Záře domácích", [10, -30, 250, 178], { type: "radial", stops: [[0, "@team:{{home}}/26"], [0.69, "@team:{{home}}/0"], [1, "@team:{{home}}/0"]] }, { blend: "screen" }),
+          rect("ag", "Záře hostů", [420, -30, 250, 178], { type: "radial", stops: [[0, "@team:{{away}}/26"], [0.69, "@team:{{away}}/0"], [1, "@team:{{away}}/0"]] }, { blend: "screen" }),
+          rect("card-hl", "Karta – horní odlesk", [30, 1, 620, 1.5], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.7)"], [1, "rgba(255,255,255,0)"])),
+          logo("hl", "Logo D", [46, 12, 150, 94], "home", { override: "{{home_logo}}", equalize: 0.62, shadow: { color: "rgba(0,0,0,0.35)", blur: 14, x: 0, y: 4 } }),
+          text("hs", "Skóre D", [196, 10, 126, 98], "{{home_score}}", { fitWith: "{{away_score}}", font: "Mazzard H", weight: 900, size: 74, minSize: 40, align: "right", valign: "middle", letterSpacing: -0.03, fill: metal, dim: { when: "home_score < away_score", opacity: 0.45, mode: "loser" } }),
+          rect("dash", "Pomlčka", [328, 56, 24, 6], "@accent", { radius: 3 }),
+          text("as", "Skóre H", [358, 10, 126, 98], "{{away_score}}", { fitWith: "{{home_score}}", font: "Mazzard H", weight: 900, size: 74, minSize: 40, align: "left", valign: "middle", letterSpacing: -0.03, fill: metal, dim: { when: "away_score < home_score", opacity: 0.45, mode: "loser" } }),
+          logo("al", "Logo H", [484, 12, 150, 94], "away", { override: "{{away_logo}}", equalize: 0.62, shadow: { color: "rgba(0,0,0,0.35)", blur: 14, x: 0, y: 4 } }),
+        ], { distribute: true, rowsBg: { src: "brand:bg0", radius: 24, canvas: true, blur: 26, brightness: 1.1, opacity: 0.4, backing: "@dark/85" } }),
+        img("foot-logos", "Loga dole (liga | oBasketu)", [290, 1230, 500, 76], "brand:partner", { row: { srcs: ["brand:partner", "brand:logo"], gap: 28, sep: { color: "rgba(255,255,255,0.5)", width: 1.5, height: 0.9 }, maxW: 0.44 }, fallback: "none", anchorY: "bottom" }),
+      ],
+    });
+  }
+
   // 29 ── VÝSLEDKY – PREMIUM CAROUSEL (stejný design jako Výsledek zápasu – Premium, 1 zápas = 1 slide)
   {
     const base = defs.find((d) => d.id === "result-premium");
