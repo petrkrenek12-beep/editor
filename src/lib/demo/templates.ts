@@ -1727,7 +1727,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       id: "standings-premium",
       name: "Tabulka – Premium",
       category: "Soutěž",
-      description: "Prémiové pozadí, velký nadpis a logo ligy, skleněný panel se světlými řádky: šipka posunu, pořadí, logo, tým, výhry, prohry a série (zeleně výhry, červeně prohry), přerušovaná a plná dělicí čára.",
+      description: "Prémiové pozadí, velký nadpis a logo ligy, skleněný panel se světlými řádky: šipka posunu, pořadí, logo, tým, zápasy, výhry, prohry a série (zeleně výhry, červeně prohry), přerušovaná a plná dělicí čára.",
       background: "@dark",
       finish: { grain: 14, vignette: 40 },
       fields: [
@@ -1742,6 +1742,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
             { key: "pos", label: "#", type: "number" },
             { key: "prev", label: "Předchozí pozice", type: "number" },
             { key: "team", label: "Tým", type: "team" },
+            { key: "g", label: "Z", type: "number" },
             { key: "w", label: "V", type: "number" },
             { key: "l", label: "P", type: "number" },
             { key: "streak", label: "Série", type: "text" },
@@ -1755,7 +1756,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       sampleData: {
         title: "Tabulka",
         round_label: "Po 4. kole",
-        rows: STANDINGS.map((r, i) => ({ pos: r.pos, prev: [1, 3, 2, 5, 4, 6, 9, 7, 8, 11, 10, 12][i] ?? r.pos, team: r.team, w: r.w, l: r.l, streak: ["4V", "2V", "P", "V", "2P", "V", "P", "2V", "P", "V", "3P", "2P"][i] ?? "" })),
+        rows: STANDINGS.map((r, i) => ({ pos: r.pos, prev: [1, 3, 2, 5, 4, 6, 9, 7, 8, 11, 10, 12][i] ?? r.pos, team: r.team, g: r.w + r.l, w: r.w, l: r.l, streak: ["4V", "2V", "P", "V", "2P", "V", "P", "2V", "P", "V", "3P", "2P"][i] ?? "" })),
         cut1: 6,
         cut2: 10,
         cut1_label: "Čtvrtfinále",
@@ -1773,6 +1774,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         // hlavička tabulky
         text("h-pos", "Hlavička #", [146, 232, 70, 54], "#", { font: "Saira Condensed", weight: 600, size: 34, align: "center", valign: "middle", opacity: 0.85 }),
         text("h-team", "Hlavička tým", [316, 232, 300, 54], "Tým", { font: "Saira Condensed", weight: 600, size: 34, uppercase: true, valign: "middle", opacity: 0.95 }),
+        text("h-g", "Hlavička Z", [680, 232, 70, 54], "Z", { font: "Saira Condensed", weight: 600, size: 34, align: "center", valign: "middle", opacity: 0.95 }),
         text("h-w", "Hlavička V", [750, 232, 70, 54], "V", { font: "Saira Condensed", weight: 600, size: 34, align: "center", valign: "middle", opacity: 0.95 }),
         text("h-l", "Hlavička P", [820, 232, 70, 54], "P", { font: "Saira Condensed", weight: 600, size: 34, align: "center", valign: "middle", opacity: 0.95 }),
         text("h-s", "Hlavička série", [890, 232, 110, 54], "Série", { font: "Saira Condensed", weight: 600, size: 34, uppercase: true, align: "center", valign: "middle", color: "@accent" }),
@@ -1786,7 +1788,8 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           text("pos", "Pořadí", [56, 0, 70, 74], "{{pos}}", { font: "Saira Condensed", weight: 700, size: 44, align: "center", valign: "middle" }),
           rect("row", "Řádek", [126, 0, 784, 74], lin(0, [0, "rgba(255,255,255,0.94)"], [1, "rgba(238,233,248,0.86)"])),
           logo("logo", "Logo", [140, 8, 76, 58], "team", { equalize: 0.72 }),
-          text("team", "Tým", [228, 0, 430, 74], "{{team}}", { font: "Saira Condensed", weight: 600, size: 40, minSize: 26, valign: "middle", color: "@dark" }),
+          text("team", "Tým", [228, 0, 360, 74], "{{team}}", { font: "Saira Condensed", weight: 600, size: 40, minSize: 26, valign: "middle", color: "@dark" }),
+          text("g", "Zápasy", [590, 0, 70, 74], "{{g}}", { font: "Saira Condensed", weight: 600, size: 38, align: "center", valign: "middle", color: "@dark" }),
           text("w", "Výhry", [660, 0, 70, 74], "{{w}}", { font: "Saira Condensed", weight: 600, size: 38, align: "center", valign: "middle", color: "@dark" }),
           text("l", "Prohry", [730, 0, 70, 74], "{{l}}", { font: "Saira Condensed", weight: 600, size: 38, align: "center", valign: "middle", color: "@dark" }),
           text("st-w", "Série (výhry)", [800, 0, 110, 74], "{{streak}}", { font: "Saira Condensed", weight: 800, size: 38, uppercase: true, align: "center", valign: "middle", color: "#14A04A", showIf: "streak *= V" }),

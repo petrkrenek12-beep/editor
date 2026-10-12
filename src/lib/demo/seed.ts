@@ -12,7 +12,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 45;
+export const SEED_VERSION = 46;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -340,7 +340,7 @@ function zblTemplates(): Template[] {
     if (id === "result-premium") Object.assign(d, { kicker: "Chance ŽBL", round: "2. kolo", home_team: T[2], away_team: T[8], home_score: 78, away_score: 71, home_record: "2-0", away_record: "1-1", detail: "20:17 · 18:19 · 22:15 · 18:20", mvp_name: "Tereza Nováková", s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "24", s3_label: "EFF" });
     if (id === "standings-premium") {
       Object.assign(d, { round_label: "Po 1. kole", cut1: 5, cut2: "", cut1_label: "Play-off", cut2_label: "" });
-      d.rows = T.map((team, k) => ({ pos: k + 1, prev: "", team, w: k < 4 ? 1 : 0, l: k >= 4 && k < 8 ? 1 : 0, streak: k < 4 ? "V" : k < 8 ? "P" : "" }));
+      d.rows = T.map((team, k) => ({ pos: k + 1, prev: "", team, g: k < 8 ? 1 : 0, w: k < 4 ? 1 : 0, l: k >= 4 && k < 8 ? 1 : 0, streak: k < 4 ? "V" : k < 8 ? "P" : "" }));
       // méně týmů → vyšší řádky (svislé rozměry prvků v řádku se natáhnou)
       const r = 88 / 74;
       nt.elements = nt.elements.map((e) =>
