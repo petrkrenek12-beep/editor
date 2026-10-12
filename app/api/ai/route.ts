@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // AI asistent – volá Anthropic API. Nastavte ANTHROPIC_API_KEY ve Vercelu.
-// Volitelně ANTHROPIC_MODEL (výchozí claude-sonnet-4-5).
+// Volitelně ANTHROPIC_MODEL (výchozí claude-sonnet-5-5).
 export const runtime = "nodejs";
 
 export async function GET() {
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5",
+      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
       max_tokens: 4000,
       messages: [{ role: "user", content }],
     }),
