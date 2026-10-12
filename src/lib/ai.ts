@@ -164,6 +164,10 @@ Pravidla:
   Když na žádném obrázku statistiky hráčů nejsou, "_mvp" vůbec nepřidávej (nevymýšlej).
 - Když má seznam zápasů sloupec "mvp", napiš do něj nejlepšího hráče vítězného týmu ve tvaru "Jméno Příjmení (21 PTS, 8 AST)" – body vždy, REB a AST jen když jich má aspoň 5.
 - Seznamy (např. zápasy) vyplň ve stejném pořadí jako na screenshotu, všechny řádky.
+- TABULKA SOUTĚŽE (sloupce jako "move", "streak", "g", "w", "l"):
+  • "move" = posun v tabulce podle ikony u pořadí: šipka NAHORU (často oranžová) → "nahoru", šipka DOLŮ (často šedá) → "dolů", šipka DOPRAVA nebo rovnítko (beze změny) → "stejně". Šipka doprava NIKDY neznamená dolů.
+  • Sloupec „Posledních 5 zápasů“ přepiš do klíče "_last5" jako řetězec písmen V/P, PRVNÍ IKONA ZLEVA = nejnovější zápas. Fajfka / zelená / oranžová = V (výhra), pomlčka / šedá / červená = P (prohra). Např. ikony ✓ ✓ – ✓ ✓ → "VVPVV". "streak" pak nevyplňuj, dopočítá se.
+  • Z = zápasy, V = výhry, P = prohry.
 - Pole, která ze screenshotu nejdou zjistit, VYNECH (nevymýšlej).
 
 Odpověz POUZE JSON objektem s klíči polí, např. {"home_team":"…","home_score":96}.`;
@@ -212,6 +216,17 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
       out[f.key] = v.map((row) => {
         const r0 = (row ?? {}) as Record<string, unknown>;
         const r1: Record<string, unknown> = {};
+        // série z posledních zápasů (první zleva = nejnovější): VVPVV → 2V, max. 5
+        const last5 = String(r0._last5 ?? "").toUpperCase().replace(/[^VPWL]/g, "").replace(/W/g, "V").replace(/L/g, "P");
+        if (last5 && (f.columns ?? []).some((c) => c.key === "streak")) {
+          let n = 1;
+          while (n < Math.min(5, last5.length) && last5[n] === last5[0]) n++;
+          r0.streak = `${n > 1 ? n : ""}${last5[0]}`;
+        }
+        if (typeof r0.move === "string") {
+          const mv = r0.move.toLowerCase();
+          r0.move = /nah|up|↑|▲/.test(mv) ? "nahoru" : /dol|down|↓|▼/.test(mv) ? "dolů" : /stej|=|→|right|same/.test(mv) ? "stejně" : r0.move;
+        }
         for (const c of f.columns ?? []) {
           if (!(c.key in r0) || c.type === "channel" || c.type === "image") continue;
           r1[c.key] = c.type === "team" ? teamName(r0[c.key]) : c.type === "date" ? dateOf(r0[c.key]) : c.type === "number" && r0[c.key] !== "" ? Number(r0[c.key]) : String(r0[c.key] ?? "");
