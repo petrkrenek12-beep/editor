@@ -1646,6 +1646,22 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
   // 30 ── VÝSLEDKY KOLA – PREMIUM (pozadí z brand kitu + světelné efekty, hlavička jako Program – Premium, karty z matného skla)
   {
     const metal = lin(90, [0, "#FFFFFF"], [0.55, "#F1EEF6"], [1, "#B9B2C6"]);
+    // společné prémiové pozadí (brand kit + hedvábné světlo + oblouky + rastr + záře)
+    const premiumBg = (): TemplateElement[] => [
+        img("bg", "Pozadí (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", zone: "bg", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+        rect("bg-dim", "Ztmavení pozadí", [0, 0, 1080, 1350], "@dark/52", { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        // hedvábné světlo v barvě projektu + bílý lesk
+        img("silk", "Hedvábné světlo (barva projektu)", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 1.6, tint: "@primary", blend: "screen", opacity: 0.65, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("silk-hl", "Hedvábné světlo – lesk", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 4.5, blend: "screen", opacity: 0.22, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("swirl", "Světelné oblouky", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 1.4, tint: "@primary", blend: "screen", opacity: 0.45, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("swirl-hl", "Světelné oblouky – lesk", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 3, blend: "screen", opacity: 0.2, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("halftone", "Rastr teček", [0, 0, 1080, 1350], "asset:tex-halftone", { fit: "cover", lumaKey: 1, blend: "screen", opacity: 0.06, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        // barevné záře
+        rect("bloom-1", "Záře vlevo nahoře", [-520, -520, 1300, 1300], { type: "radial", stops: [[0, "@primary/60"], [0.35, "@primary/20"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "left", anchorY: "top" }),
+        rect("bloom-2", "Záře vpravo dole", [380, 640, 1240, 1240], { type: "radial", stops: [[0, "@primary/35"], [0.35, "@primary/10"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "right", anchorY: "bottom" }),
+        // ztmavení pod kartami (čitelnost)
+        rect("center-dim", "Ztmavení pod kartami", [-60, 260, 1200, 1060], { type: "radial", stops: [[0, "@dark/70"], [0.45, "@dark/45"], [0.69, "@dark/0"], [1, "@dark/0"]] }, {}),
+    ];
     const beam = (id: string, x: number, y: number, h: number, rot: number, op: number): TemplateElement =>
       rect(id, "Světelný paprsek", [x, y, 70, h], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.55)"], [1, "rgba(255,255,255,0)"]), { rotation: rot, opacity: op, blend: "screen", fade: { angle: 90, from: 0, to: 0.35 } });
     defs.push({
@@ -1678,19 +1694,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       ],
       sampleData: { kicker: "Maxa NBL", title: "Výsledky", round: "2. kolo", dates: "27.–28. 9.", games: RESULTS_2_KOLO.slice(0, 6).map((g) => ({ home: g.home, away: g.away, home_score: g.home_score, away_score: g.away_score })), loser: "Ztlumit" },
       elements: [
-        img("bg", "Pozadí (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", zone: "bg", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
-        rect("bg-dim", "Ztmavení pozadí", [0, 0, 1080, 1350], "@dark/52", { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
-        // hedvábné světlo v barvě projektu + bílý lesk
-        img("silk", "Hedvábné světlo (barva projektu)", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 1.6, tint: "@primary", blend: "screen", opacity: 0.65, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
-        img("silk-hl", "Hedvábné světlo – lesk", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 4.5, blend: "screen", opacity: 0.22, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
-        img("swirl", "Světelné oblouky", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 1.4, tint: "@primary", blend: "screen", opacity: 0.45, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
-        img("swirl-hl", "Světelné oblouky – lesk", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 3, blend: "screen", opacity: 0.2, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
-        img("halftone", "Rastr teček", [0, 0, 1080, 1350], "asset:tex-halftone", { fit: "cover", lumaKey: 1, blend: "screen", opacity: 0.06, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
-        // barevné záře
-        rect("bloom-1", "Záře vlevo nahoře", [-520, -520, 1300, 1300], { type: "radial", stops: [[0, "@primary/60"], [0.35, "@primary/20"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "left", anchorY: "top" }),
-        rect("bloom-2", "Záře vpravo dole", [380, 640, 1240, 1240], { type: "radial", stops: [[0, "@primary/35"], [0.35, "@primary/10"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "right", anchorY: "bottom" }),
-        // ztmavení pod kartami (čitelnost)
-        rect("center-dim", "Ztmavení pod kartami", [-60, 260, 1200, 1060], { type: "radial", stops: [[0, "@dark/70"], [0.45, "@dark/45"], [0.69, "@dark/0"], [1, "@dark/0"]] }, {}),
+        ...premiumBg(),
         // hlavička (stejná jako Program – Premium)
         rect("k-line-l", "Linka vlevo", [318, 92, 86, 1.5], "rgba(255,255,255,0.45)"),
         rect("k-line-r", "Linka vpravo", [676, 92, 86, 1.5], "rgba(255,255,255,0.45)"),
@@ -1714,6 +1718,88 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           logo("al", "Logo H", [484, 12, 150, 94], "away", { override: "{{away_logo}}", equalize: 0.62, shadow: { color: "rgba(0,0,0,0.35)", blur: 14, x: 0, y: 4 } }),
         ], { distribute: true, rowsBg: { src: "brand:bg0", radius: 24, canvas: true, blur: 26, brightness: 1.1, opacity: 0.4, backing: "@dark/85" } }),
         img("foot-logos", "Loga dole (liga | oBasketu)", [290, 1230, 500, 76], "brand:partner", { row: { srcs: ["brand:partner", "brand:logo"], gap: 28, sep: { color: "rgba(255,255,255,0.5)", width: 1.5, height: 0.9 }, maxW: 0.44 }, fallback: "none", anchorY: "bottom" }),
+      ],
+    });
+    // 31 ── TABULKA – PREMIUM (světlé řádky na skleněném panelu, šipky posunu, série, dělicí čáry; podle EuroLeague Standings)
+    const dash = (id: string, name: string, cond: string, color: string): TemplateElement[] =>
+      Array.from({ length: 30 }, (_, i) => rect(`${id}${i}`, `${name} ${i + 1}`, [i * 30, 72, 18, 3], color, { showIf: cond }));
+    defs.push({
+      id: "standings-premium",
+      name: "Tabulka – Premium",
+      category: "Soutěž",
+      description: "Prémiové pozadí, velký nadpis a logo ligy, skleněný panel se světlými řádky: šipka posunu, pořadí, logo, tým, výhry, prohry a série (zeleně výhry, červeně prohry), přerušovaná a plná dělicí čára.",
+      background: "@dark",
+      finish: { grain: 14, vignette: 40 },
+      fields: [
+        { key: "title", label: "Nadpis", type: "text", placeholder: "Tabulka" },
+        { key: "round_label", label: "Podnadpis", type: "text", placeholder: "Po 4. kole" },
+        {
+          key: "rows",
+          label: "Tabulka",
+          type: "list",
+          help: "Předchozí pozice = šipka nahoru/dolů/rovnítko. Série např. 3V nebo 2P.",
+          columns: [
+            { key: "pos", label: "#", type: "number" },
+            { key: "prev", label: "Předchozí pozice", type: "number" },
+            { key: "team", label: "Tým", type: "team" },
+            { key: "w", label: "V", type: "number" },
+            { key: "l", label: "P", type: "number" },
+            { key: "streak", label: "Série", type: "text" },
+          ],
+        },
+        { key: "cut1", label: "Přerušovaná čára pod pozicí", type: "number" },
+        { key: "cut2", label: "Plná čára pod pozicí", type: "number" },
+        { key: "cut1_label", label: "Popisek přerušované čáry", type: "text", placeholder: "Čtvrtfinále" },
+        { key: "cut2_label", label: "Popisek plné čáry", type: "text", placeholder: "Předkolo play-off" },
+      ],
+      sampleData: {
+        title: "Tabulka",
+        round_label: "Po 4. kole",
+        rows: STANDINGS.map((r, i) => ({ pos: r.pos, prev: [1, 3, 2, 5, 4, 6, 9, 7, 8, 11, 10, 12][i] ?? r.pos, team: r.team, w: r.w, l: r.l, streak: ["4V", "2V", "P", "V", "2P", "V", "P", "2V", "P", "V", "3P", "2P"][i] ?? "" })),
+        cut1: 6,
+        cut2: 10,
+        cut1_label: "Čtvrtfinále",
+        cut2_label: "Předkolo play-off",
+      },
+      elements: [
+        ...premiumBg(),
+        // nadpis vlevo nahoře, logo ligy vpravo
+        text("title", "Nadpis", [70, 52, 620, 104], "{{title|default:Tabulka}}", { font: "Mazzard H", weight: 900, size: 104, minSize: 60, uppercase: true, letterSpacing: -0.02, fill: metal, shadow: { color: "rgba(0,0,0,0.45)", blur: 24, x: 0, y: 8 }, anchorX: "left", anchorY: "top" }),
+        text("sub", "Podnadpis", [74, 150, 620, 44], "{{round_label}}", { font: "Mazzard H", weight: 900, size: 40, uppercase: true, letterSpacing: 0.01, color: "@accent", anchorX: "left", anchorY: "top" }),
+        img("league", "Logo ligy", [700, 60, 310, 120], "brand:partner", { fit: "contain", align: "right", fallback: "none", anchorX: "right", anchorY: "top" }),
+        // skleněný panel
+        rect("panel", "Panel – sklo", [60, 222, 960, 1010], lin(90, [0, "rgba(255,255,255,0.16)"], [1, "rgba(255,255,255,0.06)"]), { radius: 28, stroke: "rgba(255,255,255,0.3)", strokeWidth: 1.5, shadow: { color: "rgba(0,0,0,0.45)", blur: 50, x: 0, y: 20 } }),
+        rect("panel-hl", "Panel – odlesk", [100, 223, 880, 1.5], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.75)"], [1, "rgba(255,255,255,0)"])),
+        // hlavička tabulky
+        text("h-pos", "Hlavička #", [146, 232, 70, 54], "#", { font: "Saira Condensed", weight: 600, size: 34, align: "center", valign: "middle", opacity: 0.85 }),
+        text("h-team", "Hlavička tým", [316, 232, 300, 54], "Tým", { font: "Saira Condensed", weight: 600, size: 34, uppercase: true, valign: "middle", opacity: 0.95 }),
+        text("h-w", "Hlavička V", [750, 232, 70, 54], "V", { font: "Saira Condensed", weight: 600, size: 34, align: "center", valign: "middle", opacity: 0.95 }),
+        text("h-l", "Hlavička P", [820, 232, 70, 54], "P", { font: "Saira Condensed", weight: 600, size: 34, align: "center", valign: "middle", opacity: 0.95 }),
+        text("h-s", "Hlavička série", [890, 232, 110, 54], "Série", { font: "Saira Condensed", weight: 600, size: 34, uppercase: true, align: "center", valign: "middle", color: "@accent" }),
+        list("rows", "Řádky", [90, 292, 910, 930], "rows", 74, 3, [
+          rect("mv-bg", "Pás šipek", [0, 0, 56, 74], "rgba(10,6,20,0.55)"),
+          path("up", "Šipka nahoru", [16, 26, 24, 20], "M50 0 L100 100 L0 100 Z", { fill: "#C6F432", showIf: "prev && prev > pos" }),
+          path("down", "Šipka dolů", [16, 28, 24, 20], "M0 0 L100 0 L50 100 Z", { fill: "#FF2E5B", showIf: "prev && prev < pos" }),
+          rect("eq1", "Beze změny 1", [17, 30, 22, 4], "#FFFFFF", { showIf: "prev && prev == pos" }),
+          rect("eq2", "Beze změny 2", [17, 40, 22, 4], "#FFFFFF", { showIf: "prev && prev == pos" }),
+          rect("pos-bg", "Pořadí – plocha", [56, 0, 70, 74], "@secondary"),
+          text("pos", "Pořadí", [56, 0, 70, 74], "{{pos}}", { font: "Saira Condensed", weight: 700, size: 44, align: "center", valign: "middle" }),
+          rect("row", "Řádek", [126, 0, 784, 74], lin(0, [0, "rgba(255,255,255,0.94)"], [1, "rgba(238,233,248,0.86)"])),
+          logo("logo", "Logo", [140, 8, 76, 58], "team", { equalize: 0.72 }),
+          text("team", "Tým", [228, 0, 430, 74], "{{team}}", { font: "Saira Condensed", weight: 600, size: 40, minSize: 26, valign: "middle", color: "@dark" }),
+          text("w", "Výhry", [660, 0, 70, 74], "{{w}}", { font: "Saira Condensed", weight: 600, size: 38, align: "center", valign: "middle", color: "@dark" }),
+          text("l", "Prohry", [730, 0, 70, 74], "{{l}}", { font: "Saira Condensed", weight: 600, size: 38, align: "center", valign: "middle", color: "@dark" }),
+          text("st-w", "Série (výhry)", [800, 0, 110, 74], "{{streak}}", { font: "Saira Condensed", weight: 800, size: 38, uppercase: true, align: "center", valign: "middle", color: "#14A04A", showIf: "streak *= V" }),
+          text("st-l", "Série (prohry)", [800, 0, 110, 74], "{{streak}}", { font: "Saira Condensed", weight: 800, size: 38, uppercase: true, align: "center", valign: "middle", color: "#D2381E", showIf: "streak *= P" }),
+          ...dash("cut1-", "Přerušovaná čára", "pos == cut1", "@accent"),
+          rect("cut2", "Plná čára", [0, 72, 910, 4], "#FFFFFF", { showIf: "pos == cut2", shadow: { color: "rgba(0,0,0,0.5)", blur: 6, x: 0, y: 0 } }),
+        ], { distribute: false }),
+        // legenda a logo
+        ...Array.from({ length: 3 }, (_, i) => rect(`lg1-${i}`, `Legenda – čárka ${i + 1}`, [70 + i * 14, 1262, 9, 3], "@accent", { showIf: "cut1_label", anchorY: "bottom" })),
+        text("lg1", "Legenda přerušované čáry", [120, 1246, 300, 34], "{{cut1_label}}", { font: "Saira Condensed", weight: 600, size: 26, uppercase: true, opacity: 0.85, showIf: "cut1_label", anchorY: "bottom" }),
+        rect("lg2-l", "Legenda – plná čára", [70, 1300, 38, 3], "#FFFFFF", { showIf: "cut2_label", anchorY: "bottom" }),
+        text("lg2", "Legenda plné čáry", [120, 1284, 300, 34], "{{cut2_label}}", { font: "Saira Condensed", weight: 600, size: 26, uppercase: true, opacity: 0.85, showIf: "cut2_label", anchorY: "bottom" }),
+        brandLogo([820, 1250, 200, 66], { align: "right", anchorX: "right", anchorY: "bottom" }),
       ],
     });
   }
