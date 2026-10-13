@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+      model: "claude-sonnet-5-5",
       max_tokens: 4000,
       messages: [{ role: "user", content }],
     }),
