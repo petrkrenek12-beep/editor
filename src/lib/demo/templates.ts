@@ -124,6 +124,28 @@ const f = {
   credit: { key: "photo_credit", label: "Autor fotky", type: "text" } as FieldDef,
 };
 
+// ── BCL premium (podle EuroLeague „Rivalry Series“) – společné pozadí a hlavička ──
+const METAL = lin(90, [0, "#FFFFFF"], [0.55, "#EEF2F6"], [1, "#AEB8C6"]);
+/** Světelný vír v barvě projektu (textura tex-vortex: barevná vrstva + bílé jádro + záře) */
+function bclVortexBg(): TemplateElement[] {
+  const S = { fit: "cover" as const, fallback: "none" as const, blend: "screen" as const, anchorX: "stretch" as const, anchorY: "stretch" as const, zone: "bg" as const };
+  return [
+    rect("bloom-top", "Záře nahoře", [190, -330, 700, 700], { type: "radial", stops: [[0, "@primary/45"], [0.4, "@primary/12"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorY: "top" }),
+    img("vortex-glow", "Světelný vír – záře", [0, 0, 1080, 1350], "asset:tex-vortex", { ...S, lumaKey: 0.75, tint: "@primary", blur: 18, opacity: 0.5 }),
+    img("vortex", "Světelný vír (barva projektu)", [0, 0, 1080, 1350], "asset:tex-vortex", { ...S, lumaKey: 0.9, tint: "@primary", opacity: 1 }),
+    img("vortex-hl", "Světelný vír – bílé jádro", [0, 0, 1080, 1350], "asset:tex-vortex", { ...S, lumaKey: 2.3, opacity: 0.85 }),
+    img("halftone", "Rastr teček", [0, 0, 1080, 1350], "asset:tex-halftone", { ...S, lumaKey: 1, opacity: 0.05 }),
+  ];
+}
+/** Logo ligy, kovový nadpis a stříbrný pruh s podtitulkem (jako „RIVALRY / SERIES“). */
+function bclHeader(title: string, subtitle: string, size = 98): TemplateElement[] {
+  return [
+    img("league", "Logo ligy", [400, 30, 280, 70], "brand:partner", { fit: "contain", fallback: "none", anchorY: "top" }),
+    text("title", "Nadpis", [170, 104 + (98 - size) / 2, 740, size + 6], title, { font: "Russo One", weight: 400, size, minSize: 40, uppercase: true, align: "center", letterSpacing: 0.01, fill: METAL, shadow: { color: "rgba(0,0,0,0.5)", blur: 26, x: 0, y: 8 }, anchorY: "top" }),
+    text("subtitle", "Pruh pod nadpisem", [200, 214, 680, 40], subtitle, { font: "Saira Condensed", weight: 700, size: 22, minSize: 14, uppercase: true, align: "center", letterSpacing: 0.42, color: "@dark", pill: { fill: lin(0, [0, "#AEB8C6"], [0.5, "#FFFFFF"], [1, "#AEB8C6"]), padX: 26, padY: 5, radius: 2 }, showIf: subtitle.replace(/[{}]/g, ""), anchorY: "top" }),
+  ];
+}
+
 const PHOTO = (asset: string) => ({ asset, zoom: 1, fx: 0.5, fy: 0.3 });
 
 interface TDef {
@@ -1059,13 +1081,15 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         text("headline", "Titulek", [208, 1190, 830, 100], "{{headline}}", { font: "Mazzard H", weight: 600, size: 40, uppercase: true, maxLines: 2, lineHeight: 1.1, anchorY: "bottom" }),
       ],
     },
-    // 21 ── PROGRAM BCL (Liga mistrů FIBA) – symetrický: hráč vlevo, hráč vpravo, karty uprostřed
+    // 21 ── PROGRAM BCL – PREMIUM (podle EuroLeague „Rivalry Series“: světelný vír, kovový nadpis, závorky kolem času).
+    //       1 zápas = rozložení jako předloha (dva hráči, loga pod nimi, čas uprostřed), 2+ zápasy = karty mezi hráči.
     {
       id: "bcl-program",
       name: "Program – Liga mistrů",
       category: "Soutěž",
-      description: "Pozadí BCL, dva vyříznutí hráči po stranách pod kartami, nadpis a karty uprostřed, TV stanice, logo BCL a oBasketu dole.",
-      background: "#020D24",
+      description: "Prémiový program BCL podle EuroLeague Rivalry: světelný vír v barvách projektu, kovový nadpis, čas v rohových závorkách. Jeden zápas = dva hráči s logy a časem uprostřed, víc zápasů = skleněné karty mezi hráči.",
+      background: { type: "radial", stops: [[0, "@secondary"], [0.6, "@dark"], [1, "@dark"]] },
+      finish: { grain: 14, vignette: 38 },
       fields: [
         { key: "title", label: "Nadpis", type: "text" },
         { key: "subtitle", label: "Pruh pod nadpisem", type: "text", placeholder: "Liga mistrů FIBA · 2. kolo" },
@@ -1073,12 +1097,13 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           key: "games",
           label: "Zápasy",
           type: "list",
-          help: "Loga soupeřů: vyberte tým, nebo nahrajte logo přímo do řádku (Logo D / Logo H).",
+          help: "Jeden zápas = velké rozložení s hráči (jako EuroLeague Rivalry). Loga soupeřů: vyberte tým, nebo nahrajte logo přímo do řádku.",
           columns: [
             { key: "home", label: "Domácí", type: "team" },
             { key: "away", label: "Hosté", type: "team" },
             { key: "date", label: "Datum", type: "date" },
             { key: "time", label: "Čas", type: "text" },
+            { key: "venue", label: "Město / hala", type: "text" },
             { key: "tv", label: "TV", type: "channel" },
             { key: "home_logo", label: "Logo D (vlastní)", type: "image" },
             { key: "away_logo", label: "Logo H (vlastní)", type: "image" },
@@ -1086,41 +1111,80 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         },
         { key: "photo_left", label: "Hráč vlevo (vyříznutý)", type: "image" },
         { key: "photo_right", label: "Hráč vpravo (vyříznutý)", type: "image" },
+        { key: "name_left", label: "Příjmení hráče vlevo (jen 1 zápas)", type: "text" },
+        { key: "name_right", label: "Příjmení hráče vpravo (jen 1 zápas)", type: "text" },
       ],
       sampleData: {
         title: "Program",
-        subtitle: "Liga mistrů FIBA",
+        subtitle: "Liga mistrů FIBA · 2. kolo",
         games: [
-          { home: "Reggiana", away: "BK Kvis Pardubice", date: "2026-10-06", time: "20:00", tv: "" },
-          { home: "Slavia Praha", away: "Alba Berlín", date: "2026-10-07", time: "18:00", tv: "" },
+          { home: "Reggiana", away: "BK Kvis Pardubice", date: "2026-10-06", time: "20:00", venue: "Reggio Emilia", tv: "" },
+          { home: "Slavia Praha", away: "Alba Berlín", date: "2026-10-07", time: "18:00", venue: "Praha", tv: "" },
         ],
         photo_left: { asset: a.player },
         photo_right: { asset: a.player },
+        name_left: "",
+        name_right: "",
       },
-      elements: [
-        img("bg", "Pozadí (brand kit)", [0, 0, 1080, 1350], "brand:bg0", { fit: "cover", zone: "bg", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
-        img("pl", "Hráč vlevo", [-150, 230, 600, 1120], "{{photo_left}}", { fit: "contain", align: "left", valign: "bottom", anchorX: "left", anchorY: "bottom", showIf: "photo_left", hideIn: ["x"] }),
-        img("pr", "Hráč vpravo", [630, 230, 600, 1120], "{{photo_right}}", { fit: "contain", align: "right", valign: "bottom", anchorX: "right", anchorY: "bottom", showIf: "photo_right", hideIn: ["x"] }),
-        rect("shade-b", "Ztmavení dole", [0, 860, 1080, 490], lin(90, [0, "@dark/0"], [0.55, "@dark/70"], [1, "@dark/95"]), { anchorX: "stretch", anchorY: "bottom" }),
-        rect("shade-c", "Ztmavení středu", [250, 0, 580, 1350], lin(0, [0, "@dark/0"], [0.5, "@dark/35"], [1, "@dark/0"]), { anchorY: "stretch", hideIn: ["x"] }),
-        text("title", "Nadpis", [110, 150, 860, 170], "{{title}}", { font: "Russo One", weight: 400, size: 168, uppercase: true, align: "center", color: "@primary", letterSpacing: -0.01, shadow: { color: "rgba(0,0,0,0.45)", blur: 24, x: 0, y: 8 } }),
-        path("pill-bg", "Pruh", [228, 338, 624, 70], "M2 0 L100 0 L95.5 100 L2 100 Q0 100 0 88 L0 12 Q0 0 2 0 Z", { fill: "@accent", shadow: { color: "rgba(0,0,0,0.35)", blur: 16, x: 0, y: 6 } }),
-        text("pill", "Pruh – text", [240, 338, 584, 70], "{{subtitle}}", { font: "Saira Condensed", weight: 800, size: 46, uppercase: true, align: "center", letterSpacing: 0.08 }),
-        list("games", "Zápasy", [252, 486, 576, 560], "games", 152, 30, [
-          rect("stripe", "Oranžový proužek", [12, 0, 564, 152], "@accent", { radius: 18 }),
-          rect("card", "Karta", [0, 0, 566, 152], "#020D24", { radius: 18, stroke: "#2CC5CF", strokeWidth: 2.5, shadow: { color: "rgba(0,0,0,0.55)", blur: 34, x: 0, y: 12 } }),
-          logo("hl", "Logo D", [22, 14, 140, 124], "home", { override: "{{home_logo}}", equalize: 0.66 }),
-          text("day", "Den", [160, 34, 246, 48], "{{date|day}}", { font: "Saira Condensed", weight: 800, size: 50, align: "center", hideIf: "tv" }),
-          text("when", "Datum a čas", [160, 84, 246, 40], "{{date|date:spaced}}  |  {{time}}", { font: "Saira Condensed", weight: 700, size: 42, align: "center", hideIf: "tv" }),
-          text("day-tv", "Den (s TV)", [160, 14, 246, 46], "{{date|day}}", { font: "Saira Condensed", weight: 800, size: 46, align: "center", showIf: "tv" }),
-          text("when-tv", "Datum a čas (s TV)", [160, 60, 246, 38], "{{date|date:spaced}}  |  {{time}}", { font: "Saira Condensed", weight: 700, size: 38, align: "center", showIf: "tv" }),
-          img("tv", "Logo TV", [203, 104, 160, 34], "channel:{{tv}}", { fit: "contain", showIf: "tv", fallback: "none" }),
-          logo("al", "Logo H", [404, 14, 140, 124], "away", { override: "{{away_logo}}", equalize: 0.66 }),
-        ]),
-        img("partner", "Logo BCL", [744, 1206, 150, 104], "brand:partner", { fit: "contain", align: "right", fallback: "none", anchorX: "right", anchorY: "bottom" }),
-        rect("sep", "Dělicí čára", [912, 1194, 2, 128], "#FFFFFF", { anchorX: "right", anchorY: "bottom" }),
-        brandLogo([934, 1208, 116, 100], { align: "left", anchorX: "right", anchorY: "bottom" }),
-      ],
+      elements: (() => {
+        const ONE = "games.length == 1";
+        const corner = (id: string, name: string, b: Box, d: string, o: Common = {}): TemplateElement => path(id, name, b, d, { stroke: "#FFFFFF", strokeWidth: 2.5, opacity: 0.9, ...o });
+        const brackets = (pre: string, x: number, y: number, w: number, h: number, sz: number, o: Common = {}): TemplateElement[] => [
+          corner(`${pre}-tl`, "Závorka 1", [x, y, sz, sz], "M0 100 L0 0 L100 0", o),
+          corner(`${pre}-tr`, "Závorka 2", [x + w - sz, y, sz, sz], "M0 0 L100 0 L100 100", o),
+          corner(`${pre}-bl`, "Závorka 3", [x, y + h - sz, sz, sz], "M0 0 L0 100 L100 100", o),
+          corner(`${pre}-br`, "Závorka 4", [x + w - sz, y + h - sz, sz, sz], "M100 0 L100 100 L0 100", o),
+        ];
+        const one = { showIf: ONE, hideIn: ["x"] as FormatId[], anchorY: "bottom" as const };
+        const many = { hideIf: ONE };
+        return [
+          ...bclVortexBg(),
+          // ── hlavička (společná)
+          ...bclHeader("{{title}}", "{{subtitle}}"),
+          // ── 1 ZÁPAS ─────────────────────────────────────────────
+          text("name-l", "Příjmení vlevo", [50, 64, 300, 50], "{{name_left}}", { font: "Saira Condensed", weight: 600, size: 38, uppercase: true, align: "left", letterSpacing: 0.08, opacity: 0.72, showIf: `${ONE} && name_left`, anchorX: "left", anchorY: "top" }),
+          text("name-r", "Příjmení vpravo", [730, 64, 300, 50], "{{name_right}}", { font: "Saira Condensed", weight: 600, size: 38, uppercase: true, align: "right", letterSpacing: 0.08, opacity: 0.72, showIf: `${ONE} && name_right`, anchorX: "right", anchorY: "top" }),
+          rect("one-glow-l", "Záře za hráčem vlevo", [-120, 260, 680, 760], { type: "radial", stops: [[0, "@primary/30"], [0.45, "@primary/8"], [0.7, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", ...one }),
+          rect("one-glow-r", "Záře za hráčem vpravo", [520, 260, 680, 760], { type: "radial", stops: [[0, "@primary/30"], [0.45, "@primary/8"], [0.7, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", ...one }),
+          img("one-pl", "Hráč vlevo (1 zápas)", [-10, 286, 560, 660], "{{photo_left}}", { fit: "contain", valign: "top", fade: { angle: 270, from: 0.06, to: 0.46 }, shadow: { color: "rgba(0,0,0,0.45)", blur: 40, x: 0, y: 10 }, ...one, showIf: `${ONE} && photo_left`, anchorY: "bottom" }),
+          img("one-pr", "Hráč vpravo (1 zápas)", [530, 286, 560, 660], "{{photo_right}}", { fit: "contain", valign: "top", fade: { angle: 270, from: 0.06, to: 0.46 }, shadow: { color: "rgba(0,0,0,0.45)", blur: 40, x: 0, y: 10 }, ...one, showIf: `${ONE} && photo_right`, anchorY: "bottom" }),
+          rect("one-dim", "Ztmavení pod logy", [0, 700, 1080, 520], lin(90, [0, "@dark/0"], [0.35, "@dark/70"], [0.7, "@dark/55"], [1, "@dark/0"]), { showIf: ONE, anchorY: "bottom" }),
+          logo("one-hl", "Logo domácí (1 zápas)", [80, 806, 280, 214], "games.0.home", { override: "{{games.0.home_logo}}", logoVariant: "white", equalize: 0.62, shadow: { color: "rgba(0,0,0,0.55)", blur: 30, x: 0, y: 10 }, showIf: ONE, anchorY: "bottom" }),
+          logo("one-al", "Logo hosté (1 zápas)", [720, 806, 280, 214], "games.0.away", { override: "{{games.0.away_logo}}", logoVariant: "white", equalize: 0.62, shadow: { color: "rgba(0,0,0,0.55)", blur: 30, x: 0, y: 10 }, showIf: ONE, anchorY: "bottom" }),
+          text("one-hn", "Název domácích", [60, 1030, 320, 66], "{{games.0.home|team}}", { font: "Saira Condensed", weight: 700, size: 30, minSize: 20, uppercase: true, align: "center", maxLines: 2, lineHeight: 1, valign: "top", letterSpacing: 0.02, showIf: ONE, anchorY: "bottom" }),
+          text("one-an", "Název hostů", [700, 1030, 320, 66], "{{games.0.away|team}}", { font: "Saira Condensed", weight: 700, size: 30, minSize: 20, uppercase: true, align: "center", maxLines: 2, lineHeight: 1, valign: "top", letterSpacing: 0.02, showIf: ONE, anchorY: "bottom" }),
+          ...brackets("one-br", 376, 812, 328, 156, 26, { showIf: ONE, anchorY: "bottom" }),
+          text("one-time", "Čas (1 zápas)", [392, 824, 296, 84], "{{games.0.time}}", { font: "Saira Condensed", weight: 800, size: 86, align: "center", letterSpacing: 0.01, shadow: { color: "rgba(0,0,0,0.4)", blur: 16, x: 0, y: 4 }, showIf: ONE, anchorY: "bottom" }),
+          text("one-when", "Datum a místo (1 zápas)", [392, 908, 296, 44], "{{games.0.date|date:spaced}}  |  {{games.0.venue}}", { font: "Saira Condensed", weight: 500, size: 34, minSize: 20, uppercase: true, align: "center", letterSpacing: 0.04, showIf: `${ONE} && games.0.venue`, anchorY: "bottom" }),
+          text("one-day", "Den a datum (1 zápas)", [392, 908, 296, 44], "{{games.0.date|day}}  {{games.0.date|date:spaced}}", { font: "Saira Condensed", weight: 500, size: 34, minSize: 20, uppercase: true, align: "center", letterSpacing: 0.04, showIf: ONE, hideIf: "games.0.venue", anchorY: "bottom" }),
+          text("one-h3", "Zkratka domácích", [356, 1000, 156, 56], "{{games.0.home|short}}", { font: "Saira Condensed", weight: 600, size: 46, uppercase: true, align: "right", letterSpacing: 0.04, showIf: ONE, anchorY: "bottom" }),
+          text("one-vs", "vs", [512, 1008, 56, 44], "vs", { font: "Saira Condensed", weight: 700, size: 26, align: "center", color: "@primary", showIf: ONE, anchorY: "bottom" }),
+          text("one-a3", "Zkratka hostů", [568, 1000, 156, 56], "{{games.0.away|short}}", { font: "Saira Condensed", weight: 600, size: 46, uppercase: true, align: "left", letterSpacing: 0.04, showIf: ONE, anchorY: "bottom" }),
+          text("one-live", "Živě na", [390, 1112, 300, 36], "Živě na", { font: "Saira Condensed", weight: 800, size: 30, uppercase: true, align: "center", letterSpacing: 0.14, showIf: `${ONE} && games.0.tv`, anchorY: "bottom" }),
+          img("one-tv", "Logo TV (1 zápas)", [380, 1152, 320, 70], "channel:{{games.0.tv}}", { fit: "contain", fallback: "none", showIf: `${ONE} && games.0.tv`, anchorY: "bottom" }),
+          // ── VÍC ZÁPASŮ ──────────────────────────────────────────
+          img("pl", "Hráč vlevo", [-230, 330, 660, 1020], "{{photo_left}}", { fit: "contain", align: "left", valign: "bottom", anchorX: "left", anchorY: "bottom", hideIn: ["x"], ...many, showIf: "photo_left" }),
+          img("pr", "Hráč vpravo", [650, 330, 660, 1020], "{{photo_right}}", { fit: "contain", align: "right", valign: "bottom", anchorX: "right", anchorY: "bottom", hideIn: ["x"], ...many, showIf: "photo_right" }),
+          rect("many-dim", "Ztmavení za kartami", [100, 300, 880, 1000], { type: "radial", stops: [[0, "@dark/80"], [0.45, "@dark/55"], [0.7, "@dark/0"], [1, "@dark/0"]] }, { ...many, hideIn: ["x"] }),
+          rect("many-dim-b", "Ztmavení dole", [0, 980, 1080, 370], lin(90, [0, "@dark/0"], [0.6, "@dark/45"], [1, "@dark/65"]), { ...many, anchorX: "stretch", anchorY: "bottom" }),
+          list("games", "Zápasy", [200, 316, 680, 900], "games", 172, 26, [
+            rect("card", "Karta – sklo", [0, 0, 680, 172], lin(0, [0, "@secondary/78"], [0.5, "@dark/82"], [1, "@secondary/78"]), { radius: 6, stroke: "rgba(255,255,255,0.16)", strokeWidth: 1.5, shadow: { color: "rgba(0,0,0,0.55)", blur: 36, x: 0, y: 14 } }),
+            rect("edge", "Světelná hrana", [40, 0, 600, 2], lin(0, [0, "@primary/0"], [0.5, "@primary"], [1, "@primary/0"])),
+            rect("edge-b", "Světelná hrana dole", [140, 170.5, 400, 1.5], lin(0, [0, "@primary/0"], [0.5, "@primary/60"], [1, "@primary/0"])),
+            rect("edge-hl", "Světelná hrana – lesk", [200, 0, 280, 1.5], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.9)"], [1, "rgba(255,255,255,0)"])),
+            logo("hl", "Logo D", [24, 16, 150, 140], "home", { override: "{{home_logo}}", logoVariant: "white", equalize: 0.64 }),
+            logo("al", "Logo H", [506, 16, 150, 140], "away", { override: "{{away_logo}}", logoVariant: "white", equalize: 0.64 }),
+            ...brackets("cb", 206, 16, 268, 140, 18),
+            text("time", "Čas", [214, 24, 252, 78], "{{time}}", { font: "Saira Condensed", weight: 800, size: 74, align: "center", hideIf: "tv" }),
+            text("when", "Den a datum", [214, 104, 252, 40], "{{date|day}}  {{date|date:spaced}}", { font: "Saira Condensed", weight: 500, size: 30, minSize: 18, uppercase: true, align: "center", letterSpacing: 0.04, opacity: 0.9, hideIf: "tv" }),
+            text("time-tv", "Čas (s TV)", [214, 20, 252, 64], "{{time}}", { font: "Saira Condensed", weight: 800, size: 62, align: "center", showIf: "tv" }),
+            text("when-tv", "Den a datum (s TV)", [214, 84, 252, 34], "{{date|day}}  {{date|date:spaced}}", { font: "Saira Condensed", weight: 500, size: 27, minSize: 18, uppercase: true, align: "center", letterSpacing: 0.04, opacity: 0.9, showIf: "tv" }),
+            img("tv", "Logo TV", [270, 122, 140, 28], "channel:{{tv}}", { fit: "contain", showIf: "tv", fallback: "none" }),
+          ], { ...many, anchorY: "stretch" }),
+          // ── patička
+          brandLogo([430, 1262, 220, 58], { anchorY: "bottom" }),
+        ];
+      })(),
     },
     // 22 ── VÝSLEDEK BCL (styl „FINAL“ panelu – skleněný panel, štítek, hráč zápasu)
     {
@@ -1198,6 +1262,96 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         rect("sep", "Dělicí čára", [578, 1226, 2, 88], "#FFFFFF", { anchorY: "bottom" }),
         brandLogo([600, 1224, 120, 92], { align: "left", anchorY: "bottom" }),
       ],
+    },
+    // 22b ── HRÁČ ZÁPASU – BCL (stejný jazyk jako Program BCL: vír, kovový nadpis, čísla v závorkách)
+    {
+      id: "bcl-mvp",
+      name: "Hráč zápasu – Liga mistrů",
+      category: "Hráči",
+      description: "Hráč zápasu v prémiovém stylu BCL (podle EuroLeague Rivalry): světelný vír, vyříznutý hráč uprostřed, kovové příjmení, tři čísla v rohových závorkách a výsledek s logy dole. Nevyříznutá fotka se roztáhne přes celé pozadí.",
+      background: { type: "radial", stops: [[0, "@secondary"], [0.6, "@dark"], [1, "@dark"]] },
+      finish: { grain: 14, vignette: 38 },
+      fields: [
+        { key: "title", label: "Nadpis", type: "text", placeholder: "Hráč zápasu" },
+        { key: "subtitle", label: "Pruh pod nadpisem", type: "text", placeholder: "Liga mistrů FIBA · 2. kolo" },
+        { key: "first_name", label: "Jméno", type: "text" },
+        { key: "last_name", label: "Příjmení", type: "text" },
+        { key: "team", label: "Tým hráče", type: "team" },
+        { key: "opponent", label: "Soupeř", type: "team" },
+        { key: "team_score", label: "Skóre týmu hráče", type: "number" },
+        { key: "opponent_score", label: "Skóre soupeře", type: "number" },
+        { key: "s1_value", label: "Stat 1 – číslo", type: "text" },
+        { key: "s1_label", label: "Stat 1 – popisek", type: "text" },
+        { key: "s2_value", label: "Stat 2 – číslo", type: "text" },
+        { key: "s2_label", label: "Stat 2 – popisek", type: "text" },
+        { key: "s3_value", label: "Stat 3 – číslo", type: "text" },
+        { key: "s3_label", label: "Stat 3 – popisek", type: "text" },
+        { key: "photo", label: "Fotka hráče (nejlépe vyříznutá)", type: "image" },
+        f.credit,
+        { key: "team_logo", label: "Logo týmu (vlastní)", type: "image" },
+        { key: "opponent_logo", label: "Logo soupeře (vlastní)", type: "image" },
+      ],
+      sampleData: {
+        title: "Hráč zápasu",
+        subtitle: "Liga mistrů FIBA · 2. kolo",
+        first_name: "Martin",
+        last_name: "Peterka",
+        team: "BK Kvis Pardubice",
+        opponent: "Slavia Praha",
+        team_score: 84,
+        opponent_score: 79,
+        s1_value: "24",
+        s1_label: "Body",
+        s2_value: "9",
+        s2_label: "Doskoky",
+        s3_value: "27",
+        s3_label: "Efektivita",
+        photo: { asset: a.player },
+        photo_credit: "",
+      },
+      elements: (() => {
+        const corner = (id: string, b: Box, d: string, o: Common = {}): TemplateElement => path(id, "Rohová závorka", b, d, { stroke: "#FFFFFF", strokeWidth: 2.5, opacity: 0.9, anchorY: "bottom", ...o });
+        const stats = [3, 2].flatMap((n): TemplateElement[] =>
+          Array.from({ length: n }, (_, i): TemplateElement[] => {
+            const w = n === 3 ? 268 : 330;
+            const x = 540 - (w * n) / 2 + i * w;
+            const cond = { showIf: `s${n}_value`, ...(n < 3 ? { hideIf: "s3_value" } : {}), anchorY: "bottom" as const };
+            const sfx = n < 3 ? "-2" : "";
+            const nm = (t: string) => `${t}${n < 3 ? " (2 staty)" : ""}`;
+            const out: TemplateElement[] = [
+              text(`v${i + 1}${sfx}`, nm(`Stat ${i + 1}`), [x, 1060, w, 100], `{{s${i + 1}_value}}`, { font: "Saira Condensed", weight: 800, size: 104, minSize: 50, align: "center", valign: "bottom", fill: METAL, shadow: { color: "rgba(0,0,0,0.45)", blur: 18, x: 0, y: 6 }, ...cond }),
+              text(`l${i + 1}${sfx}`, nm(`Stat ${i + 1} popisek`), [x + 10, 1164, w - 20, 34], `{{s${i + 1}_label}}`, { font: "Saira Condensed", weight: 700, size: 25, minSize: 16, uppercase: true, align: "center", letterSpacing: 0.2, color: "@primary", ...cond }),
+            ];
+            if (i > 0) out.push(rect(`d${i + 1}${sfx}`, nm(`Oddělovač ${i}`), [x - 0.75, 1090, 1.5, 96], lin(90, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.45)"], [1, "rgba(255,255,255,0)"]), cond));
+            return out;
+          }).flat(),
+        );
+        return [
+          // nevyříznutá fotka: přes celé pozadí, vír a ztmavení přes ni
+          img("photo-full", "Fotka (nevyříznutá)", [0, 250, 1080, 1100], "{{photo}}", { fit: "cover", onlyUncut: true, fade: { angle: 90, from: 0, to: 0.22 }, zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+          rect("photo-full-dim", "Ztmavení fotky", [0, 0, 1080, 1350], lin(90, [0, "@dark/0"], [0.45, "@dark/10"], [0.7, "@dark/80"], [1, "@dark"]), { showIf: "photo", hideIf: "photo.cut", zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+          ...bclVortexBg(),
+          ...bclHeader("{{title}}", "{{subtitle}}", 74),
+          // vyříznutý hráč uprostřed
+          rect("player-glow", "Záře za hráčem", [90, 240, 900, 900], { type: "radial", stops: [[0, "@primary/38"], [0.4, "@primary/10"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", showIf: "photo.cut", anchorY: "bottom" }),
+          img("player", "Hráč (vyříznutý)", [70, 262, 940, 840], "{{photo}}", { fit: "contain", valign: "top", useCutout: true, fade: { angle: 270, from: 0.04, to: 0.36 }, shadow: { color: "rgba(0,0,0,0.5)", blur: 44, x: 0, y: 12 }, fallback: "none", anchorY: "bottom" }),
+          rect("name-dim", "Ztmavení pod jménem", [0, 820, 1080, 530], lin(90, [0, "@dark/0"], [0.3, "@dark/72"], [0.75, "@dark/70"], [1, "@dark/40"]), { anchorX: "stretch", anchorY: "bottom" }),
+          text("first", "Jméno", [140, 880, 800, 50], "{{first_name}}", { font: "Saira Condensed", weight: 500, size: 44, minSize: 26, uppercase: true, align: "center", letterSpacing: 0.3, opacity: 0.9, anchorY: "bottom" }),
+          text("last", "Příjmení", [80, 926, 920, 112], "{{last_name}}", { font: "Russo One", weight: 400, size: 112, minSize: 54, uppercase: true, align: "center", letterSpacing: 0.01, fill: METAL, shadow: { color: "rgba(0,0,0,0.55)", blur: 28, x: 0, y: 8 }, anchorY: "bottom" }),
+          corner("c-tl", [96, 1056, 28, 28], "M0 100 L0 0 L100 0"),
+          corner("c-tr", [956, 1056, 28, 28], "M0 0 L100 0 L100 100"),
+          corner("c-bl", [96, 1182, 28, 28], "M0 0 L0 100 L100 100"),
+          corner("c-br", [956, 1182, 28, 28], "M100 0 L100 100 L0 100"),
+          ...stats,
+          // výsledek s logy (skupina na střed)
+          logo("team-logo", "Logo týmu", [338, 1238, 96, 76], "team", { override: "{{team_logo}}", logoVariant: "white", equalize: 0.75, anchorY: "bottom" }),
+          text("score", "Výsledek", [440, 1238, 200, 76], "{{team_score}} : {{opponent_score}}", { font: "Saira Condensed", weight: 700, size: 50, align: "center", showIf: "team_score", anchorY: "bottom" }),
+          text("vs", "vs (bez skóre)", [440, 1238, 200, 76], "vs", { font: "Saira Condensed", weight: 700, size: 34, align: "center", color: "@primary", hideIf: "team_score", anchorY: "bottom" }),
+          logo("opp-logo", "Logo soupeře", [646, 1238, 96, 76], "opponent", { override: "{{opponent_logo}}", logoVariant: "white", equalize: 0.75, anchorY: "bottom" }),
+          text("credit", "Foto credit", [40, 1306, 400, 26], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 18, opacity: 0.55, showIf: "photo_credit", anchorX: "left", anchorY: "bottom" }),
+          brandLogo([880, 1290, 160, 40], { align: "right", anchorX: "right", anchorY: "bottom" }),
+        ];
+      })(),
     },
     // 23 ── PROGRAM KOLA – PREMIUM (klidné tmavé karty, velký čas, hráči nasvícení, zrno a viněta)
     {

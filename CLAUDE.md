@@ -43,15 +43,34 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
 - Seznam: `rowsBg` (i `canvas: true` + `blur` = matné sklo z pozadí), `distribute`, `center`, `grid`;
   `paginate.rowAsData` = carousel (1 řádek = 1 slide).
 - `finish: { grain, vignette }` – zrno a viněta.
+- Seznam v podmínkách a textech: `games.length` (počet řádků, např. `showIf: "games.length == 1"`),
+  `games.0.home` (sloupec prvního řádku – i pro loga `team:{{games.0.home}}` a `channel:{{games.0.tv}}`).
+- Textura `tex-vortex` (světelný vír podle EuroLeague Rivalry) – 3 vrstvy: tint `@primary` + `lumaKey`, bílé jádro
+  (vyšší `lumaKey`), rozmazaná záře; vše `blend: "screen"`. Helpery `bclVortexBg()` a `bclHeader()` v templates.ts.
 
 ## Prémiové šablony (NBL + ŽBL)
 - Program kola – Premium, Výsledek zápasu – Premium (+ Premium carousel), Šlágr kola – Premium,
   Hráč zápasu – Detail (podle Euroligy Lessort), Hráč zápasu – Celá postava (podle BCL Keene),
   Výsledky kola – Premium, Tabulka – Premium (bez „next game“, se sloupcem Z, šipky posunu, série).
-- BCL má vlastní šablony `bcl-*` (fonty Russo One / Saira Condensed).
+- BCL má vlastní šablony `bcl-*` (fonty Russo One / Saira Condensed). Předloha: **EuroLeague „Rivalry Series“**
+  (Partizan – Panathinaikos) převedená do barev BCL: světelný vír, kovový nadpis Russo One, stříbrný pruh s podtitulkem,
+  čas v rohových závorkách.
+  - `bcl-program` – 1 zápas = rozložení jako předloha (2 hráči, příjmení nahoře, loga pod hráči, čas/datum/město
+    v závorkách, zkratky „SLA vs PAR“, „Živě na“ + TV); 2+ zápasy = skleněné karty mezi hráči.
+  - `bcl-mvp` – Hráč zápasu BCL: vyříznutý hráč uprostřed (nevyříznutá fotka jde přes pozadí), kovové příjmení,
+    3 (nebo 2) čísla v závorkách, výsledek s logy.
+
+## Editor fotek (`src/lib/adjust.ts` + `AdjustPanel.tsx`)
+- Inspirace imageflow.dev / Lightroom. Sekce: Tón (expozice, kontrast, světla, stíny, bílé, černé), Barvy (vibrance,
+  sytost, teplota, odstín), Detail (clarity, doostření), Match Color, Barevné tónování (split toning stíny/světla +
+  vyvážení, tónování hlubokých stínů), Efekty (záře/bloom, matnost, viněta, černobílé), světlo z boku, rim light.
+- Tlačítka: **Před / po** (podržet), **Zrcadlit** (`flip`), **Kopírovat / Vložit** úpravy mezi fotkami (localStorage).
+- Předvolby z barev brand kitu: Do barev grafiky, Dramatické, Euroliga (filmové), Noir, Matný film, Svítivé, Teplé světlo.
+- Pomocné komponenty panelu musí být mimo `AdjustPanel` (jinak se posuvník při tažení přemontuje).
 
 ## Testování náhledů
-- Bundle esbuild + Playwright (Chromium je v `/opt/pw-browsers`). Při bundlu definovat
+- Bundle esbuild + Playwright (Chromium je v `/opt/pw-browsers`). Google Fonts jsou v sandboxu blokované –
+  fonty přes npm `@fontsource/*` (russo-one, saira-condensed, barlow-condensed…) a lokální `<link>`. Při bundlu definovat
   `process.env.NEXT_PUBLIC_PRESETKA_TARGET='"web"'` a `process.env.NODE_ENV='"production"'`.
 - Na realistické testovací fotky lze použít screenshoty předloh od Petra (jen interně), vyříznutí přes `rembg`
   (model `u2net_human_seg`, ne velký bria model – spadne na paměť).

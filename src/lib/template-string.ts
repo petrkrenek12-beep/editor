@@ -51,10 +51,21 @@ export function getValue(ctx: RenderContext, key: string): DataValue {
   if (ctx.row && k in ctx.row) return ctx.row[k] as DataValue;
   if (k.startsWith("row.") && ctx.row) return ctx.row[k.slice(4)] as DataValue;
   if (!(k in ctx.data) && k.includes(".")) {
-    // vlastnost obrázku, např. „photo.cut“ = má vyříznutou verzi
+    // vlastnost obrázku, např. „photo.cut“ = má vyříznutou verzi;
+    // seznam: „games.length“ = počet řádků, „games.0.home“ = sloupec prvního řádku
     const i = k.indexOf(".");
     const base = getValue(ctx, k.slice(0, i));
-    if (base && typeof base === "object" && !Array.isArray(base)) return (base as unknown as Record<string, DataValue>)[k.slice(i + 1)];
+    const rest = k.slice(i + 1);
+    if (Array.isArray(base)) {
+      if (rest === "length" || rest === "count") return base.length;
+      const j = rest.indexOf(".");
+      const idx = Number(j < 0 ? rest : rest.slice(0, j));
+      if (!Number.isInteger(idx)) return undefined;
+      const row = base[idx] as Record<string, DataValue> | undefined;
+      if (j < 0 || !row || typeof row !== "object") return row as DataValue;
+      return getValue({ data: row as DataRecord, teams: ctx.teams }, rest.slice(j + 1));
+    }
+    if (base && typeof base === "object") return (base as unknown as Record<string, DataValue>)[rest];
   }
   return ctx.data[k];
 }

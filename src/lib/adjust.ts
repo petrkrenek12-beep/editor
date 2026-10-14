@@ -13,6 +13,18 @@ export interface PhotoAdjust {
   temperature?: number; // - modrá … + žlutá
   tint?: number; // - zelená … + purpurová
   clarity?: number; // 0..100 (lokální kontrast)
+  vibrance?: number; // -100..100 (sytost hlavně málo sytých barev, pleť šetří)
+  whites?: number; // -100..100 (bílý bod)
+  blacks?: number; // -100..100 (černý bod)
+  fade?: number; // 0..100 (matné, filmové černé)
+  sharpen?: number; // 0..100 (doostření – unsharp mask)
+  mono?: number; // 0..100 (černobílá)
+  glow?: number; // 0..100 (záře světel – bloom / Orton)
+  vignette?: number; // 0..100 (ztmavení okrajů fotky)
+  /** zrcadlit vodorovně (hráč se dívá na druhou stranu) */
+  flip?: boolean;
+  /** dělené tónování (color grading): barva stínů a světel, balance -100 (víc stínů) … 100 (víc světel) */
+  split?: { shadows: string; highlights: string; amount: number; balance?: number };
   /** Sladění s pozadím (jako Match Color ve Photoshopu): statistický přenos barev a jasu
    *  z pozadí grafiky na fotku v perceptuálním prostoru OkLab. amount = síla (0–100),
    *  lum / color = podíl přenosu jasu / barvy (0–100). */
@@ -27,7 +39,7 @@ export interface PhotoAdjust {
 
 export function hasAdjust(a?: PhotoAdjust | null): a is PhotoAdjust {
   if (!a) return false;
-  return Object.entries(a).some(([, v]) => (typeof v === "number" ? v !== 0 : !!v && (v as { amount: number }).amount > 0));
+  return Object.entries(a).some(([, v]) => (typeof v === "number" ? v !== 0 : typeof v === "boolean" ? v : !!v && (v as { amount: number }).amount > 0));
 }
 
 const cache = new Map<string, HTMLCanvasElement>();
@@ -101,7 +113,12 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
   c.width = w;
   c.height = h;
   const x = c.getContext("2d", { willReadFrequently: true })!;
+  if (a.flip) {
+    x.translate(w, 0);
+    x.scale(-1, 1);
+  }
   x.drawImage(src, 0, 0, w, h);
+  x.setTransform(1, 0, 0, 1, 0, 0);
 
   // 0) sladění s pozadím (Match Color) v OkLab
   if (a.match && a.match.amount > 0 && ref) {
@@ -146,6 +163,18 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
   const tp = (a.temperature ?? 0) / 100;
   const tn = (a.tint ?? 0) / 100;
   const g = a.grade && a.grade.amount > 0 ? { c: hex(a.grade.color), k: a.grade.amount / 100 } : null;
+  const vib = (a.vibrance ?? 0) / 100;
+  const bp = -((a.blacks ?? 0) / 100) * 0.12; // + zvedne černé, − je zahustí
+  const wp = 1 - ((a.whites ?? 0) / 100) * 0.14; // + zesvětlí bílé
+  const fd = ((a.fade ?? 0) / 100) * 0.16;
+  const mono = (a.mono ?? 0) / 100;
+  const sp = a.split && a.split.amount > 0 ? (() => {
+    const S = hex(a.split.shadows);
+    const Hc = hex(a.split.highlights);
+    const ls = 0.299 * S[0] + 0.587 * S[1] + 0.114 * S[2];
+    const lh = 0.299 * Hc[0] + 0.587 * Hc[1] + 0.114 * Hc[2];
+    return { s: S.map((v) => v - ls), h: Hc.map((v) => v - lh), k: (a.split.amount / 100) * 0.55, bal: (a.split.balance ?? 0) / 100 };
+  })() : null;
   const img = x.getImageData(0, 0, w, h);
   const d = img.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -156,6 +185,12 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
     r *= ex;
     gg *= ex;
     b *= ex;
+    if (bp || wp !== 1) {
+      const k = 1 / Math.max(0.2, wp - bp);
+      r = (r - bp) * k;
+      gg = (gg - bp) * k;
+      b = (b - bp) * k;
+    }
     let l = 0.299 * r + 0.587 * gg + 0.114 * b;
     if (sh || hi) {
       const lift = sh * 0.45 * (1 - l) * (1 - l) + hi * 0.35 * l * l;
@@ -170,6 +205,17 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
     r = l + (r - l) * sat;
     gg = l + (gg - l) * sat;
     b = l + (b - l) * sat;
+    if (vib) {
+      // vibrance: víc přidá málo sytým barvám, pleť (r > g > b) skoro netkne
+      const mx = Math.max(r, gg, b);
+      const mn = Math.min(r, gg, b);
+      const cur = mx > 0 ? (mx - mn) / mx : 0;
+      const skin = r > gg && gg > b && r - b > 0.08 ? 0.4 : 1;
+      const f = 1 + vib * (1 - Math.min(1, cur)) * skin * (vib > 0 ? 1.1 : 1);
+      r = l + (r - l) * f;
+      gg = l + (gg - l) * f;
+      b = l + (b - l) * f;
+    }
     if (tp) {
       r += tp * 0.09;
       b -= tp * 0.09;
@@ -190,11 +236,52 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
       gg = gg * (1 - wgt) + clamp(g.c[1] * f) * wgt;
       b = b * (1 - wgt) + clamp(g.c[2] * f) * wgt;
     }
+    if (sp) {
+      // dělené tónování: stíny do jedné barvy, světla do druhé (jas zůstává)
+      const lc = clamp(0.299 * r + 0.587 * gg + 0.114 * b);
+      const ws = Math.pow(1 - lc, 2) * (1 - sp.bal * 0.6) * sp.k;
+      const wh = Math.pow(lc, 2) * (1 + sp.bal * 0.6) * sp.k;
+      r += sp.s[0] * ws + sp.h[0] * wh;
+      gg += sp.s[1] * ws + sp.h[1] * wh;
+      b += sp.s[2] * ws + sp.h[2] * wh;
+    }
+    if (mono) {
+      const lm = 0.299 * r + 0.587 * gg + 0.114 * b;
+      r += (lm - r) * mono;
+      gg += (lm - gg) * mono;
+      b += (lm - b) * mono;
+    }
+    if (fd) {
+      r = fd + r * (1 - fd);
+      gg = fd + gg * (1 - fd);
+      b = fd + b * (1 - fd * 0.85);
+    }
     d[i] = clamp(r) * 255;
     d[i + 1] = clamp(gg) * 255;
     d[i + 2] = clamp(b) * 255;
   }
   x.putImageData(img, 0, 0);
+
+  // 1b) doostření – unsharp mask (originál + síla × (originál − rozmazaný))
+  if ((a.sharpen ?? 0) > 0) {
+    const t = document.createElement("canvas");
+    t.width = w;
+    t.height = h;
+    const tx = t.getContext("2d", { willReadFrequently: true })!;
+    tx.filter = `blur(${Math.max(1, Math.round(Math.max(w, h) / 700))}px)`;
+    tx.drawImage(c, 0, 0);
+    const bl = tx.getImageData(0, 0, w, h).data;
+    const id = x.getImageData(0, 0, w, h);
+    const o = id.data;
+    const k = ((a.sharpen ?? 0) / 100) * 1.6;
+    for (let i = 0; i < o.length; i += 4) {
+      if (o[i + 3] === 0) continue;
+      o[i] = Math.max(0, Math.min(255, o[i] + (o[i] - bl[i]) * k));
+      o[i + 1] = Math.max(0, Math.min(255, o[i + 1] + (o[i + 1] - bl[i + 1]) * k));
+      o[i + 2] = Math.max(0, Math.min(255, o[i + 2] + (o[i + 2] - bl[i + 2]) * k));
+    }
+    x.putImageData(id, 0, 0);
+  }
 
   // 2) clarity – lokální kontrast (overlay rozmazané kopie)
   if ((a.clarity ?? 0) > 0) {
@@ -211,10 +298,42 @@ export function adjustedImage(src: CanvasImageSource, w: number, h: number, a: P
     x.restore();
   }
 
+  // 2b) záře světel (bloom): rozmazané jasné části přes obraz v režimu Screen
+  if ((a.glow ?? 0) > 0) {
+    const t = document.createElement("canvas");
+    t.width = w;
+    t.height = h;
+    const tx = t.getContext("2d")!;
+    tx.filter = `blur(${Math.max(3, Math.round(Math.max(w, h) / 45))}px) brightness(0.9) contrast(1.9) saturate(1.2)`;
+    tx.drawImage(c, 0, 0);
+    x.save();
+    x.globalCompositeOperation = "screen";
+    x.globalAlpha = Math.min(1, ((a.glow ?? 0) / 100) * 0.75);
+    x.drawImage(t, 0, 0);
+    x.restore();
+  }
+
+  // 2c) viněta fotky
+  if ((a.vignette ?? 0) > 0) {
+    const vg = x.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.3, w / 2, h / 2, Math.hypot(w, h) * 0.6);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, `rgba(0,0,0,${Math.min(0.9, (a.vignette ?? 0) / 100)})`);
+    x.save();
+    x.globalCompositeOperation = "source-atop";
+    x.fillStyle = vg;
+    x.fillRect(0, 0, w, h);
+    x.restore();
+  }
+
   const orig = document.createElement("canvas");
   orig.width = w;
   orig.height = h;
-  orig.getContext("2d")!.drawImage(src, 0, 0, w, h);
+  const ox = orig.getContext("2d")!;
+  if (a.flip) {
+    ox.translate(w, 0);
+    ox.scale(-1, 1);
+  }
+  ox.drawImage(src, 0, 0, w, h);
 
   // 3) boční barevné světlo
   if (a.light && a.light.amount > 0) {
@@ -317,6 +436,26 @@ export function adjustPresets(raw: { primary: string; accent: string; dark: stri
       id: "dramatic",
       label: "Dramatické",
       adj: { match: { amount: 75, lum: 75, color: 70 }, exposure: -8, contrast: 24, shadows: -16, highlights: -14, saturation: -12, clarity: 30, grade: { color: colors.secondary, amount: 30 }, light: { color: colors.primary, amount: 22, side: "both" }, rim: { color: colors.primary, amount: 45, width: 18, side: "both" } },
+    },
+    {
+      id: "cinema",
+      label: "Euroliga (filmové)",
+      adj: { contrast: 18, blacks: -10, whites: 6, saturation: -8, vibrance: 16, clarity: 22, sharpen: 25, glow: 10, split: { shadows: mixColor(raw.primary, raw.dark, 0.35), highlights: mixColor(raw.accent, "#FFFFFF", 0.55), amount: 45, balance: -10 }, rim: { color: colors.primary, amount: 35, width: 16, side: "both" } },
+    },
+    {
+      id: "noir",
+      label: "Noir (černobílé)",
+      adj: { mono: 100, contrast: 30, blacks: -15, whites: 8, clarity: 32, sharpen: 30, fade: 6, vignette: 25, split: { shadows: mixColor(raw.primary, raw.dark, 0.5), highlights: "#FFFFFF", amount: 25, balance: -40 } },
+    },
+    {
+      id: "matte",
+      label: "Matný film",
+      adj: { contrast: 10, fade: 42, saturation: -14, clarity: 12, split: { shadows: mixColor(raw.primary, raw.dark, 0.3), highlights: mixColor(raw.accent, "#FFFFFF", 0.6), amount: 32, balance: 0 } },
+    },
+    {
+      id: "glow",
+      label: "Svítivé",
+      adj: { exposure: 4, whites: 16, vibrance: 24, clarity: 10, glow: 38, light: { color: colors.primary, amount: 20, side: "both" }, rim: { color: colors.primary, amount: 55, width: 22, side: "both" } },
     },
     {
       id: "warm",

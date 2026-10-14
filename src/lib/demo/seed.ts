@@ -1,4 +1,4 @@
-import { TEX_SILK, TEX_SWIRL, TEX_HALFTONE } from "./textures";
+import { TEX_SILK, TEX_SWIRL, TEX_HALFTONE, TEX_VORTEX } from "./textures";
 import type { Asset, BrandKit, Channel, Dataset, ImageElement, ListElement, Project, Team, Template, TemplateElement, TextElement } from "../types";
 import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./data";
 import { makeArena, makeBallPhoto, makePlayerCutout, makeWordmark } from "./procedural";
@@ -12,7 +12,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 47;
+export const SEED_VERSION = 48;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -111,7 +111,7 @@ export function bgAsset(): Asset {
 export function builtInTemplates(projectId: string): Template[] {
   if (projectId === "p-zbl") return zblTemplates();
   if (projectId === "p-bcl") return bclTemplates();
-  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result)$/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && (/-(result|derby)-premium$/.test(t.id) || /-(results-premium-carousel|round-results-premium|standings-premium)$/.test(t.id) || /-mvp-(closeup|body)$/.test(t.id))));
+  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result|mvp)$/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && (/-(result|derby)-premium$/.test(t.id) || /-(results-premium-carousel|round-results-premium|standings-premium)$/.test(t.id) || /-mvp-(closeup|body)$/.test(t.id))));
   for (const t of list) {
     t.rev = SEED_VERSION;
     t.baseHash = designHash(t);
@@ -236,6 +236,7 @@ export function textureAssets(): Asset[] {
     { id: "tex-silk", projectId: SHARED, name: "Textura – hedvábné světlo (Screen)", kind: "element", dataUrl: TEX_SILK, w: 1080, h: 1350, createdAt: Date.now() },
     { id: "tex-swirl", projectId: SHARED, name: "Textura – světelné oblouky (Screen)", kind: "element", dataUrl: TEX_SWIRL, w: 1080, h: 1350, createdAt: Date.now() },
     { id: "tex-halftone", projectId: SHARED, name: "Textura – rastr teček", kind: "element", dataUrl: TEX_HALFTONE, w: 1080, h: 1350, createdAt: Date.now() },
+    { id: "tex-vortex", projectId: SHARED, name: "Textura – světelný vír (Screen)", kind: "element", dataUrl: TEX_VORTEX, w: 1080, h: 1350, createdAt: Date.now() },
   ];
 }
 
@@ -443,7 +444,7 @@ export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { projec
 }
 
 function bclTemplates(): Template[] {
-  const list = buildTemplates("p-bcl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /-(bcl-result|bcl-program)$/.test(t.id));
+  const list = buildTemplates("p-bcl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /-(bcl-result|bcl-program|bcl-mvp)$/.test(t.id));
   return list.map((t) => {
     t.finish = t.finish ?? { grain: 10, vignette: 35 };
     t.rev = SEED_VERSION;
