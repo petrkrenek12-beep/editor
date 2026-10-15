@@ -68,7 +68,7 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
 - `bcl-week` – Program týdne všech českých týmů v Evropě. Rozložení: svislý kovový nadpis vlevo, skleněný panel se
   zápasy. Vlastní vzhled (Petr nechtěl styl Europa League ani stejné pozadí jako ostatní BCL): `palette` grafit + oranžová
   oBasketu, jen obrysové oblouky z loga oBasketu (`asset:obasketu-lines`, bez nápisu, oranžově + záře), oranžová záře,
-  rastr. Logo vlevo nahoře zarovnané s horní hranou panelu, termín se spodní. Řádky `fill: 1.7` (málo zápasů → vyšší řádky).
+  rastr. Logo vlevo nahoře (bez tintu – původní vzhled loga) na střed sloupce s nadpisem, zarovnané s horní hranou panelu; termín bíle s oranžovou linkou, zarovnaný se spodní hranou. Řádky `fill: 1.7` (málo zápasů → vyšší řádky).
   Seznam má `groupBy: "comp"` → před každou soutěží řádek nadpisu (`__header`) s logem soutěže (jako Basket Ženy).
 - Smazané (na přání): obecné `p-bcl-program`, `p-bcl-result`; v ŽBL player-stats, program, result, results-carousel,
   results-round, standings (náhrobky v migraci v50).
