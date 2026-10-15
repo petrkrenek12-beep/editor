@@ -65,9 +65,10 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
 - Šablona může mít vlastní barvy `palette` (přepíší brand kit) – tak jsou udělané `bcl-result-elw/ecw` a `bcl-mvp-elw/ecw`
   (kopie BCL šablon, feminizované, logo soutěže `asset:comp-elw` / `asset:comp-ecw`).
   Euroliga žen: tmavě modrá + světle modrá, stříbrné logo. EuroCup žen: fialová + akvamarínová, korálový míč.
-- `bcl-week` – Program týdne všech českých týmů v Evropě: podle UEFA Europa League „Fixtures“ (plocha `@accent` se
-  šikmými pruhy `tex-stripes`, svislý nadpis Mazzard H, tmavý panel). Seznam má `groupBy: "comp"` → před každou
-  soutěží se vloží řádek nadpisu (`__header`) s logem soutěže (jako grafika Basket Ženy).
+- `bcl-week` – Program týdne všech českých týmů v Evropě. Rozložení: svislý kovový nadpis vlevo, skleněný panel se
+  zápasy. Vlastní vzhled (Petr nechtěl styl Europa League ani stejné pozadí jako ostatní BCL): `palette` grafit + oranžová
+  oBasketu, obří reliéfní logo oBasketu jako vodoznak (`asset:obasketu-emboss`, natočené), oranžová záře, rastr.
+  Seznam má `groupBy: "comp"` → před každou soutěží řádek nadpisu (`__header`) s logem soutěže (jako Basket Ženy).
 - Smazané (na přání): obecné `p-bcl-program`, `p-bcl-result`; v ŽBL player-stats, program, result, results-carousel,
   results-round, standings (náhrobky v migraci v50).
 
