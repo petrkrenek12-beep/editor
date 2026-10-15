@@ -60,6 +60,22 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
   - `bcl-mvp` – Hráč zápasu BCL: vyříznutý hráč uprostřed (nevyříznutá fotka jde přes pozadí), kovové příjmení,
     3 (nebo 2) čísla v závorkách, výsledek s logy.
 
+## Projekt „Evropské poháry“ (id `p-bcl`, dříve BCL)
+- Liga mistrů FIBA (barvy projektu) + Euroliga žen a EuroCup žen. Ženské týmy (loga z ŽBL) jsou v projektu jako `p-bcl-zteam-*`.
+- Šablona může mít vlastní barvy `palette` (přepíší brand kit) – tak jsou udělané `bcl-result-elw/ecw` a `bcl-mvp-elw/ecw`
+  (kopie BCL šablon, feminizované, logo soutěže `asset:comp-elw` / `asset:comp-ecw`).
+  Euroliga žen: tmavě modrá + světle modrá, stříbrné logo. EuroCup žen: fialová + akvamarínová, korálový míč.
+- `bcl-week` – Program týdne všech českých týmů v Evropě: podle UEFA Europa League „Fixtures“ (plocha `@accent` se
+  šikmými pruhy `tex-stripes`, svislý nadpis Mazzard H, tmavý panel). Seznam má `groupBy: "comp"` → před každou
+  soutěží se vloží řádek nadpisu (`__header`) s logem soutěže (jako grafika Basket Ženy).
+- Smazané (na přání): obecné `p-bcl-program`, `p-bcl-result`; v ŽBL player-stats, program, result, results-carousel,
+  results-round, standings (náhrobky v migraci v50).
+
+## Čtení screenshotů (AI)
+- Popisky statistik vždy zkratky PTS/REB/AST/STL/BLK/EFF – v promptu i v kódu (`statLabel`, `statText` v ai.ts),
+  i v řádcích carouselu (`mvp_name`, `s1_value`…). Hráč zápasu přes `_mvp`, plní i `team_score`/`opponent_score`.
+- Náhledové (preview) nasazení na Vercelu NEMÁ `ANTHROPIC_API_KEY` (je jen pro Production) → AI tam hlásí chybu.
+
 ## Editor fotek (`src/lib/adjust.ts` + `AdjustPanel.tsx`)
 - Inspirace imageflow.dev / Lightroom. Sekce: Tón (expozice, kontrast, světla, stíny, bílé, černé), Barvy (vibrance,
   sytost, teplota, odstín), Detail (clarity, doostření), Match Color, Barevné tónování (split toning stíny/světla +

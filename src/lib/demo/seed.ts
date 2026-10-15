@@ -1,4 +1,5 @@
 import { TEX_SILK, TEX_SWIRL, TEX_HALFTONE, TEX_VORTEX } from "./textures";
+import { ECW_LOGO, ECW_LOGO_SIZE, ELW_LOGO, ELW_LOGO_SIZE, TEX_STRIPES } from "./euro";
 import type { Asset, BrandKit, Channel, Dataset, ImageElement, ListElement, Project, Team, Template, TemplateElement, TextElement } from "../types";
 import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./data";
 import { makeArena, makeBallPhoto, makePlayerCutout, makeWordmark } from "./procedural";
@@ -12,7 +13,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 49;
+export const SEED_VERSION = 50;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -111,7 +112,7 @@ export function bgAsset(): Asset {
 export function builtInTemplates(projectId: string): Template[] {
   if (projectId === "p-zbl") return zblTemplates();
   if (projectId === "p-bcl") return bclTemplates();
-  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-(program|result|mvp)$/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && (/-(result|derby)-premium$/.test(t.id) || /-(results-premium-carousel|round-results-premium|standings-premium)$/.test(t.id) || /-mvp-(closeup|body)$/.test(t.id))));
+  const list = buildTemplates(projectId, { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => !/-bcl-/.test(t.id) && !(projectId === "p-nbl" && NBL_REMOVED.includes(t.id.slice(projectId.length + 1))) && !(projectId !== "p-nbl" && (/-(result|derby)-premium$/.test(t.id) || /-(results-premium-carousel|round-results-premium|standings-premium)$/.test(t.id) || /-mvp-(closeup|body)$/.test(t.id))));
   for (const t of list) {
     t.rev = SEED_VERSION;
     t.baseHash = designHash(t);
@@ -237,6 +238,7 @@ export function textureAssets(): Asset[] {
     { id: "tex-swirl", projectId: SHARED, name: "Textura – světelné oblouky (Screen)", kind: "element", dataUrl: TEX_SWIRL, w: 1080, h: 1350, createdAt: Date.now() },
     { id: "tex-halftone", projectId: SHARED, name: "Textura – rastr teček", kind: "element", dataUrl: TEX_HALFTONE, w: 1080, h: 1350, createdAt: Date.now() },
     { id: "tex-vortex", projectId: SHARED, name: "Textura – světelný vír (Screen)", kind: "element", dataUrl: TEX_VORTEX, w: 1080, h: 1350, createdAt: Date.now() },
+    { id: "tex-stripes", projectId: SHARED, name: "Šikmé pruhy (Europa League)", kind: "element", dataUrl: TEX_STRIPES, w: 1080, h: 1350, createdAt: Date.now() },
   ];
 }
 
@@ -245,8 +247,8 @@ export function linesAsset(): Asset {
 }
 
 /** Otisk návrhu šablony (prvky, pole, pozadí) – mění se jen když se změní návrh. */
-export function designHash(t: Pick<Template, "elements" | "fields" | "background" | "paginate">): string {
-  const str = JSON.stringify([t.elements, t.fields, t.background, t.paginate ?? null]);
+export function designHash(t: Pick<Template, "elements" | "fields" | "background" | "paginate" | "palette">): string {
+  const str = JSON.stringify([t.elements, t.fields, t.background, t.paginate ?? null, ...(t.palette ? [t.palette] : [])]);
   let h = 5381;
   for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36);
@@ -263,7 +265,7 @@ export function newerDesign(t: Template): Template | undefined {
 
 // ── ŽBL (ženská liga) ───────────────────────────────────────
 
-export const ZBL_IDS = ["standings-premium", "round-results-premium", "results-premium-carousel", "mvp-closeup", "mvp-body", "derby-premium", "result-premium", "program-premium", "result", "results-panorama", "results-round", "program", "standings", "player-stats", "transfer", "breaking"];
+export const ZBL_IDS = ["standings-premium", "round-results-premium", "results-premium-carousel", "mvp-closeup", "mvp-body", "derby-premium", "result-premium", "program-premium", "results-panorama", "transfer", "breaking"];
 
 /** Projekt ŽBL: zelené pozadí, logo Chance ŽBL, týmy s barevnými i bílými logy. Brand (logo, fonty) převezme z NBL. */
 export function zblProject(nblBrand: BrandKit, createdAt = Date.now()): { project: Project; assets: Asset[] } {
@@ -405,7 +407,21 @@ function zblTemplates(): Template[] {
   });
 }
 
-// ── BCL (Liga mistrů FIBA) ──────────────────────────────────
+// ── Evropské poháry (dříve BCL): Liga mistrů FIBA, Euroliga žen, EuroCup žen ──────────
+
+export const EURO_NAME = "Evropské poháry";
+
+/** Ženské týmy (loga z ŽBL) – hrají Euroligu a EuroCup žen. Přidá i jejich loga do `assets`. */
+export function euroWomenTeams(assets: Asset[], createdAt = Date.now()): Team[] {
+  return ZBL_TEAMS.map((t, i) => {
+    const id = `p-bcl-zteam-${i}`;
+    assets.push(
+      { id: `${id}-logo`, projectId: "p-bcl", name: `${t.name} logo`, kind: "team", dataUrl: t.logo, createdAt },
+      { id: `${id}-logo-w`, projectId: "p-bcl", name: `${t.name} logo bílé`, kind: "team", dataUrl: t.logoWhite, createdAt },
+    );
+    return { id, name: t.name, short: t.short, aliases: t.aliases, color: t.color, color2: t.color2, logo: `${id}-logo`, logoWhite: `${id}-logo-w` };
+  });
+}
 
 export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { project: Project; assets: Asset[] } {
   const pid = "p-bcl";
@@ -418,14 +434,17 @@ export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { projec
     A("p-bcl-team-0-logo-w", "Slavia Praha logo bílé", "team", BCL_SLAVIA_W),
     A("p-bcl-team-1-logo", "BK Kvis Pardubice logo", "team", BCL_KVIS),
     A("p-bcl-team-1-logo-w", "BK Kvis Pardubice logo bílé", "team", BCL_KVIS_W),
+    A("comp-elw", "Euroliga žen (stříbrné)", "logo", ELW_LOGO, ELW_LOGO_SIZE[0], ELW_LOGO_SIZE[1]),
+    A("comp-ecw", "EuroCup žen", "logo", ECW_LOGO, ECW_LOGO_SIZE[0], ECW_LOGO_SIZE[1]),
   ];
   const teams: Team[] = [
     { id: "p-bcl-team-0", name: "Slavia Praha", short: "SLA", aliases: ["Slavia", "SK Slavia Praha", "Slavia Praha ERA NBK", "SKS"], color: "#E3001B", color2: "#FFFFFF", logo: "p-bcl-team-0-logo", logoWhite: "p-bcl-team-0-logo-w" },
     { id: "p-bcl-team-1", name: "BK Kvis Pardubice", short: "PAR", aliases: ["Pardubice", "Kvis Pardubice", "BK Pardubice"], color: "#E30613", color2: "#1D1D1B", logo: "p-bcl-team-1-logo", logoWhite: "p-bcl-team-1-logo-w" },
+    ...euroWomenTeams(assets, createdAt),
   ];
   const project: Project = {
     id: pid,
-    name: "BCL",
+    name: EURO_NAME,
     parentName: "Obasketu.cz",
     brand: {
       ...nblBrand,
@@ -444,7 +463,7 @@ export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { projec
 }
 
 function bclTemplates(): Template[] {
-  const list = buildTemplates("p-bcl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /-(bcl-result|bcl-program|bcl-mvp)$/.test(t.id));
+  const list = buildTemplates("p-bcl", { arena: "demo-arena", ball: "demo-ball", player: "demo-player" }).filter((t) => /^p-bcl-bcl-/.test(t.id));
   return list.map((t) => {
     t.finish = t.finish ?? { grain: 10, vignette: 35 };
     t.rev = SEED_VERSION;

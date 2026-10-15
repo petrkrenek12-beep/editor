@@ -130,6 +130,19 @@ function baseContext(env: RenderEnv): RenderContext {
 function listRows(el: ListElement, env: RenderEnv): Record<string, unknown>[] {
   const v = env.data[el.field];
   let rows = Array.isArray(v) ? (v as Record<string, unknown>[]) : [];
+  if (el.groupBy) {
+    // nadpis skupiny (např. soutěž) před každou novou hodnotou sloupce
+    const g = el.groupBy;
+    const out: Record<string, unknown>[] = [];
+    let prev: string | null = null;
+    for (const r of rows) {
+      const cur = String(r[g] ?? "").trim();
+      if (cur && cur !== prev) out.push({ __header: "1", [g]: cur });
+      prev = cur;
+      out.push(r);
+    }
+    rows = out;
+  }
   const p = env.template.paginate;
   if (p && p.field === el.field) {
     const page = (env.page ?? 1) - 1;
@@ -186,8 +199,16 @@ function collect(env: RenderEnv) {
   return { urls: [...urls], fonts: [...fonts] };
 }
 
+/** Barvy šablony (palette) mají přednost před brand kitem projektu. */
+function withPalette(env: RenderEnv): RenderEnv {
+  const p = env.template.palette;
+  if (!p || !Object.keys(p).length) return env;
+  return { ...env, brand: { ...env.brand, colors: { ...env.brand.colors, ...p } } };
+}
+
 /** Načte fonty a obrázky, které grafika potřebuje. */
 export async function prepare(env: RenderEnv): Promise<Images> {
+  env = withPalette(env);
   const fontsToRegister = [env.brand.fonts.display, env.brand.fonts.body, env.brand.fonts.accent].filter((f) => f.asset);
   await Promise.all(fontsToRegister.map((f) => registerCustomFont(f.family, assetUrl(env, f.asset) ?? "")));
   const { urls, fonts } = collect(env);
@@ -1120,6 +1141,7 @@ function drawElement(
 
 /** Synchronní vykreslení (obrázky a fonty už musí být připravené přes prepare). */
 export function renderSync(ctx: CanvasRenderingContext2D, env: RenderEnv, images: Images, scale = 1): HitBox[] {
+  env = withPalette(env);
   const fmt = FORMATS[env.format];
   const hits: HitBox[] = [];
   ctx.save();

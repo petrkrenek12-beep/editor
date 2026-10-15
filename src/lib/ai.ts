@@ -135,8 +135,8 @@ function describeFields(t: Template) {
     .filter((f) => f.type !== "image" && f.type !== "channel")
     .map((f) => {
       if (f.type === "list")
-        return `- "${f.key}" (${f.label}): POLE objektů, každý má klíče ${(f.columns ?? []).filter((c) => c.type !== "channel" && c.type !== "image").map((c) => `"${c.key}" (${c.label}, ${c.type})`).join(", ")}`;
-      return `- "${f.key}" (${f.label}, typ ${f.type})`;
+        return `- "${f.key}" (${f.label}): POLE objektů, každý má klíče ${(f.columns ?? []).filter((c) => c.type !== "channel" && c.type !== "image").map((c) => `"${c.key}" (${c.label}, ${c.type}${c.options ? `, jedna z hodnot: ${c.options.map((o) => `"${o}"`).join(" / ")}` : ""})`).join(", ")}`;
+      return `- "${f.key}" (${f.label}, typ ${f.type}${f.options ? `, jedna z hodnot: ${f.options.map((o) => `"${o}"`).join(" / ")}` : ""})`;
     })
     .join("\n");
 }
@@ -162,6 +162,10 @@ Pravidla:
   4. Výsledek: "_mvp": {"name": CELÉ jméno ve tvaru „Křestní Příjmení“ – když je kdekoli na obrázcích celé křestní jméno (vyskakovací karta hráče, profil, „Nejlepší hráči“), použij ho; prostřední jména vynech („Karoline Elizabeth Striplin“ → „Karoline Striplin“). Jen když celé jméno nikde není, napiš zkratku ve tvaru „K. Striplin“ (ne „Striplin K.“), "team": jeho tým, "opponent": soupeř jeho týmu, "score": výsledek z pohledu jeho týmu („88:81“), "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo} – vynech jen čísla, která na obrázku nejsou.
   5. Livesport často ukazuje i blok „Nejlepší hráči“ / „Top hráči“ u přehledu zápasu – i ten použij.
   Když na žádném obrázku statistiky hráčů nejsou, "_mvp" vůbec nepřidávej (nevymýšlej).
+- POPISKY STATISTIK (pole končící na "_label", např. "s1_label") piš VŽDY jako anglickou zkratku velkými písmeny: PTS (body), REB (doskoky), AST (asistence), STL (zisky), BLK (bloky), EFF (hodnocení / VAL / PIR), 3PM (trojky), FG (střelba z pole). NIKDY ne česky („Body“, „Doskoky“…).
+- Když má SEZNAM zápasů sloupce "mvp_name" a "s1_value"/"s1_label"… (carousel – každý řádek = jeden zápas), vyplň v KAŽDÉM řádku hráče/hráčku zápasu toho zápasu: z vítězného týmu nejvyšší EFF/VAL/PIR (jinak nejvíc bodů), "mvp_name" = „Jméno Příjmení“, s1 = PTS, další dvě čísla REB / AST (od 5), jinak EFF; popisky zkratkami. Když statistiky hráčů pro daný zápas nejsou, tyto sloupce vynech.
+- Skóre z pohledu týmu hráče (pole "team_score" a "opponent_score") vyplň, když je výsledek na obrázku.
+- Soutěž (sloupec "comp"): vyber jednu z nabízených hodnot podle toho, co je na obrázku (Basketball Champions League / Liga mistrů = "Liga mistrů FIBA", EuroLeague Women = "Euroliga žen", EuroCup Women = "EuroCup žen"). Řádky seřaď podle soutěže.
 - Když má seznam zápasů sloupec "mvp", napiš do něj nejlepšího hráče vítězného týmu ve tvaru "Jméno Příjmení (21 PTS, 8 AST)" – body vždy, REB a AST jen když jich má aspoň 5.
 - Seznamy (např. zápasy) vyplň ve stejném pořadí jako na screenshotu, všechny řádky.
 - TABULKA SOUTĚŽE (sloupce jako "move", "streak", "g", "w", "l"):
@@ -267,6 +271,9 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
       if (has("team") && m.team) out.team = teamName(m.team);
       if (has("opponent") && m.opponent) out.opponent = teamName(m.opponent);
       if (has("result") && m.score) out.result = String(m.score).replace(/\s*[-–]\s*/, ":");
+      const sc = /(\d{1,3})\s*[-–:]\s*(\d{1,3})/.exec(String(m.score ?? ""));
+      if (sc && has("team_score") && !out.team_score) out.team_score = Number(sc[1]);
+      if (sc && has("opponent_score") && !out.opponent_score) out.opponent_score = Number(sc[2]);
     }
     if (has("mvp_name") || has("last_name")) {
       if (has("mvp_name")) out.mvp_name = m.name;
@@ -283,8 +290,43 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
       }
     }
   }
+  // popisky statistik vždy zkratkou (PTS/REB/AST…), i v řádcích carouselu a v textu „hráč zápasu“
+  const fix = (rec: Record<string, unknown>) => {
+    for (const [k, v] of Object.entries(rec)) {
+      if (typeof v !== "string") continue;
+      if (/_label$/.test(k)) rec[k] = statLabel(v);
+      else if (k === "mvp" || k === "mvp_name") rec[k] = statText(v);
+    }
+  };
+  fix(out as Record<string, unknown>);
+  for (const f of t.fields) if (f.type === "list" && Array.isArray(out[f.key])) (out[f.key] as Record<string, unknown>[]).forEach(fix);
   if (!Object.keys(out).length) throw new Error("Ze screenshotu se nepodařilo nic vyčíst pro tuto šablonu.");
   return out;
+}
+
+const STAT_WORDS: [RegExp, string][] = [
+  [/^(body|bod[ůuy]?|pts|points?|b)$/i, "PTS"],
+  [/^(doskok[ůuy]?|doskoky|reb|rebounds?|dos|d)$/i, "REB"],
+  [/^(asistenc[eíi]|asist\.?|ast|as|a)$/i, "AST"],
+  [/^(zisk[ůuy]?|stl|steals?|zis)$/i, "STL"],
+  [/^(blok[ůuy]?|blk|bl|blocks?)$/i, "BLK"],
+  [/^(eff|val|pir|hodnocení|hodnoceni|efektivita|index|hod)$/i, "EFF"],
+  [/^(troj(k[ayu]|ky)|3pm|3b|3pt)$/i, "3PM"],
+];
+/** „Body“ → „PTS“, „Doskoky“ → „REB“ … (ostatní popisky jen velkými písmeny) */
+export function statLabel(v: string): string {
+  const t = v.trim().replace(/\.$/, "");
+  for (const [re, ab] of STAT_WORDS) if (re.test(t)) return ab;
+  return t.length <= 5 ? t.toUpperCase() : t;
+}
+/** „21 bodů, 9 doskoků“ → „21 PTS, 9 REB“ */
+export function statText(v: string): string {
+  return v
+    .replace(/(\d+)\s*(?:bod(?:ů|u|y)?|b\.)(?![a-zá-ž])/gi, "$1 PTS")
+    .replace(/(\d+)\s*doskok(?:ů|u|y)?(?![a-zá-ž])/gi, "$1 REB")
+    .replace(/(\d+)\s*asistenc(?:í|i|e)(?![a-zá-ž])/gi, "$1 AST")
+    .replace(/(\d+)\s*zisk(?:ů|u|y)?(?![a-zá-ž])/gi, "$1 STL")
+    .replace(/(\d+)\s*blok(?:ů|u|y)?(?![a-zá-ž])/gi, "$1 BLK");
 }
 
 /** "11.10." / "11. 10. 2026" / "2026-10-11" → "2026-10-11" (den vždy první). Bez roku: nejbližší budoucí/nedávné datum. */

@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, textureAssets, zblProject, bclProject, NBL_REMOVED } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, textureAssets, zblProject, bclProject, NBL_REMOVED, EURO_NAME } from "./demo/seed";
 import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
@@ -237,6 +237,31 @@ export function initStore() {
           templates = templates.filter((t) => t.id !== oldRes.id);
           settings = { ...(settings ?? state.settings), tombstones: { ...(settings?.tombstones ?? {}), "templates:p-bcl-result": Date.now() } };
         }
+      }
+      // v50: BCL → Evropské poháry (+ Euroliga a EuroCup žen): název, loga soutěží, ženské týmy
+      {
+        const bp = projects.find((p) => p.id === "p-bcl");
+        if (bp) {
+          const fresh = bclProject(bp.brand, Date.now());
+          const add = fresh.assets.filter((x) => !assets.some((y) => y.id === x.id));
+          for (const x of add) await a.put("assets", x);
+          assets = [...assets, ...add];
+          const missing = fresh.project.teams.filter((t) => !bp.teams.some((o) => o.id === t.id || o.name === t.name));
+          if (bp.name === "BCL" || missing.length) {
+            const np = { ...bp, name: bp.name === "BCL" ? EURO_NAME : bp.name, teams: [...bp.teams, ...missing] };
+            (np as { _mod?: number })._mod = Date.now();
+            await a.put("projects", np);
+            projects = projects.map((p) => (p.id === np.id ? np : p));
+          }
+        }
+      }
+      // v50: uživatel chce pryč staré obecné šablony v BCL a skryté šablony v ŽBL (i upravené kopie)
+      for (const id of ["p-bcl-program", "p-bcl-result", "p-zbl-player-stats", "p-zbl-program", "p-zbl-result", "p-zbl-results-carousel", "p-zbl-results-round", "p-zbl-standings"]) {
+        if (templates.some((t) => t.id === id)) {
+          await a.remove("templates", id);
+          templates = templates.filter((t) => t.id !== id);
+        }
+        settings = { ...(settings ?? state.settings), tombstones: { ...(settings?.tombstones ?? state.settings.tombstones ?? {}), [`templates:${id}`]: Date.now() } };
       }
       for (const pid of ["p-nbl", "p-repre", "p-zbl", "p-bcl"]) {
         if (!projects.some((p) => p.id === pid)) continue;

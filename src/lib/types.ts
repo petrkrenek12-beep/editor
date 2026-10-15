@@ -228,6 +228,8 @@ export interface ListElement extends BaseElement {
   rowsBg?: { src: string; radius?: number; opacity?: number; /** plná barva pod obrázkem (jako černá vrstva v Affinity) */ backing?: string; /** obrázek zarovnaný na celou plochu grafiky (např. matné sklo z pozadí) */ canvas?: boolean; blur?: number; brightness?: number };
   /** Mřížka dlaždic místo řádků: `cols` na řádek, dlaždice colWidth × rowHeight, poslední řádek na střed */
   grid?: { cols: number; colWidth: number; colGap?: number };
+  /** Skupiny: před každou novou hodnotou tohoto sloupce se vloží řádek nadpisu ({{__header}} = 1, sloupec = hodnota) */
+  groupBy?: string;
 }
 
 export type TemplateElement =
@@ -300,6 +302,8 @@ export interface Template {
   /** Carousel: rozdělí seznam na více slidů */
   /** Dokončení grafiky: zrno (grain) a viněta 0–100. Lze přepsat u grafiky (data.__grain / __vignette). */
   finish?: { grain?: number; vignette?: number };
+  /** Vlastní barvy šablony (přepíší barvy brand kitu) – např. Euroliga žen v jiném projektu */
+  palette?: Partial<BrandKit["colors"]>;
   paginate?: { field: string; perPage: number; /** každý slide = jeden řádek; jeho sloupce jsou dostupné jako {{klíč}} v celé šabloně */ rowAsData?: boolean };
   createdAt: number;
   updatedAt: number;
