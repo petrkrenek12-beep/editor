@@ -2035,17 +2035,17 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
     }
   }
 
-  // 32 ── EVROPSKÉ POHÁRY – PROGRAM TÝDNE (podle UEFA Europa League „Fixtures“: barevná plocha s šikmými pruhy,
-  //       svislý nadpis vlevo, tmavý panel se zápasy; zápasy seskupené podle soutěže jako u Basket Ženy)
+  // 32 ── EVROPSKÉ POHÁRY – PROGRAM TÝDNE (rozložení: svislý nadpis vlevo, panel se zápasy podle soutěže jako u Basket Ženy;
+  //       vlastní vzhled ve stylu BCL premium: světelný vír, kovový nadpis, skleněný panel se světelnou hranou)
   {
     const isComp = (word: string) => `__header && comp *= ${word}`;
     defs.push({
       id: "bcl-week",
       name: "Program týdne – Evropské poháry",
       category: "Soutěž",
-      description: "Všechny české týmy v Evropě za týden: podle soutěže (BCL, Euroliga žen, EuroCup žen…) nadpis s logem a pod ním zápasy. Styl Europa League Fixtures – plocha v barvě projektu se šikmými pruhy, svislý nadpis, tmavý panel.",
-      background: "@accent",
-      finish: { grain: 10, vignette: 18 },
+      description: "Všechny české týmy v Evropě za týden: podle soutěže (BCL, Euroliga žen, EuroCup žen…) nadpis s logem a pod ním zápasy. Světelný vír v barvách projektu, kovový svislý nadpis, skleněný panel se světelnou hranou.",
+      background: { type: "radial", stops: [[0, "@secondary"], [0.6, "@dark"], [1, "@dark"]] },
+      finish: { grain: 14, vignette: 34 },
       fields: [
         { key: "title", label: "Svislý nadpis", type: "text", placeholder: "Program" },
         { key: "subtitle", label: "Pod nadpisem (termín)", type: "text", placeholder: "14.–16. 10." },
@@ -2079,26 +2079,29 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         ],
       },
       elements: [
-        img("stripes", "Šikmé pruhy", [0, 0, 1080, 1350], "asset:tex-stripes", { fit: "cover", tint: "@dark", opacity: 0.92, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        ...bclVortexBg(),
+        rect("side-glow", "Záře za nadpisem", [-420, 260, 900, 1100], { type: "radial", stops: [[0, "@primary/30"], [0.4, "@primary/8"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen", anchorX: "left", anchorY: "bottom" }),
         img("logo", "Logo (bílé)", [36, 44, 168, 120], "brand:logo", { fit: "contain", tint: "#FFFFFF", fallback: "none", anchorX: "left", anchorY: "top" }),
-        text("title", "Svislý nadpis", [22, 300, 200, 880], "{{title}}", { font: "Mazzard H", weight: 900, size: 230, minSize: 80, uppercase: true, vertical: true, align: "left", letterSpacing: -0.01, anchorX: "left", anchorY: "bottom" }),
-        text("subtitle", "Termín", [26, 1196, 200, 84], "{{subtitle}}", { font: "Mazzard H", weight: 900, size: 64, minSize: 26, uppercase: true, align: "left", anchorX: "left", anchorY: "bottom" }),
-        rect("panel", "Tmavý panel", [240, 70, 812, 1212], "@dark", { shadow: { color: "rgba(0,0,0,0.3)", blur: 30, x: 0, y: 10 }, anchorX: "center", anchorY: "stretch" }),
+        text("title", "Svislý nadpis", [30, 300, 190, 880], "{{title}}", { font: "Russo One", weight: 400, size: 190, minSize: 80, uppercase: true, vertical: true, align: "left", letterSpacing: 0.01, fill: METAL, shadow: { color: "rgba(0,0,0,0.5)", blur: 30, x: 0, y: 8 }, anchorX: "left", anchorY: "bottom" }),
+        text("subtitle", "Termín", [30, 1206, 196, 60], "{{subtitle}}", { font: "Saira Condensed", weight: 800, size: 54, minSize: 24, uppercase: true, align: "left", color: "@primary", anchorX: "left", anchorY: "bottom" }),
+        rect("panel", "Skleněný panel", [240, 70, 812, 1212], lin(0, [0, "@secondary/88"], [0.55, "@dark/90"], [1, "@dark/86"]), { radius: 8, stroke: "rgba(255,255,255,0.14)", strokeWidth: 1.5, shadow: { color: "rgba(0,0,0,0.55)", blur: 50, x: 0, y: 18 }, anchorX: "center", anchorY: "stretch" }),
+        rect("panel-edge", "Světelná hrana panelu", [240, 160, 2.5, 1030], lin(90, [0, "@primary/0"], [0.5, "@primary"], [1, "@primary/0"]), { shadow: { color: "@primary", blur: 18, x: 0, y: 0 }, anchorX: "center", anchorY: "stretch" }),
+        rect("panel-top", "Světelná hrana nahoře", [380, 70, 540, 2], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.75)"], [1, "rgba(255,255,255,0)"]), { anchorX: "center", anchorY: "top" }),
         list("games", "Zápasy podle soutěže", [262, 88, 768, 1176], "games", 96, 0, [
           // nadpis soutěže
-          img("h-bcl", "Logo BCL", [8, 14, 150, 66], "brand:partner", { fit: "contain", align: "left", fallback: "none", showIf: `${isComp("mistr")} || ${isComp("bcl")} || ${isComp("champions")}` }),
-          img("h-elw", "Logo Euroligy žen", [8, 6, 150, 84], "asset:comp-elw", { fit: "contain", align: "left", fallback: "none", showIf: isComp("euroliga zen") }),
-          img("h-ecw", "Logo EuroCupu žen", [8, 14, 150, 66], "asset:comp-ecw", { fit: "contain", align: "left", fallback: "none", showIf: isComp("eurocup zen") }),
-          text("h-name", "Název soutěže", [176, 14, 584, 66], "{{comp}}", { font: "Mazzard H", weight: 900, size: 38, minSize: 22, uppercase: true, align: "left", letterSpacing: 0.02, color: "@accent", showIf: "__header" }),
-          rect("h-line", "Linka pod soutěží", [8, 90, 752, 3], "@accent", { showIf: "__header" }),
+          img("h-bcl", "Logo BCL", [8, 16, 150, 58], "brand:partner", { fit: "contain", align: "left", fallback: "none", showIf: `${isComp("mistr")} || ${isComp("bcl")} || ${isComp("champions")}` }),
+          img("h-elw", "Logo Euroligy žen", [8, 10, 150, 68], "asset:comp-elw", { fit: "contain", align: "left", fallback: "none", showIf: isComp("euroliga zen") }),
+          img("h-ecw", "Logo EuroCupu žen", [8, 16, 150, 58], "asset:comp-ecw", { fit: "contain", align: "left", fallback: "none", showIf: isComp("eurocup zen") }),
+          text("h-name", "Název soutěže", [176, 14, 584, 66], "{{comp}}", { font: "Russo One", weight: 400, size: 36, minSize: 22, uppercase: true, align: "left", letterSpacing: 0.03, fill: METAL, showIf: "__header" }),
+          rect("h-line", "Linka pod soutěží", [8, 92, 752, 2], lin(0, [0, "@primary"], [0.6, "@primary/40"], [1, "@primary/0"]), { showIf: "__header" }),
           // zápas
-          text("home", "Domácí", [8, 14, 248, 66], "{{home}}", { font: "Mazzard H", weight: 900, size: 30, minSize: 17, uppercase: true, align: "right", hideIf: "__header" }),
+          text("home", "Domácí", [8, 14, 248, 66], "{{home}}", { font: "Saira Condensed", weight: 700, size: 34, minSize: 20, uppercase: true, align: "right", letterSpacing: 0.01, hideIf: "__header" }),
           logo("hl", "Logo D", [262, 20, 62, 56], "home", { override: "{{home_logo}}", logoVariant: "white", equalize: 0.8, hideIf: "__header" }),
-          text("time", "Čas", [332, 10, 104, 54], "{{time}}", { font: "Mazzard H", weight: 900, size: 36, align: "center", color: "@accent", hideIf: "__header" }),
-          text("day", "Den", [330, 62, 108, 24], "{{date|day}} {{date|date:short}}", { font: "Mazzard H", weight: 600, size: 16, minSize: 11, uppercase: true, align: "center", opacity: 0.75, hideIf: "__header" }),
+          text("time", "Čas", [332, 10, 104, 54], "{{time}}", { font: "Saira Condensed", weight: 800, size: 42, align: "center", color: "@primary", hideIf: "__header" }),
+          text("day", "Den", [330, 62, 108, 24], "{{date|day}} {{date|date:short}}", { font: "Saira Condensed", weight: 600, size: 18, minSize: 12, uppercase: true, align: "center", letterSpacing: 0.04, opacity: 0.75, hideIf: "__header" }),
           logo("al", "Logo H", [444, 20, 62, 56], "away", { override: "{{away_logo}}", logoVariant: "white", equalize: 0.8, hideIf: "__header" }),
-          text("away", "Hosté", [512, 14, 248, 66], "{{away}}", { font: "Mazzard H", weight: 900, size: 30, minSize: 17, uppercase: true, align: "left", hideIf: "__header" }),
-          rect("sep", "Dělicí čára", [8, 95, 752, 1.5], "rgba(255,255,255,0.22)", { hideIf: "__header" }),
+          text("away", "Hosté", [512, 14, 248, 66], "{{away}}", { font: "Saira Condensed", weight: 700, size: 34, minSize: 20, uppercase: true, align: "left", letterSpacing: 0.01, hideIf: "__header" }),
+          rect("sep", "Dělicí čára", [8, 95, 752, 1], "rgba(255,255,255,0.12)", { hideIf: "__header" }),
         ], { groupBy: "comp", center: true, anchorX: "center", anchorY: "stretch" }),
       ],
     });
