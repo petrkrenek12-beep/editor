@@ -40,7 +40,7 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
   `lumaKey`, `tint`, `blend`, `equalize` (stejná optická velikost log), `row` (skupina log centrovaná jako celek),
   `override` (vlastní logo).
 - Podmínky `showIf`/`hideIf`: `a < b`, `==`, `*=` (obsahuje), `||`, `&&`, `photo.cut` (vlastnost obrázku).
-- Seznam: `rowsBg` (i `canvas: true` + `blur` = matné sklo z pozadí), `distribute`, `center`, `grid`;
+- Seznam: `fill` (řádky se protáhnou na výšku až N×, ať panel není prázdný), `groupBy` (řádky nadpisů skupin), `rowsBg` (i `canvas: true` + `blur` = matné sklo z pozadí), `distribute`, `center`, `grid`;
   `paginate.rowAsData` = carousel (1 řádek = 1 slide).
 - `finish: { grain, vignette }` – zrno a viněta.
 - Seznam v podmínkách a textech: `games.length` (počet řádků, např. `showIf: "games.length == 1"`),
@@ -67,7 +67,8 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
   Euroliga žen: tmavě modrá + světle modrá, stříbrné logo. EuroCup žen: fialová + akvamarínová, korálový míč.
 - `bcl-week` – Program týdne všech českých týmů v Evropě. Rozložení: svislý kovový nadpis vlevo, skleněný panel se
   zápasy. Vlastní vzhled (Petr nechtěl styl Europa League ani stejné pozadí jako ostatní BCL): `palette` grafit + oranžová
-  oBasketu, obří reliéfní logo oBasketu jako vodoznak (`asset:obasketu-emboss`, natočené), oranžová záře, rastr.
+  oBasketu, jen obrysové oblouky z loga oBasketu (`asset:obasketu-lines`, bez nápisu, oranžově + záře), oranžová záře,
+  rastr. Logo vlevo nahoře zarovnané s horní hranou panelu, termín se spodní. Řádky `fill: 1.7` (málo zápasů → vyšší řádky).
   Seznam má `groupBy: "comp"` → před každou soutěží řádek nadpisu (`__header`) s logem soutěže (jako Basket Ženy).
 - Smazané (na přání): obecné `p-bcl-program`, `p-bcl-result`; v ŽBL player-stats, program, result, results-carousel,
   results-round, standings (náhrobky v migraci v50).

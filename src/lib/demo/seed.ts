@@ -1,5 +1,5 @@
 import { TEX_SILK, TEX_SWIRL, TEX_HALFTONE, TEX_VORTEX } from "./textures";
-import { ECW_LOGO, ECW_LOGO_SIZE, ELW_LOGO, ELW_LOGO_SIZE, OBASKETU_EMBOSS, TEX_STRIPES } from "./euro";
+import { ECW_LOGO, ECW_LOGO_SIZE, ELW_LOGO, ELW_LOGO_SIZE, OBASKETU_EMBOSS, OBASKETU_LINES, TEX_STRIPES } from "./euro";
 import type { Asset, BrandKit, Channel, Dataset, ImageElement, ListElement, Project, Team, Template, TemplateElement, TextElement } from "../types";
 import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./data";
 import { makeArena, makeBallPhoto, makePlayerCutout, makeWordmark } from "./procedural";
@@ -13,7 +13,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 52;
+export const SEED_VERSION = 53;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -239,6 +239,7 @@ export function textureAssets(): Asset[] {
     { id: "tex-halftone", projectId: SHARED, name: "Textura – rastr teček", kind: "element", dataUrl: TEX_HALFTONE, w: 1080, h: 1350, createdAt: Date.now() },
     { id: "tex-vortex", projectId: SHARED, name: "Textura – světelný vír (Screen)", kind: "element", dataUrl: TEX_VORTEX, w: 1080, h: 1350, createdAt: Date.now() },
     { id: "obasketu-emboss", projectId: SHARED, name: "Logo oBasketu – reliéf (vodoznak)", kind: "element", dataUrl: OBASKETU_EMBOSS, w: 707, h: 553, createdAt: Date.now() },
+    { id: "obasketu-lines", projectId: SHARED, name: "Čáry z loga oBasketu", kind: "element", dataUrl: OBASKETU_LINES, w: 1414, h: 1106, createdAt: Date.now() },
     { id: "tex-stripes", projectId: SHARED, name: "Šikmé pruhy (Europa League)", kind: "element", dataUrl: TEX_STRIPES, w: 1080, h: 1350, createdAt: Date.now() },
   ];
 }

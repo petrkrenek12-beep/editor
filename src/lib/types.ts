@@ -230,6 +230,8 @@ export interface ListElement extends BaseElement {
   grid?: { cols: number; colWidth: number; colGap?: number };
   /** Skupiny: před každou novou hodnotou tohoto sloupce se vloží řádek nadpisu ({{__header}} = 1, sloupec = hodnota) */
   groupBy?: string;
+  /** Málo řádků: řádky se protáhnou na výšku až fill× (např. 1.4), aby panel nebyl prázdný */
+  fill?: number;
 }
 
 export type TemplateElement =

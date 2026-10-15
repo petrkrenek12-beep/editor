@@ -131,6 +131,7 @@ export function layoutList(
   count: number,
   distribute: boolean,
   center = false,
+  fill = 0,
 ): { rows: Frame[]; k: number } {
   if (count <= 0) return { rows: [], k: 1 };
   let k = frame.w / baseW;
@@ -144,6 +145,13 @@ export function layoutList(
     g *= f;
   }
   let total = count * rh + (count - 1) * g;
+  if (fill > 1 && total < frame.h) {
+    // řádky se zvětší na výšku (obsah se rozprostře), max. fill× – velikost písma zůstává
+    const f = Math.min(fill, frame.h / total);
+    rh *= f;
+    g *= f;
+    total = count * rh + (count - 1) * g;
+  }
   let y0 = frame.y;
   if (distribute && count > 1) {
     const free = frame.h - total;

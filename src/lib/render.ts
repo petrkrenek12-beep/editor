@@ -1065,7 +1065,7 @@ function drawElement(
         const rows = listRows(el, env);
         const { rows: rf, k: rk } = el.grid
           ? layoutGrid(frame, el.grid.cols, el.grid.colWidth, el.rowHeight, el.grid.colGap ?? el.gap, el.gap, rows.length)
-          : layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true, el.center);
+          : layoutList(frame, el.frame.w, el.rowHeight, el.gap, rows.length, el.distribute ?? true, el.center, el.fill);
         // společné pozadí: jeden obrázek přes celý blok, každý řádek ukáže svůj výřez
         const rbUrl = el.rowsBg?.src ? resolveImage({ id: "rb", name: "rb", type: "image", frame: el.frame, src: el.rowsBg.src } as ImageElement, env, rc).url : undefined;
         const rbImg = rbUrl ? images.get(rbUrl) : null;
