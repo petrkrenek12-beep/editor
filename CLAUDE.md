@@ -61,7 +61,9 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
     3 (nebo 2) čísla v závorkách, výsledek s logy.
 
 ## Projekt „Evropské poháry“ (id `p-bcl`, dříve BCL)
-- Liga mistrů FIBA (barvy projektu) + Euroliga žen a EuroCup žen. Ženské týmy (loga z ŽBL) jsou v projektu jako `p-bcl-zteam-*`.
+- Liga mistrů FIBA (barvy projektu), FIBA Europe Cup (= „Evropský pohár FIBA“ na Livesportu), Euroliga žen a EuroCup žen.
+  Ženské týmy (loga z ŽBL) jsou v projektu jako `p-bcl-zteam-*`, týmy z NBL jako `p-bcl-nteam-*` (`withNblTeams`, stejná loga).
+- `bcl-result-fec` – výsledek zápasu FIBA Europe Cup (modrá paleta, logo `asset:comp-fec`), jen výsledek, bez MVP.
 - Šablona může mít vlastní barvy `palette` (přepíší brand kit) – tak jsou udělané `bcl-result-elw/ecw` a `bcl-mvp-elw/ecw`
   (kopie BCL šablon, feminizované, logo soutěže `asset:comp-elw` / `asset:comp-ecw`).
   Euroliga žen: tmavě modrá + světle modrá, stříbrné logo. EuroCup žen: fialová + akvamarínová, korálový míč.
@@ -76,6 +78,9 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
 ## Čtení screenshotů (AI)
 - Popisky statistik vždy zkratky PTS/REB/AST/STL/BLK/EFF – v promptu i v kódu (`statLabel`, `statText` v ai.ts),
   i v řádcích carouselu (`mvp_name`, `s1_value`…). Hráč zápasu přes `_mvp`, plní i `team_score`/`opponent_score`.
+- Program z Livesportu: nadpis dne = datum všech zápasů pod ním, řádek „EVROPA: …“ = soutěž, horní tým = domácí.
+  Kód `compOption` převede názvy soutěží na hodnoty šablony a zápasy seřadí (soutěž → datum → čas);
+  „Ž“ za názvem = ženský tým (odstraní se, hledá se mezi ženskými týmy).
 - Náhledové (preview) nasazení na Vercelu NEMÁ `ANTHROPIC_API_KEY` (je jen pro Production) → AI tam hlásí chybu.
 
 ## Editor fotek (`src/lib/adjust.ts` + `AdjustPanel.tsx`)

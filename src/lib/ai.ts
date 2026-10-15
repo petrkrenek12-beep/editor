@@ -165,7 +165,12 @@ Pravidla:
 - POPISKY STATISTIK (pole končící na "_label", např. "s1_label") piš VŽDY jako anglickou zkratku velkými písmeny: PTS (body), REB (doskoky), AST (asistence), STL (zisky), BLK (bloky), EFF (hodnocení / VAL / PIR), 3PM (trojky), FG (střelba z pole). NIKDY ne česky („Body“, „Doskoky“…).
 - Když má SEZNAM zápasů sloupce "mvp_name" a "s1_value"/"s1_label"… (carousel – každý řádek = jeden zápas), vyplň v KAŽDÉM řádku hráče/hráčku zápasu toho zápasu: z vítězného týmu nejvyšší EFF/VAL/PIR (jinak nejvíc bodů), "mvp_name" = „Jméno Příjmení“, s1 = PTS, další dvě čísla REB / AST (od 5), jinak EFF; popisky zkratkami. Když statistiky hráčů pro daný zápas nejsou, tyto sloupce vynech.
 - Skóre z pohledu týmu hráče (pole "team_score" a "opponent_score") vyplň, když je výsledek na obrázku.
-- Soutěž (sloupec "comp"): vyber jednu z nabízených hodnot podle toho, co je na obrázku (Basketball Champions League / Liga mistrů = "Liga mistrů FIBA", EuroLeague Women = "Euroliga žen", EuroCup Women = "EuroCup žen"). Řádky seřaď podle soutěže.
+- Soutěž (sloupec "comp"): vyber jednu z nabízených hodnot podle toho, co je na obrázku. Livesport píše: „EVROPA: Liga mistrů“ = "Liga mistrů FIBA", „EVROPA: Evropský pohár FIBA“ = "FIBA Europe Cup", „EVROPA: Euroliga ženy“ (i „– 1. fáze“) = "Euroliga žen", „EVROPA: Eurocup ženy“ = "EuroCup žen", „EVROPA: Eurocup“ (bez „ženy“) = "EuroCup". Anglicky: Basketball Champions League = "Liga mistrů FIBA", EuroLeague Women = "Euroliga žen", EuroCup Women = "EuroCup žen".
+- PROGRAM Z LIVESPORTU (sloupce "comp", "home", "away", "date", "time"):
+  • Přehled po dnech: nadpis dne („Úterý - 20.10.“) platí pro VŠECHNY zápasy pod ním až do dalšího nadpisu dne → "date". Pod červeným pruhem „BASKETBAL“ jsou řádky soutěže „EVROPA: …“ → "comp" pro zápasy pod nimi. Každý zápas má vlevo čas → "time" a dva týmy pod sebou: HORNÍ = domácí ("home"), DOLNÍ = hosté ("away").
+  • Detail zápasu: nahoře drobečková navigace „BASKETBAL > EVROPA > LIGA MISTRŮ“ (soutěž), uprostřed „20.10.2026 18:00“ (datum a čas), vlevo domácí, vpravo hosté.
+  • Písmeno „Ž“ za názvem týmu (např. „USK Praha Ž“, „Lublin Ž“) znamená ženský tým – do názvu ho nepiš, ale pomlčky „-“ místo skóre ignoruj (zápas se ještě nehrál).
+  • Zahrnuj všechny zápasy ze všech obrázků. Seřaď je podle soutěže (Liga mistrů FIBA, FIBA Europe Cup, EuroCup, Euroliga žen, EuroCup žen) a v rámci soutěže podle data a času.
 - Když má seznam zápasů sloupec "mvp", napiš do něj nejlepšího hráče vítězného týmu ve tvaru "Jméno Příjmení (21 PTS, 8 AST)" – body vždy, REB a AST jen když jich má aspoň 5.
 - Seznamy (např. zápasy) vyplň ve stejném pořadí jako na screenshotu, všechny řádky.
 - TABULKA SOUTĚŽE (sloupce jako "move", "streak", "g", "w", "l"):
@@ -208,9 +213,14 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
   // úklid: čísla, týmy na přesné názvy z projektu, jen známá pole
   const out: DataRecord = {};
   const dateOf = (v: unknown) => toIsoDate(String(v ?? ""));
+  // „USK Praha Ž“ = ženský tým: hledat nejdřív mezi ženskými týmy, jinak nejdřív mezi mužskými
+  const isWomenTeam = (t: Team) => /zteam|p-zbl-/.test(t.id);
   const teamName = (v: unknown) => {
-    const s = String(v ?? "").trim();
-    return findTeam(teams, s)?.name ?? s;
+    let s = String(v ?? "").trim();
+    const women = /\s+Ž\.?$|\(Ž\)$/u.test(s);
+    s = s.replace(/\s+Ž\.?$|\s*\(Ž\)$/u, "").trim();
+    const pref = teams.filter((t) => isWomenTeam(t) === women);
+    return (findTeam(pref, s) ?? findTeam(teams, s))?.name ?? s;
   };
   for (const f of t.fields) {
     if (!(f.key in raw) || f.type === "image" || f.type === "channel") continue;
@@ -241,6 +251,19 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
     else if (f.type === "date") out[f.key] = dateOf(v);
     else if (f.type === "number") out[f.key] = v === "" || v === null ? "" : Number(v);
     else out[f.key] = String(v ?? "");
+  }
+  // soutěž: názvy z Livesportu na hodnoty šablony + seřadit zápasy podle soutěže, data a času
+  for (const f of t.fields) {
+    const col = (f.columns ?? []).find((c) => c.key === "comp" && c.options?.length);
+    if (f.type !== "list" || !col || !Array.isArray(out[f.key])) continue;
+    const opts = col.options!;
+    const rows = out[f.key] as Record<string, unknown>[];
+    for (const r of rows) r.comp = compOption(String(r.comp ?? ""), opts);
+    const ix = (r: Record<string, unknown>) => {
+      const i = opts.indexOf(String(r.comp));
+      return i < 0 ? 99 : i;
+    };
+    rows.sort((a, b) => ix(a) - ix(b) || String(a.date ?? "").localeCompare(String(b.date ?? "")) || String(a.time ?? "").localeCompare(String(b.time ?? "")));
   }
   // čtvrtiny: sjednotit formát na "30:12 · 23:11 · …"
   for (const f of t.fields) {
@@ -302,6 +325,23 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
   for (const f of t.fields) if (f.type === "list" && Array.isArray(out[f.key])) (out[f.key] as Record<string, unknown>[]).forEach(fix);
   if (!Object.keys(out).length) throw new Error("Ze screenshotu se nepodařilo nic vyčíst pro tuto šablonu.");
   return out;
+}
+
+/** „EVROPA: Evropský pohár FIBA“ → „FIBA Europe Cup“ atd. (podle nabídky šablony) */
+export function compOption(raw: string, options: string[]): string {
+  const n = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/^.*?:\s*/, "").replace(/\s*[-–].*fáze.*$|\s*[-–]\s*\d+\. faze.*$/, "");
+  const women = /zen|women|ženy/.test(n);
+  let key = "";
+  if (/liga mistru|champions league|\bbcl\b/.test(n)) key = "liga mistru";
+  else if (/evropsky pohar|europe cup/.test(n)) key = "europe cup";
+  else if (/euroliga|euroleague/.test(n)) key = women ? "euroliga zen" : "euroliga";
+  else if (/eurocup/.test(n)) key = women ? "eurocup zen" : "eurocup";
+  const norm = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (key) {
+    const hit = options.find((o) => norm(o) === key) ?? options.find((o) => norm(o).includes(key));
+    if (hit) return hit;
+  }
+  return options.find((o) => norm(o) === norm(raw.trim())) ?? raw.trim();
 }
 
 const STAT_WORDS: [RegExp, string][] = [

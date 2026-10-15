@@ -1998,7 +1998,9 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
     const comps = [
       { key: "elw", name: "Euroliga žen", logo: "asset:comp-elw", tall: true, palette: { primary: "#3AA7E6", secondary: "#0B3A8F", accent: "#B4248F", dark: "#03163F" }, home: "ZVVZ USK Praha", away: "Žabiny Brno" },
       { key: "ecw", name: "EuroCup žen", logo: "asset:comp-ecw", tall: false, palette: { primary: "#74E6E0", secondary: "#7D1B74", accent: "#F0566A", dark: "#2A0632" }, home: "Žabiny Brno", away: "KP Brno" },
-    ];
+      // FIBA Europe Cup (Evropský pohár FIBA) – muži, jen výsledek zápasu
+      { key: "fec", name: "FIBA Europe Cup", logo: "asset:comp-fec", tall: true, men: true, palette: { primary: "#3B8EEA", secondary: "#0F2C5E", accent: "#3B8EEA", dark: "#05112A" }, home: "BK Opava", away: "Trepça" },
+    ] as { key: string; name: string; logo: string; tall: boolean; men?: boolean; palette: Record<string, string>; home: string; away: string }[];
     const fem: [RegExp, string][] = [
       [/Hráč zápasu/g, "Hráčka zápasu"],
       [/Hráč \(vyříznutý\)/g, "Hráčka (vyříznutá)"],
@@ -2011,8 +2013,9 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
     ];
     for (const base of defs.filter((d) => d.id === "bcl-result" || d.id === "bcl-mvp")) {
       for (const c of comps) {
+        if (c.men && base.id !== "bcl-result") continue;
         let str = JSON.stringify(base);
-        for (const [re, to] of fem) str = str.replace(re, to);
+        if (!c.men) for (const [re, to] of fem) str = str.replace(re, to);
         str = str.replace(/"brand:partner"/g, `"${c.logo}"`);
         const d = JSON.parse(str) as TDef;
         d.id = `${base.id}-${c.key}`;
@@ -2020,7 +2023,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         d.description = `${c.name}: ${d.description}`;
         d.palette = c.palette;
         const sd = { ...d.sampleData };
-        if (base.id === "bcl-result") Object.assign(sd, { home_team: c.home, away_team: c.away, home_record: "2-0", away_record: "1-1", mvp_name: "Tereza Nováková", s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "24", s3_label: "EFF" });
+        if (base.id === "bcl-result") Object.assign(sd, { home_team: c.home, away_team: c.away, home_record: "2-0", away_record: "1-1", mvp_name: c.men ? "Martin Peterka" : "Tereza Nováková", s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "24", s3_label: "EFF" });
         else Object.assign(sd, { title: "Hráčka zápasu", subtitle: `${c.name} · 2. kolo`, first_name: "Tereza", last_name: "Nováková", team: c.home, opponent: c.away, s1_value: "21", s1_label: "PTS", s2_value: "9", s2_label: "REB", s3_value: "24", s3_label: "EFF" });
         d.sampleData = sd;
         // svislé logo Euroligy žen potřebuje vyšší rámeček
@@ -2056,7 +2059,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           type: "list",
           help: "Seřaďte podle soutěže – nadpis soutěže se vloží sám vždy, když se soutěž změní.",
           columns: [
-            { key: "comp", label: "Soutěž", type: "select", options: ["Liga mistrů FIBA", "Euroliga žen", "EuroCup žen", "FIBA Europe Cup", "EuroCup"] },
+            { key: "comp", label: "Soutěž", type: "select", options: ["Liga mistrů FIBA", "FIBA Europe Cup", "EuroCup", "Euroliga", "Euroliga žen", "EuroCup žen"] },
             { key: "home", label: "Domácí", type: "team" },
             { key: "away", label: "Hosté", type: "team" },
             { key: "date", label: "Datum", type: "date" },
@@ -2072,6 +2075,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         games: [
           { comp: "Liga mistrů FIBA", home: "Slavia Praha", away: "Bilbao Basket", date: "2026-10-14", time: "20:30" },
           { comp: "Liga mistrů FIBA", home: "Reggiana", away: "BK Kvis Pardubice", date: "2026-10-15", time: "20:00" },
+          { comp: "FIBA Europe Cup", home: "Trepça", away: "BK Opava", date: "2026-10-14", time: "18:30" },
           { comp: "Euroliga žen", home: "ZVVZ USK Praha", away: "Tango Bourges", date: "2026-10-14", time: "19:00" },
           { comp: "EuroCup žen", home: "Žabiny Brno", away: "AEL Limassol", date: "2026-10-14", time: "18:00" },
           { comp: "EuroCup žen", home: "ESB Villeneuve", away: "DSK Basketball Brandýs", date: "2026-10-14", time: "20:00" },
@@ -2086,7 +2090,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         img("lines", "Oblouky z loga oBasketu", [-520, 260, 1800, 1408], "asset:obasketu-lines", { fit: "contain", rotation: -12, tint: "@primary", blend: "screen", opacity: 0.75, fallback: "none", anchorX: "left", anchorY: "bottom" }),
         img("lines-2", "Oblouky z loga – vpravo nahoře", [560, -330, 900, 704], "asset:obasketu-lines", { fit: "contain", rotation: 160, blend: "screen", opacity: 0.16, fallback: "none", anchorX: "right", anchorY: "top" }),
         img("halftone", "Rastr teček", [0, 0, 1080, 1350], "asset:tex-halftone", { fit: "cover", lumaKey: 1, blend: "screen", opacity: 0.05, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
-        img("logo", "Logo", [50, 70, 150, 118], "brand:logo", { fit: "contain", valign: "top", fallback: "none", anchorX: "left", anchorY: "top" }),
+        img("logo", "Logo", [70, 70, 110, 86], "brand:logo", { fit: "contain", valign: "top", fallback: "none", anchorX: "left", anchorY: "top" }),
         text("title", "Svislý nadpis", [30, 300, 190, 880], "{{title}}", { font: "Russo One", weight: 400, size: 190, minSize: 80, uppercase: true, vertical: true, align: "left", letterSpacing: 0.01, fill: METAL, shadow: { color: "rgba(0,0,0,0.5)", blur: 30, x: 0, y: 8 }, anchorX: "left", anchorY: "bottom" }),
         rect("sub-bar", "Linka nad termínem", [101, 1214, 48, 3], "@primary", { anchorX: "left", anchorY: "bottom" }),
         text("subtitle", "Termín", [30, 1226, 190, 56], "{{subtitle}}", { font: "Saira Condensed", weight: 800, size: 46, minSize: 22, uppercase: true, align: "center", valign: "bottom", color: "#FFFFFF", shadow: { color: "rgba(0,0,0,0.6)", blur: 14, x: 0, y: 3 }, anchorX: "left", anchorY: "bottom" }),
@@ -2097,6 +2101,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           // nadpis soutěže
           img("h-bcl", "Logo BCL", [8, 16, 150, 58], "brand:partner", { fit: "contain", align: "left", fallback: "none", showIf: `${isComp("mistr")} || ${isComp("bcl")} || ${isComp("champions")}` }),
           img("h-elw", "Logo Euroligy žen", [8, 10, 150, 68], "asset:comp-elw", { fit: "contain", align: "left", fallback: "none", showIf: isComp("euroliga zen") }),
+          img("h-fec", "Logo FIBA Europe Cup", [8, 10, 150, 68], "asset:comp-fec", { fit: "contain", align: "left", fallback: "none", showIf: `${isComp("europe cup")} || ${isComp("evropsky pohar")}` }),
           img("h-ecw", "Logo EuroCupu žen", [8, 16, 150, 58], "asset:comp-ecw", { fit: "contain", align: "left", fallback: "none", showIf: isComp("eurocup zen") }),
           text("h-name", "Název soutěže", [176, 14, 584, 66], "{{comp}}", { font: "Russo One", weight: 400, size: 36, minSize: 22, uppercase: true, align: "left", letterSpacing: 0.03, fill: METAL, showIf: "__header" }),
           rect("h-line", "Linka pod soutěží", [8, 92, 752, 2], lin(0, [0, "@primary"], [0.6, "@primary/40"], [1, "@primary/0"]), { showIf: "__header" }),

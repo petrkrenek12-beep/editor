@@ -3,7 +3,7 @@ import { useRef, useSyncExternalStore } from "react";
 import { createAdapter, type CollectionMap, type CollectionName, type StorageAdapter } from "./storage";
 import type { Asset, Dataset, Graphic, Project, Role, Settings, Template, User } from "./types";
 import { setFontSource } from "./fonts";
-import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, textureAssets, zblProject, bclProject, NBL_REMOVED, EURO_NAME } from "./demo/seed";
+import { seedDemo, SEED_VERSION, bgAsset, starAsset, BG_ASSET, rowsBgAsset, ROWS_BG_ASSET, defaultChannels, builtInTemplates, upgradeTemplate, barAsset, fontAssets, linesAsset, textureAssets, zblProject, bclProject, NBL_REMOVED, EURO_NAME, withNblTeams } from "./demo/seed";
 import { PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./demo/data";
 
 export interface AppState {
@@ -247,8 +247,11 @@ export function initStore() {
           for (const x of add) await a.put("assets", x);
           assets = [...assets, ...add];
           const missing = fresh.project.teams.filter((t) => !bp.teams.some((o) => o.id === t.id || o.name === t.name));
-          if (bp.name === "BCL" || missing.length) {
-            const np = { ...bp, name: bp.name === "BCL" ? EURO_NAME : bp.name, teams: [...bp.teams, ...missing] };
+          // v55: i týmy z NBL (na další sezonu)
+          const nblTeams = projects.find((p) => p.id === "p-nbl")?.teams ?? [];
+          const merged = withNblTeams([...bp.teams, ...missing], nblTeams);
+          if (bp.name === "BCL" || merged.length !== bp.teams.length) {
+            const np = { ...bp, name: bp.name === "BCL" ? EURO_NAME : bp.name, teams: merged };
             (np as { _mod?: number })._mod = Date.now();
             await a.put("projects", np);
             projects = projects.map((p) => (p.id === np.id ? np : p));

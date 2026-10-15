@@ -1,5 +1,5 @@
 import { TEX_SILK, TEX_SWIRL, TEX_HALFTONE, TEX_VORTEX } from "./textures";
-import { ECW_LOGO, ECW_LOGO_SIZE, ELW_LOGO, ELW_LOGO_SIZE, OBASKETU_EMBOSS, OBASKETU_LINES, TEX_STRIPES } from "./euro";
+import { ECW_LOGO, ECW_LOGO_SIZE, ELW_LOGO, ELW_LOGO_SIZE, FEC_LOGO, FEC_LOGO_SIZE, OBASKETU_EMBOSS, OBASKETU_LINES, TEX_STRIPES } from "./euro";
 import type { Asset, BrandKit, Channel, Dataset, ImageElement, ListElement, Project, Team, Template, TemplateElement, TextElement } from "../types";
 import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./data";
 import { makeArena, makeBallPhoto, makePlayerCutout, makeWordmark } from "./procedural";
@@ -13,7 +13,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 54;
+export const SEED_VERSION = 55;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -97,6 +97,7 @@ export async function seedDemo(): Promise<{ projects: Project[]; templates: Temp
 
   const zbl = zblProject(nbl.brand, now + 2);
   const bcl = bclProject(nbl.brand, now + 3);
+  bcl.project.teams = withNblTeams(bcl.project.teams, nbl.teams);
   assets.push(...bcl.assets, { id: "p-bcl-logo", projectId: "p-bcl", name: "Logo (demo)", kind: "logo", dataUrl: logoNbl, createdAt: now });
   templates.push(...builtInTemplates("p-bcl"));
   assets.push(...zbl.assets, { id: "p-zbl-logo", projectId: "p-zbl", name: "Logo (demo)", kind: "logo", dataUrl: logoNbl, createdAt: now });
@@ -413,6 +414,14 @@ function zblTemplates(): Template[] {
 
 export const EURO_NAME = "Evropské poháry";
 
+/** Týmy z NBL do Evropských pohárů (kopie se stejnými logy – assety jsou sdílené), bez těch, které už tam jsou. */
+export function withNblTeams(euro: Team[], nbl: Team[]): Team[] {
+  const norm = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const have = new Set(euro.flatMap((t) => (t.id.includes("zteam") ? [t.id] : [norm(t.name), ...t.aliases.map(norm)])));
+  const add = nbl.filter((t) => !have.has(norm(t.name)) && !t.aliases.some((a) => have.has(norm(a)))).map((t) => ({ ...t, id: `p-bcl-nteam-${t.id.replace(/^p-nbl-/, "")}` }));
+  return [...euro, ...add.filter((t) => !euro.some((e) => e.id === t.id))];
+}
+
 /** Ženské týmy (loga z ŽBL) – hrají Euroligu a EuroCup žen. Přidá i jejich loga do `assets`. */
 export function euroWomenTeams(assets: Asset[], createdAt = Date.now()): Team[] {
   return ZBL_TEAMS.map((t, i) => {
@@ -438,6 +447,7 @@ export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { projec
     A("p-bcl-team-1-logo-w", "BK Kvis Pardubice logo bílé", "team", BCL_KVIS_W),
     A("comp-elw", "Euroliga žen (stříbrné)", "logo", ELW_LOGO, ELW_LOGO_SIZE[0], ELW_LOGO_SIZE[1]),
     A("comp-ecw", "EuroCup žen", "logo", ECW_LOGO, ECW_LOGO_SIZE[0], ECW_LOGO_SIZE[1]),
+    A("comp-fec", "FIBA Europe Cup", "logo", FEC_LOGO, FEC_LOGO_SIZE[0], FEC_LOGO_SIZE[1]),
   ];
   const teams: Team[] = [
     { id: "p-bcl-team-0", name: "Slavia Praha", short: "SLA", aliases: ["Slavia", "SK Slavia Praha", "Slavia Praha ERA NBK", "SKS"], color: "#E3001B", color2: "#FFFFFF", logo: "p-bcl-team-0-logo", logoWhite: "p-bcl-team-0-logo-w" },
