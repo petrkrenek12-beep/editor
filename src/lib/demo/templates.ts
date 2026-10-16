@@ -1892,6 +1892,213 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         img("foot-logos", "Loga dole (liga | oBasketu)", [290, 1230, 500, 76], "brand:partner", { row: { srcs: ["brand:partner", "brand:logo"], gap: 28, sep: { color: "rgba(255,255,255,0.5)", width: 1.5, height: 0.9 }, maxW: 0.44 }, fallback: "none", anchorY: "bottom" }),
       ],
     });
+    // 30b ── NOVÉ PRÉMIOVÉ ŠABLONY (stejné pozadí a hlavička jako Výsledky kola – Premium)
+    const premiumHeader = (title: string, info: string, size = 150): TemplateElement[] => [
+      rect("k-line-l", "Linka vlevo", [318, 92, 86, 1.5], "rgba(255,255,255,0.45)", { anchorY: "top" }),
+      rect("k-line-r", "Linka vpravo", [676, 92, 86, 1.5], "rgba(255,255,255,0.45)", { anchorY: "top" }),
+      text("kicker", "Nadtitulek", [414, 74, 252, 38], "{{kicker}}", { font: "body", weight: 600, size: 24, uppercase: true, align: "center", letterSpacing: 0.34, opacity: 0.9, anchorY: "top" }),
+      text("title", "Nadpis", [80, 112 + (172 - size) / 2, 920, size + 4], title, { font: "Mazzard H", weight: 900, size, minSize: 70, uppercase: true, align: "center", letterSpacing: -0.02, fill: metal, shadow: { color: "rgba(0,0,0,0.55)", blur: 34, x: 0, y: 12 }, anchorY: "top" }),
+      path("i-tl", "Rámeček – roh 1", [318, 296, 22, 22], "M0 100 L0 0 L100 0", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7, anchorY: "top" }),
+      path("i-tr", "Rámeček – roh 2", [740, 296, 22, 22], "M0 0 L100 0 L100 100", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7, anchorY: "top" }),
+      path("i-bl", "Rámeček – roh 3", [318, 346, 22, 22], "M0 0 L0 100 L100 100", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7, anchorY: "top" }),
+      path("i-br", "Rámeček – roh 4", [740, 346, 22, 22], "M100 0 L100 100 L0 100", { stroke: "#FFFFFF", strokeWidth: 2, opacity: 0.7, anchorY: "top" }),
+      text("info", "Kolo a termín", [340, 298, 400, 68], info, { font: "Saira Condensed", weight: 700, size: 40, minSize: 22, uppercase: true, align: "center", letterSpacing: 0.06, wordSpacing: 0.18, highlight: "@accent", highlightWeight: 800, anchorY: "top" }),
+    ];
+    const footLogos = (): TemplateElement =>
+      img("foot-logos", "Loga dole (liga | oBasketu)", [290, 1236, 500, 70], "brand:partner", { row: { srcs: ["brand:partner", "brand:logo"], gap: 28, sep: { color: "rgba(255,255,255,0.5)", width: 1.5, height: 0.9 }, maxW: 0.44 }, fallback: "none", anchorY: "bottom" });
+    const glass = (w: number, h: number, r: number): TemplateElement[] => [
+      rect("card", "Karta – sklo", [0, 0, w, h], lin(90, [0, "rgba(255,255,255,0.15)"], [1, "rgba(255,255,255,0.04)"]), { radius: r, stroke: "rgba(255,255,255,0.24)", strokeWidth: 1.5 }),
+      rect("card-hl", "Karta – horní odlesk", [w * 0.06, 1, w * 0.88, 1.5], lin(0, [0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.7)"], [1, "rgba(255,255,255,0)"])),
+    ];
+    const players5 = [
+      ["Jaborri McGhee", "Sluneta Ústí nad Labem", "27 PTS · 9 REB"],
+      ["Lamb Autrey", "BK Lokomotiva Plzeň", "27 PTS · 9 REB"],
+      ["Martin Peterka", "BK Kvis Pardubice", "24 PTS · 7 AST"],
+      ["Travis Harper II", "Slavia Praha", "15 PTS · 7 REB"],
+      ["Jaden Edwards", "Basket Brno", "16 PTS · 5 REB"],
+    ];
+
+    // IDEÁLNÍ PĚTKA KOLA – 3 + 2 skleněné karty s vyříznutými hráči, logem týmu, jménem a čísly
+    defs.push({
+      id: "best-five",
+      name: "Ideální pětka kola",
+      category: "Hráči",
+      description: "Pět nejlepších hráčů kola: skleněné karty 3 + 2 s vyříznutou fotkou, logem týmu, jménem a hlavními čísly. Hlavička a pozadí jako u Výsledků kola – Premium.",
+      background: "@dark",
+      finish: { grain: 16, vignette: 42 },
+      fields: [
+        { key: "kicker", label: "Nadtitulek", type: "text", placeholder: "Maxa NBL" },
+        { key: "title", label: "Nadpis", type: "text", placeholder: "Ideální pětka" },
+        f.round,
+        { key: "dates", label: "Termín", type: "text", placeholder: "17.–18. 10." },
+        {
+          key: "players",
+          label: "Hráči (5)",
+          type: "list",
+          help: "Fotku nahrajte kliknutím do sloupce Fotka – nejlépe vyříznutou (tlačítko Pozadí).",
+          columns: [
+            { key: "photo", label: "Fotka", type: "image" },
+            { key: "name", label: "Jméno", type: "text" },
+            { key: "team", label: "Tým", type: "team" },
+            { key: "stats", label: "Čísla", type: "text", placeholder: "27 PTS · 9 REB" },
+          ],
+        },
+      ],
+      sampleData: {
+        kicker: "Maxa NBL",
+        title: "Ideální pětka",
+        round: "7. kolo",
+        dates: "17.–18. 10.",
+        players: players5.map(([name, team, stats]) => ({ photo: { asset: a.player }, name, team, stats })),
+      },
+      elements: [
+        ...premiumBg(),
+        ...premiumHeader("{{title|default:Ideální pětka}}", "[{{round}}] | {{dates}}", 140),
+        list("players", "Hráči", [72, 404, 936, 808], "players", 392, 22, [
+          ...glass(296, 392, 22),
+          rect("glow", "Záře v barvě týmu", [-40, -30, 376, 330], { type: "radial", stops: [[0, "@team:{{team}}/45"], [0.5, "@team:{{team}}/12"], [0.69, "@team:{{team}}/0"], [1, "@team:{{team}}/0"]] }, { blend: "screen" }),
+          img("photo", "Fotka", [6, 10, 284, 292], "{{photo}}", { fit: "contain", valign: "bottom", preferCutout: true, fade: { angle: 270, from: 0.02, to: 0.26 }, fallback: "none" }),
+          rect("shade", "Ztmavení dole", [0, 232, 296, 160], lin(90, [0, "@dark/0"], [0.45, "@dark/80"], [1, "@dark/95"]), { radius: 22 }),
+          logo("logo", "Logo týmu", [14, 14, 60, 50], "team", { logoVariant: "white", equalize: 0.8 }),
+          text("name", "Jméno", [12, 294, 272, 46], "{{name}}", { font: "Mazzard H", weight: 900, size: 30, minSize: 17, uppercase: true, align: "center", letterSpacing: -0.01 }),
+          rect("line", "Linka", [123, 344, 50, 3], "@accent", { radius: 1.5 }),
+          text("stats", "Čísla", [10, 352, 276, 32], "{{stats}}", { font: "body", weight: 700, size: 25, minSize: 15, uppercase: true, align: "center", letterSpacing: 0.04, opacity: 0.92 }),
+        ], { grid: { cols: 3, colWidth: 296, colGap: 24 }, anchorY: "stretch" }),
+        footLogos(),
+      ],
+    });
+
+    // STATISTIČTÍ LÍDŘI – lídr velký s fotkou a obřím číslem, pod ním pořadí top 5 ve skleněných řádcích
+    defs.push({
+      id: "stat-leaders",
+      name: "Statističtí lídři",
+      category: "Hráči",
+      description: "Top 5 v jedné statistice (body, doskoky, asistence…): lídr velký s vyříznutou fotkou a obřím kovovým číslem, pod ním pořadí ve skleněných řádcích s logy týmů. Na carousel stačí šablonu použít víckrát.",
+      background: "@dark",
+      finish: { grain: 16, vignette: 42 },
+      fields: [
+        { key: "kicker", label: "Nadtitulek", type: "text", placeholder: "Maxa NBL" },
+        { key: "category", label: "Statistika (nadpis)", type: "text", placeholder: "Body" },
+        { key: "unit", label: "Jednotka pod číslem", type: "text", placeholder: "bodů na zápas" },
+        { key: "round_label", label: "Po kole", type: "text", placeholder: "Po 7. kole" },
+        {
+          key: "leaders",
+          label: "Pořadí (1. = lídr)",
+          type: "list",
+          help: "První řádek je lídr – jeho fotka se ukáže velká (nejlépe vyříznutá).",
+          columns: [
+            { key: "name", label: "Jméno", type: "text" },
+            { key: "team", label: "Tým", type: "team" },
+            { key: "value", label: "Hodnota", type: "text", placeholder: "24.6" },
+            { key: "photo", label: "Fotka (jen lídr)", type: "image" },
+          ],
+        },
+      ],
+      sampleData: {
+        kicker: "Maxa NBL",
+        category: "Body",
+        unit: "bodů na zápas",
+        round_label: "Po 7. kole",
+        leaders: [
+          { name: "Jaborri McGhee", team: "Sluneta Ústí nad Labem", value: "24.6", photo: { asset: a.player } },
+          { name: "Lamb Autrey", team: "BK Lokomotiva Plzeň", value: "22.1" },
+          { name: "Martin Peterka", team: "BK Kvis Pardubice", value: "19.8" },
+          { name: "Jaden Edwards", team: "Basket Brno", value: "18.4" },
+          { name: "Travis Harper II", team: "Slavia Praha", value: "17.9" },
+        ],
+      },
+      elements: [
+        ...premiumBg(),
+        ...premiumHeader("{{category}}", "[Lídři] | {{round_label}}", 150),
+        // lídr
+        rect("hero-glow", "Záře lídra", [380, 300, 760, 640], { type: "radial", stops: [[0, "@team:{{leaders.0.team}}/40"], [0.45, "@team:{{leaders.0.team}}/12"], [0.69, "@team:{{leaders.0.team}}/0"], [1, "@team:{{leaders.0.team}}/0"]] }, { blend: "screen" }),
+        img("hero-photo", "Fotka lídra", [450, 300, 630, 530], "{{leaders.0.photo}}", { fit: "contain", align: "right", valign: "bottom", preferCutout: true, fade: { angle: 270, from: 0.02, to: 0.3 }, fallback: "none", anchorX: "right" }),
+        logo("hero-logo", "Logo týmu lídra", [80, 418, 96, 80], "leaders.0.team", { logoVariant: "white", equalize: 0.85, align: "left" }),
+        text("hero-name", "Jméno lídra", [80, 506, 520, 64], "{{leaders.0.name}}", { font: "Mazzard H", weight: 900, size: 48, minSize: 26, uppercase: true, letterSpacing: -0.01, shadow: { color: "rgba(0,0,0,0.5)", blur: 14, x: 0, y: 3 } }),
+        text("hero-value", "Hodnota lídra", [72, 566, 560, 200], "{{leaders.0.value}}", { font: "Mazzard H", weight: 900, size: 210, minSize: 90, valign: "bottom", letterSpacing: -0.045, fill: metal, shadow: { color: "rgba(0,0,0,0.5)", blur: 30, x: 0, y: 10 } }),
+        text("hero-unit", "Jednotka", [80, 770, 520, 36], "{{unit}}", { font: "body", weight: 700, size: 27, uppercase: true, letterSpacing: 0.2, color: "@accent" }),
+        // pořadí
+        list("leaders", "Pořadí", [80, 838, 920, 380], "leaders", 68, 10, [
+          ...glass(920, 68, 16),
+          rect("first", "Zvýraznění lídra", [0, 0, 920, 68], "rgba(0,0,0,0)", { radius: 16, stroke: "@accent", strokeWidth: 2, showIf: "# == 1" }),
+          text("rank", "Pořadí", [14, 0, 60, 68], "{{#}}.", { font: "Mazzard H", weight: 900, size: 32, align: "center", valign: "middle", color: "@accent" }),
+          logo("logo", "Logo týmu", [84, 9, 70, 50], "team", { logoVariant: "white", equalize: 0.8 }),
+          text("name", "Jméno", [172, 0, 520, 68], "{{name}}", { font: "Mazzard H", weight: 600, size: 29, minSize: 17, uppercase: true, valign: "middle" }),
+          text("value", "Hodnota", [700, 0, 196, 68], "{{value}}", { font: "Mazzard H", weight: 900, size: 40, align: "right", valign: "middle", fill: metal }),
+        ], { anchorY: "bottom" }),
+        footLogos(),
+      ],
+    });
+
+    // PŘED ZÁPASEM – SROVNÁNÍ TÝMŮ (loga se září v barvách týmů, řádky statistik domácí | popisek | hosté)
+    defs.push({
+      id: "preview-compare",
+      name: "Před zápasem – srovnání týmů",
+      category: "Zápas",
+      description: "Srovnání týmů před zápasem: loga se září v barvách týmů, termín, a skleněné řádky (pozice, bilance, forma, body na zápas…) domácí | popisek | hosté. Hodí se jako 2. snímek k pozvánce.",
+      background: "@dark",
+      finish: { grain: 16, vignette: 42 },
+      fields: [
+        { key: "kicker", label: "Nadtitulek", type: "text", placeholder: "Maxa NBL · 7. kolo" },
+        { key: "title", label: "Nadpis", type: "text", placeholder: "Před zápasem" },
+        f.home,
+        f.away,
+        f.date,
+        f.time,
+        {
+          key: "rows",
+          label: "Srovnání",
+          type: "list",
+          columns: [
+            { key: "label", label: "Popisek", type: "text" },
+            { key: "home", label: "Domácí", type: "text" },
+            { key: "away", label: "Hosté", type: "text" },
+          ],
+        },
+      ],
+      sampleData: {
+        kicker: "Maxa NBL · 7. kolo",
+        title: "Před zápasem",
+        home_team: "Slavia Praha",
+        away_team: "BK Kvis Pardubice",
+        date: "2026-10-18",
+        time: "17:30",
+        rows: [
+          { label: "Pozice v tabulce", home: "1.", away: "3." },
+          { label: "Bilance", home: "6–0", away: "5–1" },
+          { label: "Forma", home: "VVVVV", away: "VVPVV" },
+          { label: "Body na zápas", home: "91.4", away: "88.2" },
+          { label: "Obdržené body", home: "74.8", away: "79.1" },
+          { label: "Doskoky na zápas", home: "41.2", away: "38.6" },
+        ],
+      },
+      elements: [
+        ...premiumBg(),
+        rect("k-line-l", "Linka vlevo", [318, 92, 86, 1.5], "rgba(255,255,255,0.45)", { anchorY: "top" }),
+        rect("k-line-r", "Linka vpravo", [676, 92, 86, 1.5], "rgba(255,255,255,0.45)", { anchorY: "top" }),
+        text("kicker", "Nadtitulek", [380, 74, 320, 38], "{{kicker}}", { font: "body", weight: 600, size: 24, minSize: 16, uppercase: true, align: "center", letterSpacing: 0.3, opacity: 0.9, anchorY: "top" }),
+        text("title", "Nadpis", [80, 118, 920, 120], "{{title|default:Před zápasem}}", { font: "Mazzard H", weight: 900, size: 112, minSize: 60, uppercase: true, align: "center", letterSpacing: -0.02, fill: metal, shadow: { color: "rgba(0,0,0,0.55)", blur: 30, x: 0, y: 10 }, anchorY: "top" }),
+        // týmy
+        rect("hg", "Záře domácích", [-40, 210, 560, 460], { type: "radial", stops: [[0, "@team:{{home_team}}/50"], [0.45, "@team:{{home_team}}/14"], [0.69, "@team:{{home_team}}/0"], [1, "@team:{{home_team}}/0"]] }, { blend: "screen" }),
+        rect("ag", "Záře hostů", [560, 210, 560, 460], { type: "radial", stops: [[0, "@team:{{away_team}}/50"], [0.45, "@team:{{away_team}}/14"], [0.69, "@team:{{away_team}}/0"], [1, "@team:{{away_team}}/0"]] }, { blend: "screen" }),
+        logo("home-logo", "Logo domácí", [100, 270, 280, 220], "home_team", { logoVariant: "white", equalize: 0.6, shadow: { color: "rgba(0,0,0,0.45)", blur: 24, x: 0, y: 8 } }),
+        logo("away-logo", "Logo hosté", [700, 270, 280, 220], "away_team", { logoVariant: "white", equalize: 0.6, shadow: { color: "rgba(0,0,0,0.45)", blur: 24, x: 0, y: 8 } }),
+        text("vs", "vs", [440, 318, 200, 100], "vs", { font: "Mazzard H", weight: 300, size: 76, align: "center", opacity: 0.85 }),
+        text("when", "Termín", [400, 420, 280, 40], "{{date|day}} {{date|date:short}} | [{{time}}]", { font: "Saira Condensed", weight: 700, size: 30, minSize: 18, uppercase: true, align: "center", letterSpacing: 0.06, highlight: "@accent", highlightWeight: 800 }),
+        text("home-name", "Domácí", [70, 500, 340, 44], "{{home_team}}", { font: "Saira Condensed", weight: 700, size: 32, minSize: 18, uppercase: true, align: "center", letterSpacing: 0.03 }),
+        text("away-name", "Hosté", [670, 500, 340, 44], "{{away_team}}", { font: "Saira Condensed", weight: 700, size: 32, minSize: 18, uppercase: true, align: "center", letterSpacing: 0.03 }),
+        // srovnání
+        list("rows", "Srovnání", [110, 584, 860, 620], "rows", 88, 12, [
+          ...glass(860, 88, 18),
+          rect("hb", "Barva domácích", [0, 18, 5, 52], "@team:{{home_team}}", { radius: 2.5 }),
+          rect("ab", "Barva hostů", [855, 18, 5, 52], "@team:{{away_team}}", { radius: 2.5 }),
+          text("home", "Domácí", [30, 0, 230, 88], "{{home}}", { font: "Mazzard H", weight: 900, size: 42, minSize: 22, valign: "middle", fill: metal }),
+          text("label", "Popisek", [250, 0, 360, 88], "{{label}}", { font: "body", weight: 600, size: 24, minSize: 15, uppercase: true, align: "center", valign: "middle", letterSpacing: 0.14, opacity: 0.85 }),
+          text("away", "Hosté", [600, 0, 230, 88], "{{away}}", { font: "Mazzard H", weight: 900, size: 42, minSize: 22, align: "right", valign: "middle", fill: metal }),
+        ], { center: true, fill: 1.25, anchorY: "stretch" }),
+        footLogos(),
+      ],
+    });
     // 31 ── TABULKA – PREMIUM (světlé řádky na skleněném panelu, šipky posunu, série, dělicí čáry; podle EuroLeague Standings)
     const dash = (id: string, name: string, cond: string, color: string): TemplateElement[] =>
       Array.from({ length: 30 }, (_, i) => rect(`${id}${i}`, `${name} ${i + 1}`, [i * 30, 72, 18, 3], color, { showIf: cond }));

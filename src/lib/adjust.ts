@@ -430,7 +430,8 @@ export function adjustPresets(raw: { primary: string; accent: string; dark: stri
     {
       id: "studio",
       label: "Do barev grafiky",
-      adj: { match: { amount: 55, lum: 55, color: 60 }, contrast: 12, highlights: -12, clarity: 18, grade: { color: colors.secondary, amount: 20 }, light: { color: colors.primary, amount: 16, side: "both" }, rim: { color: colors.primary, amount: 30, width: 16, side: "both" } },
+      // jemně: silný rim a boční světlo dělaly kolem postavy svítící obrys (hlavně u světlých dresů)
+      adj: { match: { amount: 40, lum: 30, color: 55 }, contrast: 10, highlights: -10, clarity: 14, grade: { color: colors.secondary, amount: 18 }, light: { color: colors.primary, amount: 8, side: "both" }, rim: { color: colors.primary, amount: 12, width: 8, side: "both" } },
     },
     {
       id: "dramatic",

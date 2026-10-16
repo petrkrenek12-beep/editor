@@ -54,6 +54,13 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
   Výsledky kola – Premium, Tabulka – Premium (bez „next game“, se sloupcem Z, šipky posunu, série).
 - Hráč zápasu – Detail / Celá postava: když popisek statu obsahuje „min“ (MIN, mins, minuty), číslo se vykreslí menší
   (prvky `m1..m3`), aby se „38:29“ vešlo vedle bodů a doskoků. Samostatné pole na minuty Petr nechce.
+- Nové (NBL, ŽBL, Repre): `best-five` Ideální pětka kola (3+2 skleněné karty s vyříznutými hráči), `stat-leaders`
+  Statističtí lídři (lídr velký s fotkou a obřím číslem + top 5 v řádcích), `preview-compare` Před zápasem – srovnání
+  (loga se září, řádky domácí | popisek | hosté). Pozadí a hlavička jako Výsledky kola – Premium (`premiumHeader`).
+- Přehled má checklist „Co dnes sdílet“ (Pages.tsx `WEEK_PLAN` podle dne v týdnu, odškrtnutí v localStorage na den).
+- Předvolba „Do barev grafiky“ je jemná (rim 12/8, světlo 8, match lum 30) – silný rim dělal svítící obrys u světlých dresů.
+- NBL bez starých šablon (anniversary, lineup, player-stats, program, result, results-panorama, results-round, standings
+  v `NBL_REMOVED`); ŽBL bez results-panorama. Grafiky ze smazaných šablon se při migraci v61 smažou (náhrobky).
 - Forma týmu – série (`streak`, NBL i Repre): fotka se ztrácí do tmavé, obří kovové číslo `{{@streakn:games}}` +
   `{{@streakw:games}}` („výher v řadě“), bilance `{{@record:games}}` mezi linkami, skleněné dlaždice s logem soupeře,
   skóre a pruhem V (zelená) / P (červená). Pole „Velké číslo série a bilance“ (Zobrazit / Skrýt) a „Loga soupeřů u proher“ (Nic / Ztlumit / Černobíle / obojí, `dim.mode`). Logo oBasketu malé.

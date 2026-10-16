@@ -13,7 +13,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 60;
+export const SEED_VERSION = 61;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -268,7 +268,7 @@ export function newerDesign(t: Template): Template | undefined {
 
 // ── ŽBL (ženská liga) ───────────────────────────────────────
 
-export const ZBL_IDS = ["standings-premium", "round-results-premium", "results-premium-carousel", "mvp-closeup", "mvp-body", "derby-premium", "result-premium", "program-premium", "results-panorama", "transfer", "breaking"];
+export const ZBL_IDS = ["standings-premium", "round-results-premium", "results-premium-carousel", "mvp-closeup", "mvp-body", "derby-premium", "result-premium", "program-premium", "transfer", "breaking", "best-five", "stat-leaders", "preview-compare"];
 
 /** Projekt ŽBL: zelené pozadí, logo Chance ŽBL, týmy s barevnými i bílými logy. Brand (logo, fonty) převezme z NBL. */
 export function zblProject(nblBrand: BrandKit, createdAt = Date.now()): { project: Project; assets: Asset[] } {
@@ -485,4 +485,4 @@ function bclTemplates(): Template[] {
 }
 
 /** Šablony, které uživatel z NBL odebral. */
-export const NBL_REMOVED = ["collage", "final-standings", "invite", "matchday", "reels-cover", "results-carousel", "story-today", "welcome"];
+export const NBL_REMOVED = ["collage", "final-standings", "invite", "matchday", "reels-cover", "results-carousel", "story-today", "welcome", "anniversary", "lineup", "player-stats", "program", "result", "results-panorama", "results-round", "standings"];

@@ -28,9 +28,10 @@ export function Dashboard() {
   const project = useCurrentProject()!;
   const user = useCurrentUser();
   const graphics = useApp((s) => s.graphics.filter((g) => g.projectId === project.id));
-  const templates = useApp((s) => s.templates.filter((t) => t.projectId === project.id));
+  const allTemplates = useApp((s) => s.templates);
+  const templates = useMemo(() => allTemplates.filter((t) => t.projectId === project.id), [allTemplates, project.id]);
   const assets = useAssetMap(project.id);
-  const quick = templates.filter((t) => ["result", "program", "player-stats", "results-carousel"].some((k) => t.id.endsWith("-" + k))).slice(0, 4);
+  const quick = templates.filter((t) => ["result-premium", "program-premium", "best-five", "stat-leaders", "bcl-week", "bcl-result"].some((k) => t.id.endsWith("-" + k))).slice(0, 4);
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-6 lg:px-8 lg:py-8">
       <PageHeader
@@ -68,6 +69,8 @@ export function Dashboard() {
         ))}
       </div>
 
+      <TodayChecklist project={project} templates={allTemplates} />
+
       <div className="mt-10">
         <SectionTitle action={graphics.length > 0 && <Button size="sm" variant="ghost" onClick={() => navigate("/recent")}>Vše</Button>}>Poslední grafiky</SectionTitle>
         {graphics.length ? (
@@ -93,6 +96,111 @@ export function Dashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ── Checklist „Co dnes sdílet“ (podle dne v týdnu) ──────────────
+
+type CheckItem = { text: string; tpl?: string; tip?: string };
+/** Doporučený týdenní rytmus (0 = neděle). `tpl` = konec id šablony, najde se v aktuálním projektu, jinak v jiném. */
+const WEEK_PLAN: Record<number, CheckItem[]> = {
+  1: [
+    { text: "Výsledky kola", tpl: "round-results-premium" },
+    { text: "Tabulka po kole – nejvíc sledovaný obsah", tpl: "standings-premium" },
+    { text: "Ideální pětka kola", tpl: "best-five" },
+    { text: "Forma týmu – série (když někdo táhne sérii)", tpl: "streak" },
+  ],
+  2: [
+    { text: "Program týdne – Evropské poháry", tpl: "bcl-week" },
+    { text: "Pozvánka na evropský zápas", tpl: "bcl-program" },
+    { text: "Statističtí lídři (body)", tpl: "stat-leaders" },
+  ],
+  3: [
+    { text: "Výsledek evropského zápasu (hned po zápase)", tpl: "bcl-result" },
+    { text: "Hráč zápasu – Evropa", tpl: "bcl-mvp" },
+    { text: "Statističtí lídři (doskoky / asistence)", tpl: "stat-leaders" },
+  ],
+  4: [
+    { text: "Výsledek evropského zápasu (hned po zápase)", tpl: "bcl-result" },
+    { text: "Před zápasem – srovnání na víkendový šlágr", tpl: "preview-compare" },
+    { text: "Statističtí lídři nebo forma týmu", tpl: "stat-leaders" },
+  ],
+  5: [
+    { text: "Program kola", tpl: "program-premium" },
+    { text: "Šlágr kola – pozvánka", tpl: "derby-premium" },
+    { text: "Před zápasem – srovnání (2. snímek k pozvánce)", tpl: "preview-compare" },
+  ],
+  6: [
+    { text: "Pozvánka na dnešní šlágr", tpl: "derby-premium" },
+    { text: "Výsledky hned po zápasech (rychlost rozhoduje)", tpl: "result-premium" },
+    { text: "Hráč zápasu", tpl: "mvp-closeup" },
+  ],
+  0: [
+    { text: "Výsledky hned po zápasech", tpl: "results-premium-carousel" },
+    { text: "Hráč zápasu", tpl: "mvp-body" },
+    { text: "Výsledky kola (večer, až dohrají všichni)", tpl: "round-results-premium" },
+  ],
+};
+const EVERY_DAY: CheckItem[] = [
+  { text: "Každý příspěvek sdílet do story (+ anketa „Kdo vyhraje?“ před šlágrem)", tip: "story" },
+  { text: "Označit klub, hráče a fotografa – u velkých zápasů pozvat klub jako spoluautora (Collab)", tip: "collab" },
+];
+const DAY_NAMES = ["neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota"];
+
+function TodayChecklist({ project, templates }: { project: Project; templates: Template[] }) {
+  const today = new Date();
+  const dayKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+  const storeKey = `presetka-checklist-${dayKey}`;
+  const [done, setDone] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(storeKey) ?? "{}");
+    } catch {
+      return {};
+    }
+  });
+  const toggle = (k: string) => {
+    const n = { ...done, [k]: !done[k] };
+    setDone(n);
+    try {
+      localStorage.setItem(storeKey, JSON.stringify(n));
+    } catch {
+      /* bez úložiště */
+    }
+  };
+  const findTpl = (suffix: string) =>
+    templates.find((t) => t.projectId === project.id && t.id.endsWith("-" + suffix)) ?? templates.find((t) => t.id.endsWith("-" + suffix));
+  const items = [...(WEEK_PLAN[today.getDay()] ?? []), ...EVERY_DAY];
+  const count = items.filter((it) => done[it.text]).length;
+  return (
+    <div className="mt-8 rounded-lg border border-line bg-white p-4">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <div>
+          <div className="font-cond text-[19px] font-bold uppercase leading-tight">Co dnes sdílet</div>
+          <div className="text-[13px] text-mute">Dnes je {DAY_NAMES[today.getDay()]} – doporučený plán pro Instagram</div>
+        </div>
+        <Badge tone={count === items.length ? "ok" : "neutral"}>
+          {count} / {items.length}
+        </Badge>
+      </div>
+      <ul className="space-y-1.5">
+        {items.map((it) => {
+          const t = it.tpl ? findTpl(it.tpl) : undefined;
+          const other = t && t.projectId !== project.id;
+          return (
+            <li key={it.text} className="flex items-center gap-2.5 rounded-md px-1 py-1 hover:bg-paper">
+              <input type="checkbox" checked={!!done[it.text]} onChange={() => toggle(it.text)} className="h-4 w-4 accent-[#2A4BFF]" aria-label={it.text} />
+              <span className={cx("flex-1 text-[14px]", done[it.text] && "text-mute line-through")}>{it.text}</span>
+              {t && (
+                <Button size="sm" variant="ghost" icon="plus" onClick={() => navigate(`/create/${t.id}`)} title={other ? "Šablona je v jiném projektu" : undefined}>
+                  {other ? "Otevřít (jiný projekt)" : "Vytvořit"}
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

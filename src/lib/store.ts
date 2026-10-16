@@ -259,12 +259,22 @@ export function initStore() {
         }
       }
       // v50: uživatel chce pryč staré obecné šablony v BCL a skryté šablony v ŽBL (i upravené kopie)
-      for (const id of ["p-bcl-program", "p-bcl-result", "p-zbl-player-stats", "p-zbl-program", "p-zbl-result", "p-zbl-results-carousel", "p-zbl-results-round", "p-zbl-standings"]) {
+      for (const id of ["p-bcl-program", "p-bcl-result", "p-zbl-player-stats", "p-zbl-program", "p-zbl-result", "p-zbl-results-carousel", "p-zbl-results-round", "p-zbl-standings", "p-zbl-results-panorama"]) {
         if (templates.some((t) => t.id === id)) {
           await a.remove("templates", id);
           templates = templates.filter((t) => t.id !== id);
         }
         settings = { ...(settings ?? state.settings), tombstones: { ...(settings?.tombstones ?? state.settings.tombstones ?? {}), [`templates:${id}`]: Date.now() } };
+      }
+      // v61: grafiky ze smazaných starých šablon pryč z přehledu (bez šablony je stejně nejde upravit)
+      {
+        const tb = settings?.tombstones ?? {};
+        const gone = (tid: string) => !!tb[`templates:${tid}`] || (tid.startsWith("p-nbl-") && NBL_REMOVED.includes(tid.slice(6)));
+        for (const g of graphics.filter((x) => gone(x.templateId) && !templates.some((t) => t.id === x.templateId))) {
+          await a.remove("graphics", g.id);
+          graphics = graphics.filter((x) => x.id !== g.id);
+          settings = { ...(settings ?? state.settings), tombstones: { ...(settings?.tombstones ?? state.settings.tombstones ?? {}), [`graphics:${g.id}`]: Date.now() } };
+        }
       }
       for (const pid of ["p-nbl", "p-repre", "p-zbl", "p-bcl"]) {
         if (!projects.some((p) => p.id === pid)) continue;
