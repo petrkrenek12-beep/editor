@@ -52,6 +52,9 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
 - Program kola – Premium, Výsledek zápasu – Premium (+ Premium carousel), Šlágr kola – Premium,
   Hráč zápasu – Detail (podle Euroligy Lessort), Hráč zápasu – Celá postava (podle BCL Keene),
   Výsledky kola – Premium, Tabulka – Premium (bez „next game“, se sloupcem Z, šipky posunu, série).
+- Forma týmu – série (`streak`, NBL i Repre): fotka se ztrácí do tmavé, obří kovové číslo `{{@streakn:games}}` +
+  `{{@streakw:games}}` („výher v řadě“), bilance `{{@record:games}}` mezi linkami, skleněné dlaždice s logem soupeře,
+  skóre a pruhem V (barva `@accent`) / P (ztlumené). Hedvábné světlo, rastr, zrno, viněta.
 - BCL má vlastní šablony `bcl-*` (fonty Russo One / Saira Condensed). Předloha: **EuroLeague „Rivalry Series“**
   (Partizan – Panathinaikos) převedená do barev BCL: světelný vír, kovový nadpis Russo One, stříbrný pruh s podtitulkem,
   čas v rohových závorkách.

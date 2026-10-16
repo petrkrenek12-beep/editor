@@ -179,7 +179,7 @@ const ANCHORS: Record<string, Record<string, AnchorY>> = {
   program: { games: "stretch" },
   "results-round": { games: "stretch" },
   "program-premium": { games: "stretch" },
-  streak: { kicker: "center", "kicker-own": "center", record: "center", games: "center" },
+  streak: { "streak-n": "center", "streak-w": "center", "kicker-own": "center", "rec-l": "center", record: "center", "rec-r": "center", games: "center", bloom: "center" },
   quote: { mark: "bottom", marks: "bottom", quote: "bottom", "quote-c": "bottom", "name-box": "bottom", "speaker-logo": "bottom", name: "bottom" },
 };
 
@@ -1029,8 +1029,9 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       id: "streak",
       name: "Forma týmu – série",
       category: "Klub",
-      description: "Dlaždice V/P s logy soupeřů za posledních až 20 zápasů. Série („15 výher v řadě“) i bilance se spočítají samy.",
+      description: "Prémiová forma týmu: fotka se ztrácí do tmavé, obří kovové číslo série („9 výher v řadě“), bilance a skleněné dlaždice s logy soupeřů (výhra v barvě projektu, prohra ztlumená). Série i bilance se spočítají samy.",
       background: "@dark",
+      finish: { grain: 14, vignette: 34 },
       fields: [
         { key: "team", label: "Tým", type: "team" },
         { key: "headline", label: "Titulek dole", type: "text", placeholder: "Dlouhá neporazitelnost Nymburka je u konce" },
@@ -1063,23 +1064,37 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       },
       elements: [
         img("photo", "Fotka", [0, 0, 1080, 1350], "{{photo}}", { fit: "cover", zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "placeholder" }),
-        rect("shade", "Ztmavení", [0, 0, 1080, 1350], lin(90, [0, "@dark/55"], [0.25, "@dark/15"], [0.45, "@dark/35"], [1, "@dark/95"]), { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
-        brandLogo([40, 40, 110, 80], { align: "left", anchorY: "top" }),
-        text("credit", "Foto credit", [560, 36, 480, 42], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 30, align: "right", showIf: "photo_credit", anchorX: "right", anchorY: "top", shadow: { color: "rgba(0,0,0,0.5)", blur: 8, x: 0, y: 2 } }),
-        img("comp-logo", "Logo soutěže", [390, 40, 300, 100], "{{comp_logo}}", { fit: "contain", showIf: "comp_logo", fallback: "none", anchorY: "top" }),
-        img("partner", "Liga / partner", [390, 40, 300, 100], "brand:partner", { fit: "contain", hideIf: "comp_logo", fallback: "none", anchorY: "top" }),
-        text("kicker", "Nadpis (série)", [60, 480, 960, 110], "{{@streak:games}}", { size: 120, uppercase: true, align: "center", color: "@accent", hideIf: "kicker", shadow: { color: "rgba(0,0,0,0.5)", blur: 16, x: 0, y: 4 } }),
-        text("kicker-own", "Nadpis (vlastní)", [60, 480, 960, 110], "{{kicker}}", { size: 120, uppercase: true, align: "center", color: "@accent", showIf: "kicker", shadow: { color: "rgba(0,0,0,0.5)", blur: 16, x: 0, y: 4 } }),
-        text("record", "Bilance", [340, 590, 400, 46], "Bilance {{@record:games}}", { font: "body", weight: 700, size: 30, uppercase: true, align: "center", letterSpacing: 0.06 }),
-        list("games", "Série zápasů", [80, 660, 920, 470], "games", 150, 18, [
-          rect("win", "Výhra", [0, 0, 150, 150], "#18B23A", { radius: 14, showIf: "result == V || result == W" }),
-          rect("loss", "Prohra", [0, 0, 150, 150], "#D81E2C", { radius: 14, showIf: "result == P || result == L" }),
-          text("letter", "Písmeno", [0, 8, 150, 104], "{{result|upper}}", { size: 112, align: "center" }),
-          logo("opp", "Soupeř", [42, 108, 66, 56], "opp", { equalize: 0.85 }),
-        ], { grid: { cols: 6, colWidth: 150, colGap: 18 } }),
-        logo("team-logo", "Logo týmu", [60, 1190, 110, 100], "team", { anchorY: "bottom" }),
-        rect("bar", "Čárka", [186, 1196, 5, 88], "@accent", { anchorY: "bottom" }),
-        text("headline", "Titulek", [208, 1190, 830, 100], "{{headline}}", { font: "Mazzard H", weight: 600, size: 40, uppercase: true, maxLines: 2, lineHeight: 1.1, anchorY: "bottom" }),
+        // fotka se dole ztrácí do tmavé barvy, nahoře jemné ztmavení pro logo
+        rect("shade", "Přechod do tmavé", [0, 0, 1080, 1350], lin(90, [0, "@dark/55"], [0.16, "@dark/10"], [0.34, "@dark/25"], [0.55, "@dark/88"], [0.7, "@dark/97"], [1, "@dark"]), { zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        // prémiové světlo v barvě projektu
+        img("silk", "Hedvábné světlo (barva projektu)", [0, 560, 1080, 790], "asset:tex-silk", { fit: "cover", lumaKey: 1.6, tint: "@primary", blend: "screen", opacity: 0.55, fallback: "none", anchorX: "stretch", anchorY: "bottom" }),
+        img("silk-hl", "Hedvábné světlo – lesk", [0, 560, 1080, 790], "asset:tex-silk", { fit: "cover", lumaKey: 4.5, blend: "screen", opacity: 0.16, fallback: "none", anchorX: "stretch", anchorY: "bottom" }),
+        rect("bloom", "Záře za číslem", [140, 300, 800, 620], { type: "radial", stops: [[0, "@primary/45"], [0.4, "@primary/12"], [0.69, "@primary/0"], [1, "@primary/0"]] }, { blend: "screen" }),
+        img("halftone", "Rastr teček", [0, 0, 1080, 1350], "asset:tex-halftone", { fit: "cover", lumaKey: 1, blend: "screen", opacity: 0.05, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        brandLogo([40, 40, 130, 90], { align: "left", anchorY: "top" }),
+        text("credit", "Foto credit", [560, 36, 480, 42], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 26, align: "right", opacity: 0.8, showIf: "photo_credit", anchorX: "right", anchorY: "top", shadow: { color: "rgba(0,0,0,0.5)", blur: 8, x: 0, y: 2 } }),
+        img("comp-logo", "Logo soutěže", [390, 40, 300, 90], "{{comp_logo}}", { fit: "contain", showIf: "comp_logo", fallback: "none", anchorY: "top" }),
+        img("partner", "Liga / partner", [390, 40, 300, 90], "brand:partner", { fit: "contain", hideIf: "comp_logo", fallback: "none", anchorY: "top" }),
+        // série: obří kovové číslo + slova pod ním
+        text("streak-n", "Série – číslo", [140, 330, 800, 330], "{{@streakn:games}}", { font: "Mazzard H", weight: 900, size: 340, minSize: 120, align: "center", valign: "bottom", letterSpacing: -0.04, fill: lin(90, [0, "#FFFFFF"], [0.55, "#F1EEF6"], [1, "#B9B2C6"]), shadow: { color: "rgba(0,0,0,0.55)", blur: 40, x: 0, y: 14 }, hideIf: "kicker" }),
+        text("streak-w", "Série – text", [100, 668, 880, 58], "{{@streakw:games}}", { font: "Mazzard H", weight: 600, size: 46, uppercase: true, align: "center", letterSpacing: 0.22, hideIf: "kicker", shadow: { color: "rgba(0,0,0,0.5)", blur: 14, x: 0, y: 3 } }),
+        text("kicker-own", "Nadpis (vlastní)", [80, 480, 920, 240], "{{kicker}}", { font: "Mazzard H", weight: 900, size: 150, minSize: 60, uppercase: true, align: "center", valign: "bottom", maxLines: 2, lineHeight: 0.95, fill: lin(90, [0, "#FFFFFF"], [0.55, "#F1EEF6"], [1, "#B9B2C6"]), showIf: "kicker", shadow: { color: "rgba(0,0,0,0.55)", blur: 30, x: 0, y: 10 } }),
+        rect("rec-l", "Bilance – linka vlevo", [330, 762, 70, 1.5], "rgba(255,255,255,0.5)"),
+        text("record", "Bilance", [400, 742, 280, 42], "Bilance [{{@record:games}}]", { font: "Mazzard H", weight: 600, size: 26, uppercase: true, align: "center", letterSpacing: 0.16, highlight: "@accent", highlightWeight: 900 }),
+        rect("rec-r", "Bilance – linka vpravo", [680, 762, 70, 1.5], "rgba(255,255,255,0.5)"),
+        // forma: skleněné dlaždice s logem soupeře, V/P v pruhu dole (výhra = barva projektu, prohra ztlumená)
+        list("games", "Série zápasů", [70, 818, 940, 368], "games", 168, 16, [
+          rect("tile", "Dlaždice – sklo", [0, 0, 144, 168], lin(90, [0, "rgba(255,255,255,0.13)"], [1, "rgba(255,255,255,0.04)"]), { radius: 14, stroke: "rgba(255,255,255,0.18)", strokeWidth: 1.5, shadow: { color: "rgba(0,0,0,0.35)", blur: 18, x: 0, y: 8 } }),
+          logo("opp", "Soupeř", [24, 14, 96, 84], "opp", { equalize: 0.72, dim: { when: "result == P || result == L", opacity: 0.45 } }),
+          text("score", "Skóre", [0, 98, 144, 24], "{{score}}", { font: "Mazzard H", weight: 600, size: 18, align: "center", opacity: 0.8, showIf: "score" }),
+          path("band-w", "Pruh výhra", [0, 126, 144, 42], "M0 0 L100 0 L100 66 Q100 100 90 100 L10 100 Q0 100 0 66 Z", { fill: lin(90, [0, "@accent"], [1, "@accent/80"]), showIf: "result == V || result == W" }),
+          path("band-l", "Pruh prohra", [0, 126, 144, 42], "M0 0 L100 0 L100 66 Q100 100 90 100 L10 100 Q0 100 0 66 Z", { fill: "rgba(255,255,255,0.10)", showIf: "result == P || result == L" }),
+          text("letter", "V / P", [0, 126, 144, 42], "{{result|upper}}", { font: "Mazzard H", weight: 900, size: 28, align: "center", dim: { when: "result == P || result == L", opacity: 0.6 } }),
+        ], { grid: { cols: 6, colWidth: 144, colGap: 15 }, center: true }),
+        // titulek dole s logem týmu
+        logo("team-logo", "Logo týmu", [60, 1210, 110, 96], "team", { logoVariant: "white", anchorY: "bottom" }),
+        rect("bar", "Čárka", [188, 1214, 4, 88], "@accent", { anchorY: "bottom" }),
+        text("headline", "Titulek", [210, 1210, 830, 96], "{{headline}}", { font: "Mazzard H", weight: 600, size: 40, uppercase: true, maxLines: 2, lineHeight: 1.1, anchorY: "bottom" }),
       ],
     },
     // 21 ── PROGRAM BCL – PREMIUM (podle EuroLeague „Rivalry Series“: světelný vír, kovový nadpis, závorky kolem času).

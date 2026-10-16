@@ -139,7 +139,7 @@ function applyFilter(val: string, filter: string, ctx: RenderContext): string {
 export function interpolate(tpl: string, ctx: RenderContext): string {
   return tpl.replace(/\{\{([^}]+)\}\}/g, (_, expr: string) => {
     // {{@join: · |position|height: cm|age: let}} – spojí jen vyplněné části
-    if (expr.startsWith("@streak:") || expr.startsWith("@record:")) return seriesText(ctx, expr);
+    if (/^@(streak|streakn|streakw|record):/.test(expr)) return seriesText(ctx, expr);
     if (expr.startsWith("@join:")) {
       const [sep, ...parts] = expr.slice(6).split("|");
       return parts
@@ -230,5 +230,8 @@ function seriesText(ctx: RenderContext, expr: string): string {
   const last = res[res.length - 1];
   let n = 0;
   for (let i = res.length - 1; i >= 0 && res[i] === last; i--) n++;
+  // {{@streakn:games}} = jen číslo, {{@streakw:games}} = jen slova („výher v řadě“)
+  if (kind === "streakn") return String(n);
+  if (kind === "streakw") return last === "W" ? `${plural(n, "výhra", "výhry", "výher")} v řadě` : `${plural(n, "prohra", "prohry", "proher")} v řadě`;
   return last === "W" ? `${n} ${plural(n, "výhra", "výhry", "výher")} v řadě` : `${n} ${plural(n, "prohra", "prohry", "proher")} v řadě`;
 }
