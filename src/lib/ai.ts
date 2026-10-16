@@ -159,7 +159,7 @@ Pravidla:
   1. Najdi na obrázcích tabulku statistik hráčů (Livesport/Flashscore záložka „Statistiky hráčů“ nebo „Sestavy“, FIBA LiveStats, box score ligy). Sloupce bývají: B / PTS / BOD (body), DOS / REB / D (doskoky), AS / AST / A (asistence), ZIS / STL (zisky), BL / BLK (bloky), EFF / VAL / PIR / HOD (hodnocení).
   2. Tabulka bývá rozdělená po týmech (dva bloky nebo přepínač s názvy/logy týmů). Urči, který blok patří VÍTĚZNÉMU týmu (podle skóre zápasu). Když není jasné, vezmi hráče s nejvyšší hodnotou EFF/VAL/PIR v celém zápase.
   3. Z vítězného týmu vyber hráče s nejvyšším EFF/VAL/PIR; když tento sloupec není, hráče s nejvíce body.
-  4. Výsledek: "_mvp": {"name": CELÉ jméno ve tvaru „Křestní Příjmení“ – když je kdekoli na obrázcích celé křestní jméno (vyskakovací karta hráče, profil, „Nejlepší hráči“), použij ho; prostřední jména vynech („Karoline Elizabeth Striplin“ → „Karoline Striplin“). Jen když celé jméno nikde není, napiš zkratku ve tvaru „K. Striplin“ (ne „Striplin K.“), "team": jeho tým, "opponent": soupeř jeho týmu, "score": výsledek z pohledu jeho týmu („88:81“), "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo, "min": odehrané minuty ve tvaru „38:29“ nebo „38“} – vynech jen čísla, která na obrázku nejsou.
+  4. Výsledek: "_mvp": {"name": CELÉ jméno ve tvaru „Křestní Příjmení“ – když je kdekoli na obrázcích celé křestní jméno (vyskakovací karta hráče, profil, „Nejlepší hráči“), použij ho; prostřední jména vynech („Karoline Elizabeth Striplin“ → „Karoline Striplin“). Jen když celé jméno nikde není, napiš zkratku ve tvaru „K. Striplin“ (ne „Striplin K.“), "team": jeho tým, "opponent": soupeř jeho týmu, "score": výsledek z pohledu jeho týmu („88:81“), "pts": číslo, "reb": číslo, "ast": číslo, "stl": číslo, "blk": číslo, "eff": číslo} – vynech jen čísla, která na obrázku nejsou.
   5. Livesport často ukazuje i blok „Nejlepší hráči“ / „Top hráči“ u přehledu zápasu – i ten použij.
   Když na žádném obrázku statistiky hráčů nejsou, "_mvp" vůbec nepřidávej (nevymýšlej).
 - POPISKY STATISTIK (pole končící na "_label", např. "s1_label") piš VŽDY jako anglickou zkratku velkými písmeny: PTS (body), REB (doskoky), AST (asistence), STL (zisky), BLK (bloky), EFF (hodnocení / VAL / PIR), 3PM (trojky), FG (střelba z pole). NIKDY ne česky („Body“, „Doskoky“…).
@@ -273,7 +273,7 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
     if (pairs.length >= 2) out[f.key] = pairs.join(" · ");
   }
   // hráč zápasu: vždy body; doskoky a asistence od 5, jinak doplnit EFF/zisky/bloky
-  const m = raw._mvp as { name?: string; min?: string | number; team?: string; opponent?: string; score?: string; pts?: number; reb?: number; ast?: number; stl?: number; blk?: number; eff?: number } | undefined;
+  const m = raw._mvp as { name?: string; team?: string; opponent?: string; score?: string; pts?: number; reb?: number; ast?: number; stl?: number; blk?: number; eff?: number } | undefined;
   if (m?.name) {
     // "Striplin K." → "K. Striplin"
     const nm = String(m.name).trim().replace(/\s+/g, " ");
@@ -293,7 +293,6 @@ export async function extractFromScreenshot(image: Blob | Blob[], t: Template, t
       out.first_name = parts.length > 1 ? parts[0] : "";
       if (has("team") && m.team) out.team = teamName(m.team);
       if (has("opponent") && m.opponent) out.opponent = teamName(m.opponent);
-      if (has("minutes") && m.min !== undefined && m.min !== null && String(m.min).trim()) out.minutes = String(m.min).trim();
       if (has("result") && m.score) out.result = String(m.score).replace(/\s*[-–]\s*/, ":");
       const sc = /(\d{1,3})\s*[-–:]\s*(\d{1,3})/.exec(String(m.score ?? ""));
       if (sc && has("team_score") && !out.team_score) out.team_score = Number(sc[1]);
