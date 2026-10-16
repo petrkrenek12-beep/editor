@@ -1663,6 +1663,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         { key: "last_name", label: "Příjmení", type: "text" },
         { key: "team", label: "Tým hráče", type: "team" },
         { key: "opponent", label: "Soupeř", type: "team" },
+        { key: "minutes", label: "Minuty (nepovinné, např. 38:29)", type: "text" },
         { key: "s1_value", label: "Stat 1 – číslo", type: "text" },
         { key: "s1_label", label: "Stat 1 – popisek", type: "text" },
         { key: "s2_value", label: "Stat 2 – číslo", type: "text" },
@@ -1686,6 +1687,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         s3_value: "9",
         s3_label: "REB",
         photo: PHOTO(a.arena),
+        minutes: "",
         photo_credit: "",
       },
       elements: (() => {
@@ -1726,7 +1728,9 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           logo("opp-logo", "Logo soupeře", [862, 286, 116, 96], "opponent", { override: "{{opponent_logo}}", logoVariant: "white", equalize: 0.7, anchorX: "right", anchorY: "top" }),
           ...stats,
           text("name", "Jméno a příjmení", [64, 1084, 640, 60], "{{first_name}} {{last_name}}", { font: "Mazzard H", weight: 900, size: 54, minSize: 30, uppercase: true, letterSpacing: -0.005, shadow: { color: "rgba(0,0,0,0.45)", blur: 14, x: 0, y: 3 }, anchorY: "bottom" }),
-          text("vs", "Soupeř", [66, 1146, 640, 34], "vs {{opponent}}", { font: "Mazzard H", weight: 300, size: 26, uppercase: true, letterSpacing: 0.02, opacity: 0.85, showIf: "opponent", anchorY: "bottom" }),
+          text("vs", "Soupeř", [66, 1146, 640, 34], "vs {{opponent}}", { font: "Mazzard H", weight: 300, size: 26, uppercase: true, letterSpacing: 0.02, opacity: 0.85, showIf: "opponent", hideIf: "minutes", anchorY: "bottom" }),
+          text("vs-min", "Soupeř a minuty", [66, 1146, 640, 34], "vs {{opponent}}   |   [{{minutes}}] min", { font: "Mazzard H", weight: 300, size: 26, uppercase: true, letterSpacing: 0.02, opacity: 0.85, highlight: "#FFFFFF", highlightWeight: 900, showIf: "opponent && minutes", anchorY: "bottom" }),
+          text("min", "Minuty", [66, 1146, 640, 34], "[{{minutes}}] min na hřišti", { font: "Mazzard H", weight: 300, size: 26, uppercase: true, letterSpacing: 0.02, opacity: 0.85, highlight: "#FFFFFF", highlightWeight: 900, showIf: "minutes", hideIf: "opponent", anchorY: "bottom" }),
           text("credit", "Foto credit", [66, 1196, 640, 24], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 17, opacity: 0.5, showIf: "photo_credit", anchorY: "bottom" }),
           brandLogo([760, 1236, 220, 64], { align: "right", anchorX: "right", anchorY: "bottom" }),
         ];
@@ -1745,6 +1749,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         { key: "last_name", label: "Příjmení", type: "text" },
         { key: "team", label: "Tým hráče", type: "team" },
         { key: "opponent", label: "Soupeř", type: "team" },
+        { key: "minutes", label: "Minuty (nepovinné, např. 38:29)", type: "text" },
         { key: "s1_value", label: "Stat 1 – číslo", type: "text" },
         { key: "s1_label", label: "Stat 1 – popisek", type: "text" },
         { key: "s2_value", label: "Stat 2 – číslo", type: "text" },
@@ -1767,6 +1772,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         s3_value: "26",
         s3_label: "EFF",
         photo: PHOTO(a.arena),
+        minutes: "",
         photo_credit: "",
       },
       elements: (() => {
@@ -1804,7 +1810,9 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
           text("first", "Jméno", [96, 700, 900, 170], "{{first_name}}", { font: "Mazzard H", weight: 300, size: 190, minSize: 80, uppercase: true, letterSpacing: -0.02, color: "#F4F3F7", shadow: { color: "rgba(0,0,0,0.35)", blur: 20, x: 0, y: 6 }, anchorY: "bottom" }),
           text("last", "Příjmení", [420, 834, 640, 170], "{{last_name}}", { font: "Mazzard H", weight: 300, size: 190, minSize: 70, uppercase: true, letterSpacing: -0.02, color: "#F4F3F7", shadow: { color: "rgba(0,0,0,0.35)", blur: 20, x: 0, y: 6 }, anchorY: "bottom" }),
           ...stats,
-          text("vs", "Soupeř", [60, 1216, 640, 32], "vs {{opponent}}", { font: "Mazzard H", weight: 300, size: 24, uppercase: true, letterSpacing: 0.04, opacity: 0.8, showIf: "opponent", anchorY: "bottom" }),
+          text("vs", "Soupeř", [60, 1216, 640, 32], "vs {{opponent}}", { font: "Mazzard H", weight: 300, size: 24, uppercase: true, letterSpacing: 0.04, opacity: 0.8, showIf: "opponent", hideIf: "minutes", anchorY: "bottom" }),
+          text("vs-min", "Soupeř a minuty", [60, 1216, 640, 32], "vs {{opponent}}   |   [{{minutes}}] min", { font: "Mazzard H", weight: 300, size: 24, uppercase: true, letterSpacing: 0.04, opacity: 0.8, highlight: "#FFFFFF", highlightWeight: 900, showIf: "opponent && minutes", anchorY: "bottom" }),
+          text("min", "Minuty", [60, 1216, 640, 32], "[{{minutes}}] min na hřišti", { font: "Mazzard H", weight: 300, size: 24, uppercase: true, letterSpacing: 0.04, opacity: 0.8, highlight: "#FFFFFF", highlightWeight: 900, showIf: "minutes", hideIf: "opponent", anchorY: "bottom" }),
           text("credit", "Foto credit", [60, 1260, 600, 24], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 17, opacity: 0.5, showIf: "photo_credit", anchorY: "bottom" }),
           img("foot-logos", "Loga dole (liga | oBasketu)", [720, 1246, 320, 56], "brand:partner", { row: { srcs: ["brand:partner", "brand:logo"], gap: 20, sep: { color: "rgba(255,255,255,0.5)", width: 1.5, height: 0.9 }, maxW: 0.44 }, fallback: "none", anchorX: "right", anchorY: "bottom" }),
         ];
