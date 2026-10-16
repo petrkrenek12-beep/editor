@@ -52,6 +52,8 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
 - Program kola – Premium, Výsledek zápasu – Premium (+ Premium carousel), Šlágr kola – Premium,
   Hráč zápasu – Detail (podle Euroligy Lessort), Hráč zápasu – Celá postava (podle BCL Keene),
   Výsledky kola – Premium, Tabulka – Premium (bez „next game“, se sloupcem Z, šipky posunu, série).
+- Hráč zápasu – Detail / Celá postava: když popisek statu obsahuje „min“ (MIN, mins, minuty), číslo se vykreslí menší
+  (prvky `m1..m3`), aby se „38:29“ vešlo vedle bodů a doskoků. Samostatné pole na minuty Petr nechce.
 - Forma týmu – série (`streak`, NBL i Repre): fotka se ztrácí do tmavé, obří kovové číslo `{{@streakn:games}}` +
   `{{@streakw:games}}` („výher v řadě“), bilance `{{@record:games}}` mezi linkami, skleněné dlaždice s logem soupeře,
   skóre a pruhem V (zelená) / P (červená). Pole „Velké číslo série a bilance“ (Zobrazit / Skrýt) a „Loga soupeřů u proher“ (Nic / Ztlumit / Černobíle / obojí, `dim.mode`). Logo oBasketu malé.

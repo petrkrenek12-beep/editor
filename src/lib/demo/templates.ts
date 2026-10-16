@@ -1698,7 +1698,9 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
             const sfx = n < 3 ? "-2" : "";
             const nm = (x: string) => `${x}${n < 3 ? " (2 staty)" : ""}`;
             return [
-              text(`v${i + 1}${sfx}`, nm(`Stat ${i + 1}`), [700, y, 370, 214], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 212, minSize: 80, valign: "bottom", letterSpacing: -0.045, fill: metal, shadow: { color: "rgba(0,0,0,0.35)", blur: 26, x: 0, y: 8 }, anchorX: "right", ...cond }),
+              text(`v${i + 1}${sfx}`, nm(`Stat ${i + 1}`), [700, y, 370, 214], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 212, minSize: 80, valign: "bottom", letterSpacing: -0.045, fill: metal, shadow: { color: "rgba(0,0,0,0.35)", blur: 26, x: 0, y: 8 }, anchorX: "right", ...cond, hideIf: [cond.hideIf, `s${i + 1}_label *= min`].filter(Boolean).join(" || ") }),
+              // minuty (popisek MIN) – menší číslo, aby se „38:29“ vešlo a nepřebilo ostatní
+              text(`m${i + 1}${sfx}`, nm(`Stat ${i + 1} (minuty)`), [700, y, 370, 214], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 118, minSize: 60, valign: "bottom", letterSpacing: -0.03, fill: metal, shadow: { color: "rgba(0,0,0,0.35)", blur: 22, x: 0, y: 6 }, anchorX: "right", ...cond, showIf: `${cond.showIf} && s${i + 1}_label *= min` }),
               text(`l${i + 1}${sfx}`, nm(`Stat ${i + 1} popisek`), [710, y + 214, 340, 40], `{{s${i + 1}_label}}`, { font: "Mazzard H", weight: 900, size: 30, uppercase: true, letterSpacing: 0.01, anchorX: "right", ...cond }),
             ];
           }).flat(),
@@ -1779,7 +1781,8 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
             const sfx = n < 3 ? "-2" : "";
             const nm = (t: string) => `${t}${n < 3 ? " (2 staty)" : ""}`;
             const out: TemplateElement[] = [
-              text(`v${i + 1}${sfx}`, nm(`Stat ${i + 1}`), [x, 986, w, 126], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 128, minSize: 60, align: "center", valign: "bottom", letterSpacing: -0.02, shadow: { color: "rgba(0,0,0,0.35)", blur: 18, x: 0, y: 6 }, anchorY: "bottom", ...cond }),
+              text(`v${i + 1}${sfx}`, nm(`Stat ${i + 1}`), [x, 986, w, 126], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 128, minSize: 60, align: "center", valign: "bottom", letterSpacing: -0.02, shadow: { color: "rgba(0,0,0,0.35)", blur: 18, x: 0, y: 6 }, anchorY: "bottom", ...cond, hideIf: [cond.hideIf, `s${i + 1}_label *= min`].filter(Boolean).join(" || ") }),
+              text(`m${i + 1}${sfx}`, nm(`Stat ${i + 1} (minuty)`), [x, 986, w, 126], `{{s${i + 1}_value}}`, { font: "Mazzard H", weight: 900, size: 74, minSize: 44, align: "center", valign: "bottom", letterSpacing: -0.01, shadow: { color: "rgba(0,0,0,0.35)", blur: 18, x: 0, y: 6 }, anchorY: "bottom", ...cond, showIf: `${cond.showIf} && s${i + 1}_label *= min` }),
               rect(`p${i + 1}${sfx}`, nm(`Štítek ${i + 1}`), [x + w / 2 - 60, 1126, 120, 42], "@dark/85", { radius: 21, stroke: "rgba(255,255,255,0.9)", strokeWidth: 2, anchorY: "bottom", ...cond }),
               text(`l${i + 1}${sfx}`, nm(`Štítek ${i + 1} – text`), [x + w / 2 - 60, 1126, 120, 42], `{{s${i + 1}_label}}`, { font: "Mazzard H", weight: 900, size: 24, uppercase: true, align: "center", valign: "middle", letterSpacing: 0.02, anchorY: "bottom", ...cond }),
             ];
