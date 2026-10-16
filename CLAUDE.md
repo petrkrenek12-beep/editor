@@ -54,7 +54,7 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
   Výsledky kola – Premium, Tabulka – Premium (bez „next game“, se sloupcem Z, šipky posunu, série).
 - Forma týmu – série (`streak`, NBL i Repre): fotka se ztrácí do tmavé, obří kovové číslo `{{@streakn:games}}` +
   `{{@streakw:games}}` („výher v řadě“), bilance `{{@record:games}}` mezi linkami, skleněné dlaždice s logem soupeře,
-  skóre a pruhem V (zelená) / P (červená). Pole „Velké číslo série a bilance“ (Zobrazit / Skrýt). Logo oBasketu malé.
+  skóre a pruhem V (zelená) / P (červená). Pole „Velké číslo série a bilance“ (Zobrazit / Skrýt) a „Loga soupeřů u proher“ (Nic / Ztlumit / Černobíle / obojí, `dim.mode`). Logo oBasketu malé.
 - BCL má vlastní šablony `bcl-*` (fonty Russo One / Saira Condensed). Předloha: **EuroLeague „Rivalry Series“**
   (Partizan – Panathinaikos) převedená do barev BCL: světelný vír, kovový nadpis Russo One, stříbrný pruh s podtitulkem,
   čas v rohových závorkách.

@@ -1029,7 +1029,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       id: "streak",
       name: "Forma týmu – série",
       category: "Klub",
-      description: "Prémiová forma týmu: fotka se ztrácí do tmavé, obří kovové číslo série („9 výher v řadě“), bilance a skleněné dlaždice s logy soupeřů (výhra zeleně, prohra červeně); velké číslo a bilanci lze skrýt. Série i bilance se spočítají samy.",
+      description: "Prémiová forma týmu: fotka se ztrácí do tmavé, obří kovové číslo série („9 výher v řadě“), bilance a skleněné dlaždice s logy soupeřů (výhra zeleně, prohra červeně, logo soupeře u prohry volitelně ztlumené / černobílé); velké číslo a bilanci lze skrýt. Série i bilance se spočítají samy.",
       background: "@dark",
       finish: { grain: 14, vignette: 34 },
       fields: [
@@ -1037,6 +1037,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         { key: "headline", label: "Titulek dole", type: "text", placeholder: "Dlouhá neporazitelnost Nymburka je u konce" },
         { key: "kicker", label: "Nadpis nahoře (prázdné = série se spočítá sama)", type: "text" },
         { key: "hero", label: "Velké číslo série a bilance", type: "select", options: ["Zobrazit", "Skrýt"] },
+        { key: "loss_dim", label: "Loga soupeřů u proher", type: "select", options: ["Nic", "Ztlumit", "Černobíle", "Ztlumit a černobíle"] },
         {
           key: "games",
           label: "Zápasy (od nejstaršího)",
@@ -1057,6 +1058,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         headline: "Pardubice drží šňůru bez porážky",
         kicker: "",
         hero: "Zobrazit",
+        loss_dim: "Nic",
         games: [
           ["V", "NH Ostrava"], ["V", "BK Armex Energy Děčín"], ["P", "Slavia Praha"], ["V", "Sluneta Ústí nad Labem"], ["V", "Sršni Písek"], ["V", "Basket Brno"],
           ["V", "NH Ostrava"], ["V", "BK Opava"], ["V", "USK Praha"], ["V", "BK Olomoucko"], ["V", "BK GAPA Hradec Králové"], ["V", "BK Lokomotiva Plzeň"],
@@ -1087,7 +1089,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         // forma: skleněné dlaždice s logem soupeře, V/P v pruhu dole (výhra = barva projektu, prohra ztlumená)
         list("games", "Série zápasů", [70, 818, 940, 368], "games", 168, 16, [
           rect("tile", "Dlaždice – sklo", [0, 0, 144, 168], lin(90, [0, "rgba(255,255,255,0.13)"], [1, "rgba(255,255,255,0.04)"]), { radius: 14, stroke: "rgba(255,255,255,0.18)", strokeWidth: 1.5, shadow: { color: "rgba(0,0,0,0.35)", blur: 18, x: 0, y: 8 } }),
-          logo("opp", "Soupeř", [24, 14, 96, 84], "opp", { equalize: 0.72, dim: { when: "result == P || result == L", opacity: 0.7 } }),
+          logo("opp", "Soupeř", [24, 14, 96, 84], "opp", { equalize: 0.72, dim: { when: "result == P || result == L", opacity: 0.45, gray: true, mode: "loss_dim" } }),
           text("score", "Skóre", [0, 98, 144, 24], "{{score}}", { font: "Mazzard H", weight: 600, size: 18, align: "center", opacity: 0.8, showIf: "score" }),
           path("band-w", "Pruh výhra", [0, 126, 144, 42], "M0 0 L100 0 L100 66 Q100 100 90 100 L10 100 Q0 100 0 66 Z", { fill: lin(90, [0, "#22B455"], [1, "#16893F"]), showIf: "result == V || result == W" }),
           path("band-l", "Pruh prohra", [0, 126, 144, 42], "M0 0 L100 0 L100 66 Q100 100 90 100 L10 100 Q0 100 0 66 Z", { fill: lin(90, [0, "#E2283E"], [1, "#B01B2E"]), showIf: "result == P || result == L" }),
