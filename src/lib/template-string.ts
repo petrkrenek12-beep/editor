@@ -185,6 +185,8 @@ export function isEmptyValue(v: DataValue) {
 export function evalCondition(ctx: RenderContext, expr: string): boolean {
   if (expr.includes("||")) return expr.split("||").some((e) => evalCondition(ctx, e.trim()));
   if (expr.includes("&&")) return expr.split("&&").every((e) => evalCondition(ctx, e.trim()));
+  // negace: „!photo.cut“
+  if (expr.trim().startsWith("!")) return !evalCondition(ctx, expr.trim().slice(1));
   // obsahuje: „streak *= V“ (text pole obsahuje písmeno/řetězec)
   const cm = /^\s*([^<>=!*\s]+)\s*\*=\s*(.+?)\s*$/.exec(expr);
   if (cm) return normalize(valueToString(getValue(ctx, cm[1]))).includes(normalize(cm[2].replace(/^["']|["']$/g, "")));

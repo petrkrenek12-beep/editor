@@ -2352,16 +2352,16 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
   //       čísla nahoře, křestní jméno v barvě týmu, obří stříbrné příjmení ZA hráčem, tenký rámeček, pruhy nahoře)
   {
     const silver = lin(90, [0, "#FFFFFF"], [0.55, "#C9CDD3"], [1, "rgba(201,205,211,0.18)"]);
-    const T = "@team:{{team}}";
+    const T = "#E03A3E"; // vždy Portland Trail Blazers (Petr: barvy se měnit nemusí)
     const stat = (i: number, x: number): TemplateElement[] => [
-      text(`v${i}`, `Stat ${i} – číslo`, [x, 92, 140, 112], `{{s${i}_value}}`, { font: "Barlow Condensed", weight: 900, italic: true, size: 104, minSize: 50, align: "right", valign: "bottom", letterSpacing: -0.01, shadow: { color: "rgba(0,0,0,0.5)", blur: 16, x: 0, y: 4 }, showIf: `s${i}_value`, anchorY: "top" }),
-      text(`l${i}`, `Stat ${i} – popisek`, [x + 146, 150, 100, 46], `{{s${i}_label}}`, { font: "Barlow Condensed", weight: 800, italic: true, size: 40, minSize: 22, uppercase: true, align: "left", valign: "bottom", opacity: 0.92, showIf: `s${i}_value`, anchorY: "top" }),
+      text(`v${i}`, `Stat ${i} – číslo`, [x, 92, 140, 112], `{{s${i}_value}}`, { font: "Barlow Condensed", weight: 900, italic: true, size: 104, minSize: 50, align: "right", valign: "bottom", letterSpacing: -0.01, shadow: { color: "rgba(0,0,0,0.5)", blur: 16, x: 0, y: 4 }, showIf: `s${i}_value`, hideIf: "photo && !photo.cut", anchorY: "top" }),
+      text(`l${i}`, `Stat ${i} – popisek`, [x + 146, 150, 100, 46], `{{s${i}_label}}`, { font: "Barlow Condensed", weight: 800, italic: true, size: 40, minSize: 22, uppercase: true, align: "left", valign: "bottom", opacity: 0.92, showIf: `s${i}_value`, hideIf: "photo && !photo.cut", anchorY: "top" }),
     ];
     defs.push({
       id: "bcl-nba",
       name: "Čech v NBA – statistiky",
       category: "Hráči",
-      description: "Statistiky českého hráče v NBA (podle grafik Portland Trail Blazers): grafitové kouřové pozadí se zrnem, čísla nahoře, křestní jméno v barvě týmu, obří stříbrné příjmení za vyříznutým hráčem. Barvy se berou z týmu hráče.",
+      description: "Statistiky českého hráče v NBA (podle grafik Portland Trail Blazers): grafitové kouřové pozadí se zrnem, čísla nahoře, křestní jméno v barvě týmu, obří stříbrné příjmení za vyříznutým hráčem. Barvy Portland Trail Blazers. S vyříznutou fotkou je hráč před obřím jménem, s obyčejnou fotkou jde fotka nahoru a jméno s čísly pod ni.",
       background: "#16171A",
       finish: { grain: 30, vignette: 46 },
       fields: [
@@ -2377,7 +2377,7 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         { key: "s2_label", label: "Stat 2 – popisek", type: "text" },
         { key: "s3_value", label: "Stat 3 – číslo", type: "text" },
         { key: "s3_label", label: "Stat 3 – popisek", type: "text" },
-        { key: "photo", label: "Fotka hráče (nejlépe vyříznutá)", type: "image" },
+        { key: "photo", label: "Fotka hráče (vyříznutá i nevyříznutá)", type: "image" },
         f.credit,
       ],
       sampleData: {
@@ -2398,11 +2398,11 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
       },
       elements: [
         // pozadí: grafit + kouř + záře v barvě týmu
-        img("photo-full", "Fotka (nevyříznutá)", [0, 0, 1080, 1350], "{{photo}}", { fit: "cover", onlyUncut: true, zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
-        rect("photo-dim", "Ztmavení fotky", [0, 0, 1080, 1350], lin(90, [0, "rgba(10,10,12,0.78)"], [0.35, "rgba(10,10,12,0.25)"], [0.7, "rgba(10,10,12,0.35)"], [1, "rgba(10,10,12,0.92)"]), { showIf: "photo", hideIf: "photo.cut", zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
-        img("smoke", "Kouř", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 1.2, blend: "screen", opacity: 0.32, blur: 14, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("photo-full", "Fotka (nevyříznutá)", [0, 0, 1080, 1060], "{{photo}}", { fit: "cover", onlyUncut: true, zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+        rect("photo-dim", "Ztmavení fotky", [0, 0, 1080, 1350], lin(90, [0, "rgba(16,17,20,0.55)"], [0.14, "rgba(16,17,20,0)"], [0.5, "rgba(16,17,20,0.05)"], [0.68, "rgba(16,17,20,0.85)"], [0.78, "#16171A"], [1, "#16171A"]), { showIf: "photo && !photo.cut", zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        img("smoke", "Kouř", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 1.2, blend: "screen", opacity: 0.32, blur: 14, fallback: "none", anchorX: "stretch", anchorY: "stretch", hideIf: "photo && !photo.cut" }),
         img("smoke-2", "Kouř 2", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 1.4, blend: "screen", opacity: 0.12, blur: 30, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
-        rect("team-glow", "Záře v barvě týmu", [-200, 700, 1480, 900], { type: "radial", stops: [[0, `${T}/40`], [0.45, `${T}/10`], [0.69, `${T}/0`], [1, `${T}/0`]] }, { blend: "screen", anchorX: "stretch", anchorY: "bottom" }),
+        rect("team-glow", "Záře v barvě týmu", [-200, 700, 1480, 900], { type: "radial", stops: [[0, "rgba(224,58,62,0.4)"], [0.45, "rgba(224,58,62,0.1)"], [0.69, "rgba(224,58,62,0)"], [1, "rgba(224,58,62,0)"]] }, { blend: "screen", anchorX: "stretch", anchorY: "bottom" }),
         // pruhy nahoře (jako Blazers) a tenký rámeček
         ...Array.from({ length: 6 }, (_, i) => rect(`dash${i}`, `Pruh nahoře ${i + 1}`, [20 + i * 186, 0, 120, 12], T, { anchorY: "top" })),
         rect("frame", "Rámeček", [34, 36, 1012, 1278], "rgba(0,0,0,0)", { radius: 44, stroke: "rgba(255,255,255,0.22)", strokeWidth: 2, anchorX: "stretch", anchorY: "stretch" }),
@@ -2413,13 +2413,23 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
         ...stat(2, 410),
         ...stat(3, 700),
         // jméno: obří stříbrné příjmení ZA hráčem, křestní jméno v barvě týmu
-        text("last", "Příjmení", [20, 400, 1040, 420], "{{last_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 420, minSize: 150, uppercase: true, align: "center", valign: "bottom", letterSpacing: -0.02, fill: silver }),
-        text("first", "Jméno", [140, 236, 800, 220], "{{first_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 230, minSize: 90, uppercase: true, align: "center", valign: "bottom", letterSpacing: -0.01, color: T, shadow: { color: "rgba(0,0,0,0.4)", blur: 24, x: 0, y: 8 } }),
+        text("last", "Příjmení", [20, 400, 1040, 420], "{{last_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 420, minSize: 150, uppercase: true, align: "center", valign: "bottom", letterSpacing: -0.02, fill: silver, hideIf: "photo && !photo.cut" }),
+        text("first", "Jméno", [140, 236, 800, 220], "{{first_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 230, minSize: 90, uppercase: true, align: "center", valign: "bottom", letterSpacing: -0.01, color: T, shadow: { color: "rgba(0,0,0,0.4)", blur: 24, x: 0, y: 8 }, hideIf: "photo && !photo.cut" }),
         // vyříznutý hráč přes jméno
         img("player", "Hráč (vyříznutý)", [90, 300, 900, 1000], "{{photo}}", { fit: "contain", valign: "bottom", useCutout: true, shadow: { color: "rgba(0,0,0,0.55)", blur: 50, x: 0, y: 16 }, fallback: "none", anchorY: "bottom" }),
         rect("bottom-dim", "Ztmavení dole", [0, 1060, 1080, 290], lin(90, [0, "rgba(10,10,12,0)"], [0.6, "rgba(10,10,12,0.75)"], [1, "rgba(10,10,12,0.95)"]), { anchorX: "stretch", anchorY: "bottom" }),
+        // ── obyčejná (nevyříznutá) fotka: jméno a čísla pod fotkou
+        text("u-first", "Jméno (obyčejná fotka)", [100, 760, 880, 120], "{{first_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 120, minSize: 60, uppercase: true, align: "center", valign: "bottom", color: T, shadow: { color: "rgba(0,0,0,0.5)", blur: 20, x: 0, y: 6 }, showIf: "photo && !photo.cut", anchorY: "bottom" }),
+        text("u-last", "Příjmení (obyčejná fotka)", [40, 846, 1000, 210], "{{last_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 230, minSize: 100, uppercase: true, align: "center", valign: "bottom", letterSpacing: -0.02, fill: lin(90, [0, "#FFFFFF"], [0.6, "#D3D7DD"], [1, "#9EA3AB"]), shadow: { color: "rgba(0,0,0,0.5)", blur: 24, x: 0, y: 8 }, showIf: "photo && !photo.cut", anchorY: "bottom" }),
+        ...[1, 2, 3].flatMap((i): TemplateElement[] => {
+          const x = 150 + (i - 1) * 270;
+          return [
+            text(`u-v${i}`, `Stat ${i} – číslo (obyčejná fotka)`, [x, 1060, 128, 104], `{{s${i}_value}}`, { font: "Barlow Condensed", weight: 900, italic: true, size: 96, minSize: 46, align: "right", valign: "bottom", letterSpacing: -0.01, showIf: `photo && !photo.cut && s${i}_value`, anchorY: "bottom" }),
+            text(`u-l${i}`, `Stat ${i} – popisek (obyčejná fotka)`, [x + 134, 1112, 110, 44], `{{s${i}_label}}`, { font: "Barlow Condensed", weight: 800, italic: true, size: 38, minSize: 20, uppercase: true, valign: "bottom", color: T, showIf: `photo && !photo.cut && s${i}_value`, anchorY: "bottom" }),
+          ];
+        }),
         // tahy štětcem v barvě týmu
-        path("brush-1", "Tah štětcem 1", [60, 1090, 700, 200], "M0 70 C 30 40, 60 30, 100 0", { stroke: T, strokeWidth: 14, opacity: 0.75, shadow: { color: T, blur: 18, x: 0, y: 0 }, anchorY: "bottom" }),
+        path("brush-1", "Tah štětcem 1", [60, 1090, 700, 200], "M0 70 C 30 40, 60 30, 100 0", { stroke: T, strokeWidth: 14, opacity: 0.75, shadow: { color: T, blur: 18, x: 0, y: 0 }, anchorY: "bottom", hideIf: "photo && !photo.cut" }),
         path("brush-2", "Tah štětcem 2", [180, 1150, 760, 160], "M0 100 C 35 60, 70 40, 100 20", { stroke: T, strokeWidth: 8, opacity: 0.55, anchorY: "bottom" }),
         // zápas dole
         logo("team-logo", "Logo týmu", [306, 1222, 74, 64], "team", { logoVariant: "white", equalize: 0.85, anchorY: "bottom" }),

@@ -115,3 +115,10 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
   `process.env.NEXT_PUBLIC_PRESETKA_TARGET='"web"'` a `process.env.NODE_ENV='"production"'`.
 - Na realistické testovací fotky lze použít screenshoty předloh od Petra (jen interně), vyříznutí přes `rembg`
   (model `u2net_human_seg`, ne velký bria model – spadne na paměť).
+
+## Čech v NBA (`bcl-nba`, Evropské poháry)
+- Podle grafik Portland Trail Blazers (Avdija). Barvy **napevno Portland** (`#E03A3E`) – Krejčí je vždy v Blazers.
+- Dvě rozložení podle fotky: vyříznutá → čísla nahoře, obří příjmení za hráčem; nevyříznutá (`photo && !photo.cut`)
+  → fotka přes horní část, jméno a čísla pod ní (prvky `u-*`).
+- Podmínky umí negaci `!` (např. `hideIf: "photo && !photo.cut"`). Loga NBA týmů v `public/nba` (+ bílé `-w`).
+- Barvy v přechodech: `#hex/40` nefunguje (jen `@primary/40` apod.) – použij `rgba()`.
