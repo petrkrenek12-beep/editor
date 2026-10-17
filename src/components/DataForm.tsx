@@ -119,7 +119,7 @@ function TeamLogo({ team, assets, size = 40 }: { team?: Project["teams"][number]
       className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line font-cond text-[11px] font-bold"
       style={{ width: size, height: size, background: team?.logo ? "#fff" : team?.color ?? "#EEF0F3", color: team && !team.logo ? "#fff" : "#5E6977" }}
     >
-      {team?.logo && assets[team.logo] ? <img src={assets[team.logo]} alt="" className="h-full w-full object-contain p-0.5" /> : team?.short ?? "?"}
+      {team?.logo && (assets[team.logo] || team.logo.startsWith("/")) ? <img src={assets[team.logo] ?? team.logo} alt="" className="h-full w-full object-contain p-0.5" /> : team?.short ?? "?"}
     </div>
   );
 }

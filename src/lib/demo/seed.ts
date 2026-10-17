@@ -1,4 +1,5 @@
 import { TEX_SILK, TEX_SWIRL, TEX_HALFTONE, TEX_VORTEX } from "./textures";
+import { nbaTeams } from "./nba";
 import { ECW_LOGO, ECW_LOGO_SIZE, ELW_LOGO, ELW_LOGO_SIZE, FEC_LOGO, FEC_LOGO_SIZE, OBASKETU_EMBOSS, OBASKETU_LINES, TEX_STRIPES } from "./euro";
 import type { Asset, BrandKit, Channel, Dataset, ImageElement, ListElement, Project, Team, Template, TemplateElement, TextElement } from "../types";
 import { DEMO_REPRE_TEAMS, DEMO_TEAMS, PLAYERS, PROGRAM_3_KOLO, RESULTS_2_KOLO, STANDINGS } from "./data";
@@ -13,7 +14,7 @@ import { LINES_JPG } from "./lines";
 import { BCL_BG, BCL_KVIS, BCL_KVIS_W, BCL_LOGO, BCL_LOGO_SIZE, BCL_LOGO_WHITE, BCL_SLAVIA, BCL_SLAVIA_W } from "./bcl";
 import { ZBL_BG, ZBL_LOGO, ZBL_LOGO_SIZE, ZBL_ROWS_BG, ZBL_TEAMS } from "./zbl";
 
-export const SEED_VERSION = 61;
+export const SEED_VERSION = 62;
 export const BG_ASSET = "p-nbl-bg0";
 
 export const SHARED = "shared";
@@ -453,6 +454,7 @@ export function bclProject(nblBrand: BrandKit, createdAt = Date.now()): { projec
     { id: "p-bcl-team-0", name: "Slavia Praha", short: "SLA", aliases: ["Slavia", "SK Slavia Praha", "Slavia Praha ERA NBK", "SKS"], color: "#E3001B", color2: "#FFFFFF", logo: "p-bcl-team-0-logo", logoWhite: "p-bcl-team-0-logo-w" },
     { id: "p-bcl-team-1", name: "BK Kvis Pardubice", short: "PAR", aliases: ["Pardubice", "Kvis Pardubice", "BK Pardubice"], color: "#E30613", color2: "#1D1D1B", logo: "p-bcl-team-1-logo", logoWhite: "p-bcl-team-1-logo-w" },
     ...euroWomenTeams(assets, createdAt),
+    ...nbaTeams(),
   ];
   const project: Project = {
     id: pid,

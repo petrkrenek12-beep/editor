@@ -84,6 +84,12 @@ Tento soubor čte Claude na začátku každé nové konverzace nad repozitářem
   oBasketu, jen obrysové oblouky z loga oBasketu (`asset:obasketu-lines`, bez nápisu, oranžově + záře), oranžová záře,
   rastr. Logo vlevo nahoře (bez tintu – původní vzhled loga) na střed sloupce s nadpisem, zarovnané s horní hranou panelu; termín bíle s oranžovou linkou, zarovnaný se spodní hranou. Řádky `fill: 1.7` (málo zápasů → vyšší řádky).
   Seznam má `groupBy: "comp"` → před každou soutěží řádek nadpisu (`__header`) s logem soutěže (jako Basket Ženy).
+- NBA: všech 30 týmů jako `p-bcl-nba-*` (src/lib/demo/nba.ts), loga NEJSOU v assetech, ale v `public/nba/{key}.png` a
+  `{key}-w.png` (URL „/nba/…“ – renderer i UI je berou přímo). Barevná loga z npm `nba-team-logos` (vyrenderovaná SVG),
+  bílé verze dopočítané (u odznaků se plocha nejčastější barvy zprůhlední); Portland od Petra (pinwheel).
+- `bcl-nba` – Čech v NBA (Vít Krejčí, Portland): podle grafik Blazers (Deni Avdija) – grafitové kouřové pozadí se zrnem,
+  3 čísla nahoře (Barlow Condensed italic), křestní jméno v barvě týmu `@team:{{team}}`, obří stříbrné příjmení ZA
+  vyříznutým hráčem, pruhy nahoře, tenký rámeček, výsledek s logy a logo NBA dole. Barvy z týmu hráče.
 - Smazané (na přání): obecné `p-bcl-program`, `p-bcl-result`; v ŽBL player-stats, program, result, results-carousel,
   results-round, standings (náhrobky v migraci v50).
 

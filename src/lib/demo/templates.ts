@@ -2347,6 +2347,91 @@ export function buildTemplates(projectId: string, a: { arena: string; ball: stri
     });
   }
 
+
+  // 33 ── ČECH V NBA (podle grafik Portland Trail Blazers – Deni Avdija: kouřové grafitové pozadí se zrnem,
+  //       čísla nahoře, křestní jméno v barvě týmu, obří stříbrné příjmení ZA hráčem, tenký rámeček, pruhy nahoře)
+  {
+    const silver = lin(90, [0, "#FFFFFF"], [0.55, "#C9CDD3"], [1, "rgba(201,205,211,0.18)"]);
+    const T = "@team:{{team}}";
+    const stat = (i: number, x: number): TemplateElement[] => [
+      text(`v${i}`, `Stat ${i} – číslo`, [x, 92, 140, 112], `{{s${i}_value}}`, { font: "Barlow Condensed", weight: 900, italic: true, size: 104, minSize: 50, align: "right", valign: "bottom", letterSpacing: -0.01, shadow: { color: "rgba(0,0,0,0.5)", blur: 16, x: 0, y: 4 }, showIf: `s${i}_value`, anchorY: "top" }),
+      text(`l${i}`, `Stat ${i} – popisek`, [x + 146, 150, 100, 46], `{{s${i}_label}}`, { font: "Barlow Condensed", weight: 800, italic: true, size: 40, minSize: 22, uppercase: true, align: "left", valign: "bottom", opacity: 0.92, showIf: `s${i}_value`, anchorY: "top" }),
+    ];
+    defs.push({
+      id: "bcl-nba",
+      name: "Čech v NBA – statistiky",
+      category: "Hráči",
+      description: "Statistiky českého hráče v NBA (podle grafik Portland Trail Blazers): grafitové kouřové pozadí se zrnem, čísla nahoře, křestní jméno v barvě týmu, obří stříbrné příjmení za vyříznutým hráčem. Barvy se berou z týmu hráče.",
+      background: "#16171A",
+      finish: { grain: 30, vignette: 46 },
+      fields: [
+        { key: "kicker", label: "Nadtitulek (vpravo nahoře)", type: "text", placeholder: "Čech v NBA" },
+        { key: "first_name", label: "Jméno", type: "text" },
+        { key: "last_name", label: "Příjmení", type: "text" },
+        { key: "team", label: "Tým hráče", type: "team" },
+        { key: "opponent", label: "Soupeř", type: "team" },
+        { key: "score", label: "Výsledek (z pohledu týmu)", type: "text", placeholder: "119:66" },
+        { key: "s1_value", label: "Stat 1 – číslo", type: "text" },
+        { key: "s1_label", label: "Stat 1 – popisek", type: "text" },
+        { key: "s2_value", label: "Stat 2 – číslo", type: "text" },
+        { key: "s2_label", label: "Stat 2 – popisek", type: "text" },
+        { key: "s3_value", label: "Stat 3 – číslo", type: "text" },
+        { key: "s3_label", label: "Stat 3 – popisek", type: "text" },
+        { key: "photo", label: "Fotka hráče (nejlépe vyříznutá)", type: "image" },
+        f.credit,
+      ],
+      sampleData: {
+        kicker: "Čech v NBA",
+        first_name: "Vít",
+        last_name: "Krejčí",
+        team: "Portland Trail Blazers",
+        opponent: "Golden State Warriors",
+        score: "118:128",
+        s1_value: "10",
+        s1_label: "PTS",
+        s2_value: "5",
+        s2_label: "REB",
+        s3_value: "3",
+        s3_label: "3PM",
+        photo: { asset: a.player },
+        photo_credit: "",
+      },
+      elements: [
+        // pozadí: grafit + kouř + záře v barvě týmu
+        img("photo-full", "Fotka (nevyříznutá)", [0, 0, 1080, 1350], "{{photo}}", { fit: "cover", onlyUncut: true, zone: "hero", anchorX: "stretch", anchorY: "stretch", fallback: "none" }),
+        rect("photo-dim", "Ztmavení fotky", [0, 0, 1080, 1350], lin(90, [0, "rgba(10,10,12,0.78)"], [0.35, "rgba(10,10,12,0.25)"], [0.7, "rgba(10,10,12,0.35)"], [1, "rgba(10,10,12,0.92)"]), { showIf: "photo", hideIf: "photo.cut", zone: "bg", anchorX: "stretch", anchorY: "stretch" }),
+        img("smoke", "Kouř", [0, 0, 1080, 1350], "asset:tex-silk", { fit: "cover", lumaKey: 1.2, blend: "screen", opacity: 0.32, blur: 14, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        img("smoke-2", "Kouř 2", [0, 0, 1080, 1350], "asset:tex-swirl", { fit: "cover", lumaKey: 1.4, blend: "screen", opacity: 0.12, blur: 30, fallback: "none", anchorX: "stretch", anchorY: "stretch" }),
+        rect("team-glow", "Záře v barvě týmu", [-200, 700, 1480, 900], { type: "radial", stops: [[0, `${T}/40`], [0.45, `${T}/10`], [0.69, `${T}/0`], [1, `${T}/0`]] }, { blend: "screen", anchorX: "stretch", anchorY: "bottom" }),
+        // pruhy nahoře (jako Blazers) a tenký rámeček
+        ...Array.from({ length: 6 }, (_, i) => rect(`dash${i}`, `Pruh nahoře ${i + 1}`, [20 + i * 186, 0, 120, 12], T, { anchorY: "top" })),
+        rect("frame", "Rámeček", [34, 36, 1012, 1278], "rgba(0,0,0,0)", { radius: 44, stroke: "rgba(255,255,255,0.22)", strokeWidth: 2, anchorX: "stretch", anchorY: "stretch" }),
+        brandLogo([64, 64, 92, 62], { align: "left", anchorY: "top" }),
+        text("kicker", "Nadtitulek", [620, 70, 396, 40], "{{kicker}}", { font: "Barlow Condensed", weight: 800, italic: true, size: 28, uppercase: true, align: "right", letterSpacing: 0.18, color: T, anchorX: "right", anchorY: "top" }),
+        // čísla nahoře
+        ...stat(1, 120),
+        ...stat(2, 410),
+        ...stat(3, 700),
+        // jméno: obří stříbrné příjmení ZA hráčem, křestní jméno v barvě týmu
+        text("last", "Příjmení", [20, 400, 1040, 420], "{{last_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 420, minSize: 150, uppercase: true, align: "center", valign: "bottom", letterSpacing: -0.02, fill: silver }),
+        text("first", "Jméno", [140, 236, 800, 220], "{{first_name}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 230, minSize: 90, uppercase: true, align: "center", valign: "bottom", letterSpacing: -0.01, color: T, shadow: { color: "rgba(0,0,0,0.4)", blur: 24, x: 0, y: 8 } }),
+        // vyříznutý hráč přes jméno
+        img("player", "Hráč (vyříznutý)", [90, 300, 900, 1000], "{{photo}}", { fit: "contain", valign: "bottom", useCutout: true, shadow: { color: "rgba(0,0,0,0.55)", blur: 50, x: 0, y: 16 }, fallback: "none", anchorY: "bottom" }),
+        rect("bottom-dim", "Ztmavení dole", [0, 1060, 1080, 290], lin(90, [0, "rgba(10,10,12,0)"], [0.6, "rgba(10,10,12,0.75)"], [1, "rgba(10,10,12,0.95)"]), { anchorX: "stretch", anchorY: "bottom" }),
+        // tahy štětcem v barvě týmu
+        path("brush-1", "Tah štětcem 1", [60, 1090, 700, 200], "M0 70 C 30 40, 60 30, 100 0", { stroke: T, strokeWidth: 14, opacity: 0.75, shadow: { color: T, blur: 18, x: 0, y: 0 }, anchorY: "bottom" }),
+        path("brush-2", "Tah štětcem 2", [180, 1150, 760, 160], "M0 100 C 35 60, 70 40, 100 20", { stroke: T, strokeWidth: 8, opacity: 0.55, anchorY: "bottom" }),
+        // zápas dole
+        logo("team-logo", "Logo týmu", [306, 1222, 74, 64], "team", { logoVariant: "white", equalize: 0.85, anchorY: "bottom" }),
+        text("score", "Výsledek", [390, 1222, 300, 64], "{{score}}", { font: "Barlow Condensed", weight: 900, italic: true, size: 50, align: "center", valign: "middle", showIf: "score", anchorY: "bottom" }),
+        text("vs", "vs (bez výsledku)", [390, 1222, 300, 64], "vs", { font: "Barlow Condensed", weight: 800, italic: true, size: 40, align: "center", valign: "middle", color: T, hideIf: "score", anchorY: "bottom" }),
+        logo("opp-logo", "Logo soupeře", [700, 1222, 74, 64], "opponent", { logoVariant: "white", equalize: 0.85, anchorY: "bottom" }),
+        img("nba", "Logo NBA", [952, 1210, 50, 86], "/nba/nba.png", { fit: "contain", fallback: "none", anchorX: "right", anchorY: "bottom" }),
+        text("credit", "Foto credit", [64, 1268, 240, 22], "Foto: {{photo_credit}}", { font: "body", italic: true, weight: 600, size: 16, opacity: 0.55, showIf: "photo_credit", anchorY: "bottom" }),
+      ],
+    });
+  }
+
   for (const d of defs) {
     const map = ANCHORS[d.id];
     if (!map) continue;

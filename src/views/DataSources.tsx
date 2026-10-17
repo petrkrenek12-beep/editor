@@ -375,7 +375,7 @@ function Teams() {
               <LogoSlot
                 label="Logo"
                 title="Barevné logo"
-                url={t.logo ? assets[t.logo] : undefined}
+                url={t.logo ? assets[t.logo] ?? (t.logo.startsWith("/") ? t.logo : undefined) : undefined}
                 team={t}
                 manage={manage}
                 onFile={async (f) => {
@@ -388,7 +388,7 @@ function Teams() {
                 dark
                 label="Bílé"
                 title="Bílé logo – použije se, když je v šabloně / u grafiky zvolena bílá loga"
-                url={t.logoWhite ? assets[t.logoWhite] : undefined}
+                url={t.logoWhite ? assets[t.logoWhite] ?? (t.logoWhite.startsWith("/") ? t.logoWhite : undefined) : undefined}
                 team={t}
                 manage={manage}
                 onFile={async (f) => {
